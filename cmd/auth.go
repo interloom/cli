@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/interloom/cli/internal/client"
@@ -32,7 +34,8 @@ func newAuthLoginCmd() *cobra.Command {
 			"argument or via --instance: a short name (dev), a host (dev.interloom.com),\n" +
 			"or a local address (localhost:8080, always http).\n\n" +
 			"The API key is never read from a flag: pipe it via stdin, set INTERLOOM_API_KEY,\n" +
-			"or paste it when prompted.",
+			"or paste it when prompted. When prompting, the instance's personal-tokens page\n" +
+			"is opened in your browser so you can create a key.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: runAuthLogin,
 	}
@@ -46,7 +49,7 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// 2. Resolve the API key (piped stdin > env > hidden prompt). Never a flag.
-	apiKey, err := readAPIKey()
+	apiKey, err := readAPIKey(baseURL)
 	if err != nil {
 		return err
 	}
@@ -142,8 +145,10 @@ func newAuthLogoutCmd() *cobra.Command {
 }
 
 // readAPIKey returns the key from piped stdin, then INTERLOOM_API_KEY, then a
-// hidden interactive prompt. It never accepts the key from a flag.
-func readAPIKey() (string, error) {
+// hidden interactive prompt. It never accepts the key from a flag. When
+// prompting interactively it first opens the instance's personal-tokens page so
+// the user can create a key.
+func readAPIKey(baseURL string) (string, error) {
 	if !stdinIsTTY() {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -157,9 +162,30 @@ func readAPIKey() (string, error) {
 		return key, nil
 	}
 	if stdinIsTTY() {
-		return promptHidden("API key: ")
+		tokenURL := strings.TrimRight(baseURL, "/") + "/personal-tokens?autoCreate=true&name=Interloom%20CLI"
+		if err := openBrowser(tokenURL); err != nil {
+			fmt.Fprintf(os.Stderr, "Open this page to create an API key:\n  %s\n\n", tokenURL)
+		} else {
+			fmt.Fprintf(os.Stderr, "Opened %s in your browser to create an API key.\n\n", tokenURL)
+		}
+		return promptHidden("Paste your API key: ")
 	}
 	return "", fmt.Errorf("no API key: pipe it via stdin or set %s", config.EnvAPIKey)
+}
+
+// openBrowser opens rawURL in the user's default browser.
+func openBrowser(rawURL string) error {
+	var name string
+	var args []string
+	switch runtime.GOOS {
+	case "darwin":
+		name = "open"
+	case "windows":
+		name, args = "rundll32", []string{"url.dll,FileProtocolHandler"}
+	default:
+		name = "xdg-open"
+	}
+	return exec.Command(name, append(args, rawURL)...).Start()
 }
 
 func promptHidden(prompt string) (string, error) {

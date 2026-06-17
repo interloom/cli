@@ -22,13 +22,15 @@ Or grab a prebuilt binary from the [releases](https://github.com/interloom/cli/r
 which always uses http).
 
 The API key is **never** read from a flag. It comes from piped stdin, then
-`INTERLOOM_API_KEY`, then a hidden interactive prompt:
+`INTERLOOM_API_KEY`, then a hidden interactive prompt. When prompting, the
+instance's personal-tokens page is opened in your browser so you can create a
+key, then paste it back:
 
 ```sh
 # Pipe the key (recommended for CI / agents)
 echo "$MY_KEY" | interloom auth login dev
 
-# Or paste it when prompted
+# Opens <base-url>/personal-tokens to create a key, then prompts for it
 interloom auth login
 
 # Verify the credentials and show the authenticated user
