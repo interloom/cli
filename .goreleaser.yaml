@@ -18,11 +18,10 @@ builds:
       - -s -w -X github.com/interloom/cli/cmd.version={{.Version}}
 
 archives:
-  - formats: [tar.gz]
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        formats: [zip]
+  # Ship raw binaries (not tarballs) so npm-binary-releaser can read dist/
+  # without colliding with the per-target build subdirectories.
+  - formats: [binary]
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt

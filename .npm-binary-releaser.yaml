@@ -1,0 +1,15 @@
+# Config for npm-binary-releaser (https://github.com/christophwitzko/npm-binary-releaser).
+# Run after GoReleaser to publish the built binaries to npm.
+#
+# - name (the binary): keeps the installed command as `interloom`
+# - packageName + packageNamePrefix: main package @interloom/cli,
+#   per-platform packages @interloom/cli-<os>-<arch> (optionalDependencies)
+#
+# homepage and repository default from $GITHUB_SERVER_URL / $GITHUB_REPOSITORY.
+name: interloom
+packageName: cli
+packageNamePrefix: "@interloom/"
+inputPath: dist # read the binaries GoReleaser writes to ./dist
+description: "Interloom CLI — manage spaces, cases, notes, files and more"
+license: MIT
+publish: true

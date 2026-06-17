@@ -9,6 +9,10 @@ from scripts and agents.
 ## Install
 
 ```sh
+# npm (installs the right prebuilt binary for your platform)
+npm i -g @interloom/cli
+
+# or with Go
 go install github.com/interloom/cli@latest
 ```
 
