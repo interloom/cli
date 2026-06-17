@@ -1,0 +1,8 @@
+# Config for oapi-codegen. Regenerate with: make generate
+package: api
+output: internal/api/api.gen.go
+generate:
+  models: true
+  client: false
+output-options:
+  skip-prune: true
