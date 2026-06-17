@@ -7,8 +7,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/interloom/cli/internal/client"
 	"github.com/interloom/cli/internal/config"
@@ -189,8 +191,28 @@ func openBrowser(rawURL string) error {
 }
 
 func promptHidden(prompt string) (string, error) {
+	fd := int(os.Stdin.Fd())
 	fmt.Fprint(os.Stderr, prompt)
-	data, err := term.ReadPassword(int(os.Stdin.Fd()))
+
+	// term.ReadPassword disables echo and restores it on return, but a Ctrl-C
+	// kills the process mid-read before that happens, leaving the terminal with
+	// echo off and the cursor hidden. Save the state and restore it on signal.
+	oldState, err := term.GetState(fd)
+	if err != nil {
+		return "", err
+	}
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+	go func() {
+		if _, ok := <-sigCh; ok {
+			_ = term.Restore(fd, oldState)
+			fmt.Fprintln(os.Stderr)
+			os.Exit(130) // 128 + SIGINT
+		}
+	}()
+
+	data, err := term.ReadPassword(fd)
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return "", err
