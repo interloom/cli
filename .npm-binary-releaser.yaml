@@ -4,4 +4,3 @@ packageNamePrefix: "@interloom/"
 inputPath: npm-dist
 description: ""
 license: MIT
-publish: true
