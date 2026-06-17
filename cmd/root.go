@@ -1,0 +1,82 @@
+// Package cmd implements the interloom CLI command tree.
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/interloom/cli/internal/client"
+	"github.com/interloom/cli/internal/config"
+	"github.com/interloom/cli/internal/output"
+	"github.com/spf13/cobra"
+)
+
+var (
+	flagInstance string
+	flagBaseURL  string
+	flagOutput   string
+)
+
+func newRootCmd() *cobra.Command {
+	root := &cobra.Command{
+		Use:   "interloom",
+		Short: "Interloom CLI — manage spaces, cases, notes, files and more",
+		Long: "interloom is an agent-first command line interface for the Interloom REST API.\n" +
+			"Output is JSON by default; errors are a JSON envelope on stderr with stable exit codes.",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
+
+	pf := root.PersistentFlags()
+	pf.StringVarP(&flagInstance, "instance", "i", "", "instance to use (defaults to the current instance)")
+	pf.StringVar(&flagBaseURL, "base-url", "", "override the API base URL")
+	pf.StringVarP(&flagOutput, "output", "o", "json", "output format: json")
+
+	root.AddCommand(
+		newAuthCmd(),
+		newConfigCmd(),
+		newResourceCmd(resource{name: "spaces", singular: "space"}),
+		newResourceCmd(resource{name: "cases", singular: "case", filters: []filter{
+			filterSpaceID,
+			{"parent_case_id", "filter by parent Case ID"},
+			{"assignee_id", "filter by assignee User ID"},
+			filterSort,
+			filterDirection,
+		}}),
+		newResourceCmd(resource{name: "notes", singular: "note", filters: []filter{
+			filterSpaceID,
+			filterCaseID,
+			{"thread_id", "filter by thread ID"},
+			filterSort,
+			filterDirection,
+		}}),
+		newResourceCmd(resource{name: "procedures", singular: "procedure", filters: []filter{
+			filterSpaceID,
+		}}),
+		newResourceCmd(resource{name: "agents", singular: "agent", noDelete: true}),
+		newFilesCmd(),
+		newUsersCmd(),
+		newVersionCmd(),
+	)
+	return root
+}
+
+// Execute runs the CLI and returns a process exit code.
+func Execute() int {
+	if err := newRootCmd().Execute(); err != nil {
+		return output.EmitError(os.Stderr, err)
+	}
+	return output.ExitOK
+}
+
+// newClient resolves credentials and builds an API client.
+func newClient() (*client.Client, error) {
+	if flagOutput != "json" {
+		return nil, fmt.Errorf("unsupported output format %q (only json is supported)", flagOutput)
+	}
+	r, err := config.Resolve(flagInstance, flagBaseURL)
+	if err != nil {
+		return nil, err
+	}
+	return client.New(r.BaseURL, r.APIKey), nil
+}
