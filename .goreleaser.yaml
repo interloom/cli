@@ -18,18 +18,14 @@ builds:
       - -s -w -X github.com/interloom/cli/cmd.version={{.Version}}
 
 archives:
-  # tar.gz (zip on Windows) archives for the GitHub release.
-  - id: targz
-    formats: [tar.gz]
+  # Only tar.gz/zip archives are uploaded to the GitHub release. The raw build
+  # binaries (dist/<name>_<target>/) are staged separately for the npm publish
+  # (see release.yml) and are intentionally not uploaded here.
+  - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         formats: [zip]
-  # Raw binaries, also uploaded to the GitHub release. npm-binary-releaser reads
-  # these from the build subdirs via a staging dir (see release.yml).
-  - id: binary
-    formats: [binary]
-    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
