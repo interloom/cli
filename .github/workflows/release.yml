@@ -30,6 +30,6 @@ jobs:
         run: |
           mkdir -p npm-dist
           cp -r dist/interloom_*/ npm-dist/
-          npx --yes npm-binary-releaser@1.10.1 --publish --package-version "${GITHUB_REF_NAME#v}"
+          npx --yes npm-binary-releaser@1.11.0 --publish --package-version "${GITHUB_REF_NAME#v}"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

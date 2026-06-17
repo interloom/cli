@@ -2,5 +2,5 @@ name: interloom
 packageName: cli
 packageNamePrefix: "@interloom/"
 inputPath: npm-dist
-description: ""
+description: "Interloom CLI"
 license: MIT
