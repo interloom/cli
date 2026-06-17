@@ -1,3 +1,5 @@
 dist/
 build/
 bin/
+npm-dist/
+generated-packages/

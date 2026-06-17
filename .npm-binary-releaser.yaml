@@ -9,7 +9,7 @@
 name: interloom
 packageName: cli
 packageNamePrefix: "@interloom/"
-inputPath: dist # read the binaries GoReleaser writes to ./dist
+inputPath: npm-dist # staged raw binaries (see the "Publish to npm" step in release.yml)
 description: "Interloom CLI — manage spaces, cases, notes, files and more"
 license: MIT
 publish: true

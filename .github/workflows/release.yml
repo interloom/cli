@@ -27,10 +27,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # GoReleaser has no native post-release hook, so publish the binaries that
-      # GoReleaser just built into ./dist to npm as the next step. Config lives
-      # in .npm-binary-releaser.yaml; the version comes from the tag.
+      # GoReleaser just built to npm as the next step. dist/ also contains the
+      # tar.gz/zip archives, so stage just the raw build binaries into npm-dist/
+      # for npm-binary-releaser (config in .npm-binary-releaser.yaml). The
+      # version comes from the tag.
       - name: Publish to npm
         run: |
+          mkdir -p npm-dist
+          cp -r dist/interloom_*/ npm-dist/
           go install github.com/christophwitzko/npm-binary-releaser/cmd/npm-binary-releaser@v1.10.1
           "$(go env GOPATH)/bin/npm-binary-releaser" --package-version "${GITHUB_REF_NAME#v}"
         env:
