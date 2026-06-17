@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  enable:
+    - errorlint
+    - forbidigo
+    - gochecknoinits
+    - gocritic
+    - goconst
+    - gocyclo
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+  settings:
+    gocyclo:
+      min-complexity: 12
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
