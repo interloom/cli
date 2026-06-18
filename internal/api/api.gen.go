@@ -889,6 +889,9 @@ type ListCasesParams struct {
 	// AssigneeId Return cases assigned to this User.
 	AssigneeId *openapi_types.UUID `form:"assignee_id,omitempty" json:"assignee_id,omitempty"`
 
+	// Status Return cases with any of these statuses. Repeat status for multiple values. Supported values are open, started, completed, cancelled, and blocked; unsupported values match no cases.
+	Status *[]string `form:"status,omitempty" json:"status,omitempty"`
+
 	// Sort Field to sort by. Use created_at or updated_at.
 	Sort *ListCasesParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 
