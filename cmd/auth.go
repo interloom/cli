@@ -21,7 +21,7 @@ import (
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
-		Short: "Manage authentication and instances",
+		Short: "Manage authentication and configs",
 	}
 	addConfigNameFlag(cmd)
 	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
@@ -39,7 +39,7 @@ func newAuthLoginCmd() *cobra.Command {
 			"Defaults to app.interloom.com. To target another instance, pass it as an\n" +
 			"argument or via --config-name: a short name (dev), a host (dev.interloom.com),\n" +
 			"or a local address (localhost:8080, always http).\n\n" +
-			"The instance is identified by host and organization, so the same host can\n" +
+			"Each config is identified by host and organization, so the same host can\n" +
 			"hold several organizations side by side (e.g. app-acme, app-beta).\n\n" +
 			"The API key is never read from a flag: pipe it via stdin, set INTERLOOM_API_KEY,\n" +
 			"or paste it when prompted. When prompting, the instance's personal-tokens page\n" +
@@ -82,15 +82,15 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. Persist under the (host, org) identity and make current.
-	name := config.InstanceName(host, orgSlug)
-	if err := config.SaveInstance(name, config.Instance{APIKey: apiKey, BaseURL: baseURL, OrganizationSlug: orgSlug}); err != nil {
+	name := config.Name(host, orgSlug)
+	if err := config.SaveConfig(name, config.Config{APIKey: apiKey, BaseURL: baseURL, OrganizationSlug: orgSlug}); err != nil {
 		return err
 	}
-	if err := config.SetCurrentInstance(name); err != nil {
+	if err := config.SetCurrentConfigName(name); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Logged in to %s as organization %q (instance %q) and set as current.\n", baseURL, orgSlug, name)
+	fmt.Fprintf(os.Stderr, "Logged in to %s as organization %q (config %q) and set as current.\n", baseURL, orgSlug, name)
 	return printResult([]byte(fmt.Sprintf(`{"config_name":%q,"base_url":%q,"organization_slug":%q,"status":"authenticated"}`, name, baseURL, orgSlug)))
 }
 
@@ -140,13 +140,13 @@ func newAuthStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			backfillOrgSlug(r.Instance, user)
+			backfillOrgSlug(r.ConfigName, user)
 			out, err := json.Marshal(struct {
 				ConfigName string          `json:"config_name"`
 				BaseURL    string          `json:"base_url"`
 				Status     string          `json:"status"`
 				User       json.RawMessage `json:"user"`
-			}{r.Instance, r.BaseURL, "ok", user})
+			}{r.ConfigName, r.BaseURL, "ok", user})
 			if err != nil {
 				return err
 			}
@@ -157,8 +157,8 @@ func newAuthStatusCmd() *cobra.Command {
 
 func newAuthLogoutCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "logout [instance]",
-		Short: "Remove a saved instance (defaults to the current one)",
+		Use:   "logout [config-name]",
+		Short: "Remove a saved config (defaults to the current one)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			name := flagConfigName
@@ -166,12 +166,12 @@ func newAuthLogoutCmd() *cobra.Command {
 				name = args[0]
 			}
 			if name == "" {
-				name = config.CurrentInstance()
+				name = config.CurrentConfigName()
 			}
 			if name == "" {
-				return fmt.Errorf("no instance to log out: pass one as an argument")
+				return fmt.Errorf("no config to log out: pass one as an argument")
 			}
-			if err := config.DeleteInstance(name); err != nil {
+			if err := config.DeleteConfig(name); err != nil {
 				return err
 			}
 			return printResult([]byte(fmt.Sprintf(`{"config_name":%q,"status":"logged_out"}`, name)))
@@ -179,7 +179,7 @@ func newAuthLogoutCmd() *cobra.Command {
 	}
 }
 
-// backfillOrgSlug records the organization slug on a stored instance that
+// backfillOrgSlug records the organization slug on a stored config that
 // predates org tracking. The slug is stable, so it is written only when absent.
 // Failures are non-fatal: status should still print even if the file is missing
 // (e.g. credentials came purely from environment variables).
@@ -187,16 +187,16 @@ func backfillOrgSlug(name string, user json.RawMessage) {
 	if name == "" {
 		return
 	}
-	inst, err := config.LoadInstance(name)
-	if err != nil || inst.OrganizationSlug != "" {
+	cfg, err := config.LoadConfig(name)
+	if err != nil || cfg.OrganizationSlug != "" {
 		return
 	}
 	slug, err := orgSlugFromUser(user)
 	if err != nil {
 		return
 	}
-	inst.OrganizationSlug = slug
-	_ = config.SaveInstance(name, inst)
+	cfg.OrganizationSlug = slug
+	_ = config.SaveConfig(name, cfg)
 }
 
 // readAPIKey returns the key from piped stdin, then INTERLOOM_API_KEY, then a

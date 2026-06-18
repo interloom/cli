@@ -1,5 +1,5 @@
-// Package config manages Interloom CLI instances stored under
-// ~/.config/interloom/<instance>.json and resolves the effective
+// Package config manages Interloom CLI configs stored under
+// ~/.config/interloom/<config-name>.json and resolves the effective
 // credentials for a command, honoring flag > env > file precedence.
 package config
 
@@ -26,12 +26,12 @@ const (
 	rootFile      = "config.json"
 )
 
-// Instance is the credential set persisted per instance.
+// Config is the credential set persisted per (host, organization).
 //
-// An instance is identified by the pair (host, organization): the same host
+// A config is identified by the pair (host, organization): the same host
 // may hold several organizations, each in its own file. OrganizationSlug is the
 // stable slug returned by /users/me; it never changes for a given key.
-type Instance struct {
+type Config struct {
 	APIKey           string `json:"api_key"`
 	BaseURL          string `json:"base_url"`
 	OrganizationSlug string `json:"organization_slug,omitempty"`
@@ -53,21 +53,21 @@ func Dir() (string, error) {
 	return filepath.Join(home, ".config", "interloom"), nil
 }
 
-func instancePath(dir, name string) string { return filepath.Join(dir, name+".json") }
+func configPath(dir, name string) string { return filepath.Join(dir, name+".json") }
 
-// InstanceName builds the instance identifier from a normalized host name and an
-// organization slug. Each (host, org) pair is a distinct instance, so the same
-// host can hold several organizations side by side. An empty slug yields the
-// bare host name (used only before an org is known).
-func InstanceName(host, orgSlug string) string {
+// Name builds the config name from a normalized host name and an organization
+// slug. Each (host, org) pair is a distinct config, so the same host can hold
+// several organizations side by side. An empty slug yields the bare host name
+// (used only before an org is known).
+func Name(host, orgSlug string) string {
 	if orgSlug == "" {
 		return host
 	}
 	return host + "-" + orgSlug
 }
 
-// SaveInstance writes the instance file (0600) and ensures the dir exists (0700).
-func SaveInstance(name string, inst Instance) error {
+// SaveConfig writes the config file (0600) and ensures the dir exists (0700).
+func SaveConfig(name string, cfg Config) error {
 	dir, err := Dir()
 	if err != nil {
 		return err
@@ -75,15 +75,15 @@ func SaveInstance(name string, inst Instance) error {
 	if err = os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(inst, "", "  ")
+	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(instancePath(dir, name), append(data, '\n'), 0o600)
+	return os.WriteFile(configPath(dir, name), append(data, '\n'), 0o600)
 }
 
-// ListInstances returns the names of all saved instances, sorted.
-func ListInstances() ([]string, error) {
+// ListConfigs returns the names of all saved configs, sorted.
+func ListConfigs() ([]string, error) {
 	dir, err := Dir()
 	if err != nil {
 		return nil, err
@@ -107,37 +107,37 @@ func ListInstances() ([]string, error) {
 	return names, nil
 }
 
-// DeleteInstance removes a saved instance file, clearing it as current if set.
-func DeleteInstance(name string) error {
+// DeleteConfig removes a saved config file, clearing it as current if set.
+func DeleteConfig(name string) error {
 	dir, err := Dir()
 	if err != nil {
 		return err
 	}
-	if err := os.Remove(instancePath(dir, name)); err != nil {
+	if err := os.Remove(configPath(dir, name)); err != nil {
 		return err
 	}
-	if CurrentInstance() == name {
-		return SetCurrentInstance("")
+	if CurrentConfigName() == name {
+		return SetCurrentConfigName("")
 	}
 	return nil
 }
 
-// LoadInstance reads a stored instance by name.
-func LoadInstance(name string) (Instance, error) {
-	var inst Instance
+// LoadConfig reads a stored config by name.
+func LoadConfig(name string) (Config, error) {
+	var cfg Config
 	dir, err := Dir()
 	if err != nil {
-		return inst, err
+		return cfg, err
 	}
-	data, err := os.ReadFile(instancePath(dir, name))
+	data, err := os.ReadFile(configPath(dir, name))
 	if err != nil {
-		return inst, err
+		return cfg, err
 	}
-	return inst, json.Unmarshal(data, &inst)
+	return cfg, json.Unmarshal(data, &cfg)
 }
 
-// CurrentInstance returns the active instance name, or "" if unset.
-func CurrentInstance() string {
+// CurrentConfigName returns the active config name, or "" if unset.
+func CurrentConfigName() string {
 	dir, err := Dir()
 	if err != nil {
 		return ""
@@ -153,8 +153,8 @@ func CurrentInstance() string {
 	return rc.CurrentConfigName
 }
 
-// SetCurrentInstance records the active instance name.
-func SetCurrentInstance(name string) error {
+// SetCurrentConfigName records the active config name.
+func SetCurrentConfigName(name string) error {
 	dir, err := Dir()
 	if err != nil {
 		return err
@@ -171,30 +171,30 @@ func SetCurrentInstance(name string) error {
 
 // Resolved is the effective configuration for a command invocation.
 type Resolved struct {
-	Instance string
-	BaseURL  string
-	APIKey   string
+	ConfigName string
+	BaseURL    string
+	APIKey     string
 }
 
 // Resolve computes effective credentials.
 //
-//	base URL: --base-url flag > INTERLOOM_BASE_URL > instance file
-//	api key : INTERLOOM_API_KEY > instance file   (never a flag)
+//	base URL: --base-url flag > INTERLOOM_BASE_URL > config file
+//	api key : INTERLOOM_API_KEY > config file   (never a flag)
 //
 // The config is chosen from --config-name flag > INTERLOOM_CONFIG > current.
 func Resolve(flagConfigName, flagBaseURL string) (Resolved, error) {
-	name := firstNonEmpty(flagConfigName, os.Getenv(EnvConfig), CurrentInstance())
+	name := firstNonEmpty(flagConfigName, os.Getenv(EnvConfig), CurrentConfigName())
 
-	var inst Instance
+	var cfg Config
 	if name != "" {
 		// A missing file is not fatal: env vars alone may suffice.
-		inst, _ = LoadInstance(name)
+		cfg, _ = LoadConfig(name)
 	}
 
 	r := Resolved{
-		Instance: name,
-		BaseURL:  firstNonEmpty(flagBaseURL, os.Getenv(EnvBaseURL), inst.BaseURL),
-		APIKey:   firstNonEmpty(os.Getenv(EnvAPIKey), inst.APIKey),
+		ConfigName: name,
+		BaseURL:    firstNonEmpty(flagBaseURL, os.Getenv(EnvBaseURL), cfg.BaseURL),
+		APIKey:     firstNonEmpty(os.Getenv(EnvAPIKey), cfg.APIKey),
 	}
 	if r.BaseURL == "" {
 		return r, fmt.Errorf("no base URL: run `interloom auth login` or set %s", EnvBaseURL)
@@ -214,7 +214,7 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
-// Normalize maps user input to a canonical instance name and base URL.
+// Normalize maps user input to a canonical host name and base URL.
 //
 //	dev                  -> dev,             https://dev.interloom.com
 //	dev.interloom.com    -> dev,             https://dev.interloom.com
@@ -223,7 +223,7 @@ func firstNonEmpty(vals ...string) string {
 func Normalize(input string) (name, baseURL string, err error) {
 	in := strings.TrimSpace(strings.ToLower(input))
 	if in == "" {
-		return "", "", fmt.Errorf("empty instance")
+		return "", "", fmt.Errorf("empty host")
 	}
 
 	scheme := ""
@@ -238,7 +238,7 @@ func Normalize(input string) (name, baseURL string, err error) {
 
 	host, port := splitHostPort(in)
 	if host == "" {
-		return "", "", fmt.Errorf("invalid instance %q", input)
+		return "", "", fmt.Errorf("invalid host %q", input)
 	}
 
 	if isLocal(host) {

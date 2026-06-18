@@ -51,7 +51,7 @@ func TestNormalizeEmpty(t *testing.T) {
 	}
 }
 
-func TestInstanceName(t *testing.T) {
+func TestConfigName(t *testing.T) {
 	cases := []struct {
 		host, slug, want string
 	}{
@@ -62,44 +62,44 @@ func TestInstanceName(t *testing.T) {
 		{appName, "", appName}, // slug unknown
 	}
 	for _, tc := range cases {
-		if got := InstanceName(tc.host, tc.slug); got != tc.want {
-			t.Errorf("InstanceName(%q, %q) = %q, want %q", tc.host, tc.slug, got, tc.want)
+		if got := Name(tc.host, tc.slug); got != tc.want {
+			t.Errorf("Name(%q, %q) = %q, want %q", tc.host, tc.slug, got, tc.want)
 		}
 	}
 }
 
-func TestInstanceRoundtrip(t *testing.T) {
+func TestConfigRoundtrip(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	in := Instance{APIKey: "secret-key", BaseURL: devURL, OrganizationSlug: orgSlug}
-	if err := SaveInstance(devName, in); err != nil {
-		t.Fatalf("SaveInstance: %v", err)
+	in := Config{APIKey: "secret-key", BaseURL: devURL, OrganizationSlug: orgSlug}
+	if err := SaveConfig(devName, in); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
 	}
-	got, err := LoadInstance(devName)
+	got, err := LoadConfig(devName)
 	if err != nil {
-		t.Fatalf("LoadInstance: %v", err)
+		t.Fatalf("LoadConfig: %v", err)
 	}
 	if got != in {
 		t.Errorf("roundtrip = %+v, want %+v", got, in)
 	}
 
-	if cur := CurrentInstance(); cur != "" {
-		t.Errorf("CurrentInstance before set = %q, want empty", cur)
+	if cur := CurrentConfigName(); cur != "" {
+		t.Errorf("CurrentConfigName before set = %q, want empty", cur)
 	}
-	if err := SetCurrentInstance(devName); err != nil {
-		t.Fatalf("SetCurrentInstance: %v", err)
+	if err := SetCurrentConfigName(devName); err != nil {
+		t.Fatalf("SetCurrentConfigName: %v", err)
 	}
-	if cur := CurrentInstance(); cur != devName {
-		t.Errorf("CurrentInstance = %q, want %q", cur, devName)
+	if cur := CurrentConfigName(); cur != devName {
+		t.Errorf("CurrentConfigName = %q, want %q", cur, devName)
 	}
 }
 
 func TestResolvePrecedence(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	if err := SaveInstance(devName, Instance{APIKey: "file-key", BaseURL: devURL}); err != nil {
+	if err := SaveConfig(devName, Config{APIKey: "file-key", BaseURL: devURL}); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetCurrentInstance(devName); err != nil {
+	if err := SetCurrentConfigName(devName); err != nil {
 		t.Fatal(err)
 	}
 

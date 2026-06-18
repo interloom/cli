@@ -23,11 +23,11 @@ func newConfigListCmd() *cobra.Command {
 		Short: "List saved configs",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			names, err := config.ListInstances()
+			names, err := config.ListConfigs()
 			if err != nil {
 				return err
 			}
-			current := config.CurrentInstance()
+			current := config.CurrentConfigName()
 			type item struct {
 				Name             string `json:"name"`
 				BaseURL          string `json:"base_url"`
@@ -36,8 +36,8 @@ func newConfigListCmd() *cobra.Command {
 			}
 			items := make([]item, 0, len(names))
 			for _, n := range names {
-				inst, _ := config.LoadInstance(n)
-				items = append(items, item{Name: n, BaseURL: inst.BaseURL, OrganizationSlug: inst.OrganizationSlug, Current: n == current})
+				cfg, _ := config.LoadConfig(n)
+				items = append(items, item{Name: n, BaseURL: cfg.BaseURL, OrganizationSlug: cfg.OrganizationSlug, Current: n == current})
 			}
 			out, err := json.Marshal(struct {
 				Current string `json:"current"`
@@ -58,11 +58,11 @@ func newConfigUseCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			name := args[0]
-			inst, err := config.LoadInstance(name)
+			cfg, err := config.LoadConfig(name)
 			if err != nil {
 				return fmt.Errorf("config %q not found: run `interloom auth login %s`", name, name)
 			}
-			if err = config.SetCurrentInstance(name); err != nil {
+			if err = config.SetCurrentConfigName(name); err != nil {
 				return err
 			}
 			out, err := json.Marshal(struct {
@@ -70,7 +70,7 @@ func newConfigUseCmd() *cobra.Command {
 				BaseURL          string `json:"base_url"`
 				OrganizationSlug string `json:"organization_slug,omitempty"`
 				Status           string `json:"status"`
-			}{name, inst.BaseURL, inst.OrganizationSlug, "current"})
+			}{name, cfg.BaseURL, cfg.OrganizationSlug, "current"})
 			if err != nil {
 				return err
 			}
@@ -85,16 +85,16 @@ func newConfigCurrentCmd() *cobra.Command {
 		Short: "Print the current config",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			name := config.CurrentInstance()
+			name := config.CurrentConfigName()
 			if name == "" {
 				return fmt.Errorf("no current config: run `interloom auth login` or `interloom config use <config>`")
 			}
-			inst, _ := config.LoadInstance(name)
+			cfg, _ := config.LoadConfig(name)
 			out, err := json.Marshal(struct {
 				Config           string `json:"config"`
 				BaseURL          string `json:"base_url"`
 				OrganizationSlug string `json:"organization_slug,omitempty"`
-			}{name, inst.BaseURL, inst.OrganizationSlug})
+			}{name, cfg.BaseURL, cfg.OrganizationSlug})
 			if err != nil {
 				return err
 			}

@@ -40,19 +40,19 @@ interloom auth login
 # Verify the credentials and show the authenticated user
 interloom auth status
 
-# Remove a saved instance
+# Remove a saved config
 interloom auth logout dev
 ```
 
-Credentials live in `~/.config/interloom/<instance>.json`; the selected instance
+Credentials live in `~/.config/interloom/<config-name>.json`; the selected config
 is tracked in `~/.config/interloom/config.json`.
 
-### Switching instances
+### Switching configs
 
 ```sh
-interloom config list          # list saved instances (marks the current one)
-interloom config use dev       # set the current instance
-interloom config current       # print the current instance
+interloom config list          # list saved configs (marks the current one)
+interloom config use dev       # set the current config
+interloom config current       # print the current config
 ```
 
 ### Environment overrides
