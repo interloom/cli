@@ -63,6 +63,7 @@ func newRootCmd() *cobra.Command {
 		newResourceCmd(resource{name: "agents", singular: "agent", noDelete: true}),
 		newFilesCmd(),
 		newUsersCmd(),
+		newTUICmd(),
 		newVersionCmd(),
 	)
 	return root
