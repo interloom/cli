@@ -42,14 +42,13 @@ func (e CaseStatus) Valid() bool {
 
 // Defines values for GameObjectType.
 const (
-	AGENT          GameObjectType = "AGENT"
-	CASE           GameObjectType = "CASE"
-	FILE           GameObjectType = "FILE"
-	NOTE           GameObjectType = "NOTE"
-	PROCEDURE      GameObjectType = "PROCEDURE"
-	PROCEDURESTAGE GameObjectType = "PROCEDURE_STAGE"
-	SPACE          GameObjectType = "SPACE"
-	USER           GameObjectType = "USER"
+	AGENT     GameObjectType = "AGENT"
+	CASE      GameObjectType = "CASE"
+	FILE      GameObjectType = "FILE"
+	NOTE      GameObjectType = "NOTE"
+	PROCEDURE GameObjectType = "PROCEDURE"
+	SPACE     GameObjectType = "SPACE"
+	USER      GameObjectType = "USER"
 )
 
 // Valid indicates whether the value is a known member of the GameObjectType enum.
@@ -64,8 +63,6 @@ func (e GameObjectType) Valid() bool {
 	case NOTE:
 		return true
 	case PROCEDURE:
-		return true
-	case PROCEDURESTAGE:
 		return true
 	case SPACE:
 		return true
@@ -457,7 +454,7 @@ type ListNotesResponse struct {
 // ListProceduresResponse defines model for ListProceduresResponse.
 type ListProceduresResponse struct {
 	// Data Items in the current page.
-	Data []Procedure `json:"data"`
+	Data []ProcedureSummary `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -536,8 +533,62 @@ type Procedure struct {
 	Id     openapi_types.UUID `json:"id"`
 	Parent *GameObjectLink    `json:"parent,omitempty"`
 
-	// Stages Procedure stage links, in procedure order.
-	Stages *[]GameObjectLink `json:"stages,omitempty"`
+	// Stages Procedure stages, in procedure order.
+	Stages *[]ProcedureStage `json:"stages,omitempty"`
+
+	// Title Human-readable procedure name.
+	Title string `json:"title"`
+
+	// Type Public resource type for the procedure.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the object was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ProcedureStage defines model for ProcedureStage.
+type ProcedureStage struct {
+	Assignee *GameObjectLink `json:"assignee,omitempty"`
+
+	// CreatedAt Timestamp when the stage was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the procedure stage.
+	Id openapi_types.UUID `json:"id"`
+
+	// Instructions Optional instructions for the stage.
+	Instructions *string `json:"instructions,omitempty"`
+
+	// Title Optional human-readable stage title.
+	Title *string `json:"title,omitempty"`
+
+	// UpdatedAt Timestamp when the stage was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ProcedureStagePatchRequest defines model for ProcedureStagePatchRequest.
+type ProcedureStagePatchRequest struct {
+	// AssigneeId User ID assigned to the stage, or null for no assignee.
+	AssigneeId *openapi_types.UUID `json:"assignee_id"`
+
+	// Id Existing stage ID. Omit to create a new stage.
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Instructions Stage instructions, or null for no instructions.
+	Instructions *string `json:"instructions"`
+
+	// Title Stage title, or null for no title.
+	Title *string `json:"title"`
+}
+
+// ProcedureSummary defines model for ProcedureSummary.
+type ProcedureSummary struct {
+	// CreatedAt Timestamp when the object was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the object.
+	Id     openapi_types.UUID `json:"id"`
+	Parent *GameObjectLink    `json:"parent,omitempty"`
 
 	// Title Human-readable procedure name.
 	Title string `json:"title"`
@@ -627,6 +678,9 @@ type UpdateNoteRequest struct {
 
 // UpdateProcedureRequest defines model for UpdateProcedureRequest.
 type UpdateProcedureRequest struct {
+	// Stages Complete replacement list of procedure stages, in desired order. Existing procedure stages omitted from this list are deleted.
+	Stages *[]ProcedureStagePatchRequest `json:"stages,omitempty"`
+
 	// Title Human-readable procedure name.
 	Title *string `json:"title,omitempty"`
 }
