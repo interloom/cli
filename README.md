@@ -39,9 +39,6 @@ interloom auth login
 
 # Verify the credentials and show the authenticated user
 interloom auth status
-
-# Remove a saved config
-interloom auth logout dev
 ```
 
 Credentials live in `~/.config/interloom/<config-name>.json`; the selected config
@@ -53,6 +50,7 @@ is tracked in `~/.config/interloom/config.json`.
 interloom config list          # list saved configs (marks the current one)
 interloom config use dev       # set the current config
 interloom config current       # print the current config
+interloom config delete dev    # remove a saved config (does not revoke the key)
 ```
 
 ### Environment overrides

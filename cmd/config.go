@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 
 	"github.com/interloom/cli/internal/config"
 	"github.com/spf13/cobra"
@@ -13,7 +15,7 @@ func newConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "Manage saved configs",
 	}
-	cmd.AddCommand(newConfigListCmd(), newConfigUseCmd(), newConfigCurrentCmd())
+	cmd.AddCommand(newConfigListCmd(), newConfigUseCmd(), newConfigCurrentCmd(), newConfigDeleteCmd())
 	return cmd
 }
 
@@ -99,6 +101,24 @@ func newConfigCurrentCmd() *cobra.Command {
 				return err
 			}
 			return printResult(out)
+		},
+	}
+}
+
+func newConfigDeleteCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete <config>",
+		Short: "Remove a saved config (does not revoke the API key)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			name := args[0]
+			if err := config.DeleteConfig(name); err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return fmt.Errorf("config %q not found", name)
+				}
+				return err
+			}
+			return printResult([]byte(fmt.Sprintf(`{"config":%q,"status":"deleted"}`, name)))
 		},
 	}
 }

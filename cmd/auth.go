@@ -21,10 +21,10 @@ import (
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
-		Short: "Manage authentication and configs",
+		Short: "Manage authentication",
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
+	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd())
 	return cmd
 }
 
@@ -151,30 +151,6 @@ func newAuthStatusCmd() *cobra.Command {
 				return err
 			}
 			return printResult(out)
-		},
-	}
-}
-
-func newAuthLogoutCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "logout [config-name]",
-		Short: "Remove a saved config (defaults to the current one)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			name := flagConfigName
-			if len(args) == 1 {
-				name = args[0]
-			}
-			if name == "" {
-				name = config.CurrentConfigName()
-			}
-			if name == "" {
-				return fmt.Errorf("no config to log out: pass one as an argument")
-			}
-			if err := config.DeleteConfig(name); err != nil {
-				return err
-			}
-			return printResult([]byte(fmt.Sprintf(`{"config_name":%q,"status":"logged_out"}`, name)))
 		},
 	}
 }
