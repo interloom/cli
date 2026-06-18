@@ -6,7 +6,9 @@
 set -euo pipefail
 
 OAPI_CODEGEN="github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1"
-SPEC_URL="https://dev.interloom.com/api/v1/public/openapi.json"
+# Defaults to dev; override with SPEC_URL to generate from another instance,
+# e.g. SPEC_URL=http://localhost:8000/api/v1/public/openapi.json ./scripts/generate.sh
+SPEC_URL="${SPEC_URL:-https://dev.interloom.com/api/v1/public/openapi.json}"
 SPEC="internal/api/openapi.json"
 SPEC_3_0="build/openapi.v3.0.json"
 

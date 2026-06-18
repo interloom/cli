@@ -324,6 +324,28 @@ type CreateSpaceRequest struct {
 	Name        string  `json:"name"`
 }
 
+// CurrentUser defines model for CurrentUser.
+type CurrentUser struct {
+	// CreatedAt Timestamp when the user was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the user.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsPending True when the user has been invited but has not yet signed in via Zitadel.
+	IsPending bool `json:"is_pending"`
+
+	// Name Display name for the user.
+	Name         string       `json:"name"`
+	Organization Organization `json:"organization"`
+
+	// Type Public resource type for the user.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the user was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // File defines model for File.
 type File struct {
 	AdditionalMetadata *AdditionalMetadata `json:"additional_metadata,omitempty"`
@@ -491,6 +513,18 @@ type Note struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Organization defines model for Organization.
+type Organization struct {
+	// Id Unique identifier for the organization.
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Display name for the organization.
+	Name string `json:"name"`
+
+	// Slug URL-safe slug for the organization.
+	Slug string `json:"slug"`
 }
 
 // Procedure defines model for Procedure.
