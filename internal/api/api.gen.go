@@ -209,6 +209,28 @@ type Agent struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// AgentListItem defines model for AgentListItem.
+type AgentListItem struct {
+	// CreatedAt Timestamp when the object was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the object.
+	Id openapi_types.UUID `json:"id"`
+
+	// Model Effective model used by the agent. If the stored model is null, the configured default model is used.
+	Model string `json:"model"`
+
+	// Name Human-readable agent name.
+	Name   string          `json:"name"`
+	Parent *GameObjectLink `json:"parent,omitempty"`
+
+	// Type Public resource type for the agent.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the object was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Case defines model for Case.
 type Case struct {
 	Assignee *GameObjectLink `json:"assignee,omitempty"`
@@ -238,6 +260,40 @@ type Case struct {
 
 	// Summary Optional generated or user-provided case summary.
 	Summary *string `json:"summary,omitempty"`
+
+	// Tags Tags assigned to the case, represented as simple names.
+	Tags *[]string `json:"tags,omitempty"`
+
+	// Title Human-readable case name.
+	Title string `json:"title"`
+
+	// Type Public resource type for the case.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the object was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// CaseListItem defines model for CaseListItem.
+type CaseListItem struct {
+	Assignee *GameObjectLink `json:"assignee,omitempty"`
+
+	// CompletedAt Timestamp when the case was completed, if completed.
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+
+	// CreatedAt Timestamp when the object was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// DueAt Optional deadline for the case.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// ExternalId Optional caller-provided identifier for linking to an external system.
+	ExternalId *string `json:"external_id,omitempty"`
+
+	// Id Unique identifier for the object.
+	Id     openapi_types.UUID `json:"id"`
+	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Status CaseStatus         `json:"status"`
 
 	// Tags Tags assigned to the case, represented as simple names.
 	Tags *[]string `json:"tags,omitempty"`
@@ -406,7 +462,7 @@ type GameObjectType string
 // ListAgentsResponse defines model for ListAgentsResponse.
 type ListAgentsResponse struct {
 	// Data Items in the current page.
-	Data []Agent `json:"data"`
+	Data []AgentListItem `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -418,7 +474,7 @@ type ListAgentsResponse struct {
 // ListCasesResponse defines model for ListCasesResponse.
 type ListCasesResponse struct {
 	// Data Items in the current page.
-	Data []Case `json:"data"`
+	Data []CaseListItem `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -442,7 +498,7 @@ type ListFilesResponse struct {
 // ListNotesResponse defines model for ListNotesResponse.
 type ListNotesResponse struct {
 	// Data Items in the current page.
-	Data []Note `json:"data"`
+	Data []NoteListItem `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -466,7 +522,7 @@ type ListProceduresResponse struct {
 // ListSpacesResponse defines model for ListSpacesResponse.
 type ListSpacesResponse struct {
 	// Data Items in the current page.
-	Data []Space `json:"data"`
+	Data []SpaceListItem `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -492,6 +548,28 @@ type Note struct {
 	// Body Optional note body.
 	Body *string `json:"body,omitempty"`
 
+	// CreatedAt Timestamp when the object was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the object.
+	Id     openapi_types.UUID `json:"id"`
+	Parent *GameObjectLink    `json:"parent,omitempty"`
+
+	// Tags Tags assigned to the note, represented as simple names.
+	Tags *[]string `json:"tags,omitempty"`
+
+	// Title Human-readable note title.
+	Title string `json:"title"`
+
+	// Type Public resource type for the note.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the object was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// NoteListItem defines model for NoteListItem.
+type NoteListItem struct {
 	// CreatedAt Timestamp when the object was created.
 	CreatedAt time.Time `json:"created_at"`
 
@@ -607,6 +685,31 @@ type Space struct {
 
 	// Description Optional detailed description for the space.
 	Description *string `json:"description,omitempty"`
+
+	// Id Unique identifier for the object.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsPublic Whether the space is visible to the organization.
+	IsPublic bool `json:"is_public"`
+
+	// IsSystem Whether this is a permanent system space.
+	IsSystem bool `json:"is_system"`
+
+	// Name Human-readable space name.
+	Name   string          `json:"name"`
+	Parent *GameObjectLink `json:"parent,omitempty"`
+
+	// Type Public resource type for the space.
+	Type *string `json:"type,omitempty"`
+
+	// UpdatedAt Timestamp when the object was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SpaceListItem defines model for SpaceListItem.
+type SpaceListItem struct {
+	// CreatedAt Timestamp when the object was created.
+	CreatedAt time.Time `json:"created_at"`
 
 	// Id Unique identifier for the object.
 	Id openapi_types.UUID `json:"id"`
