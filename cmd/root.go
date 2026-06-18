@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	flagInstance string
-	flagBaseURL  string
-	flagOutput   string
+	flagConfig  string
+	flagBaseURL string
+	flagOutput  string
 )
 
 func newRootCmd() *cobra.Command {
@@ -28,7 +28,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagInstance, "instance", "i", "", "instance to use (defaults to the current instance)")
+	pf.StringVarP(&flagConfig, "config", "c", "", "config to use (defaults to the current config)")
 	pf.StringVar(&flagBaseURL, "base-url", "", "override the API base URL")
 	pf.StringVarP(&flagOutput, "output", "o", "json", "output format: json")
 
@@ -74,7 +74,7 @@ func newClient() (*client.Client, error) {
 	if flagOutput != "json" {
 		return nil, fmt.Errorf("unsupported output format %q (only json is supported)", flagOutput)
 	}
-	r, err := config.Resolve(flagInstance, flagBaseURL)
+	r, err := config.Resolve(flagConfig, flagBaseURL)
 	if err != nil {
 		return nil, err
 	}

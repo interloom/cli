@@ -16,9 +16,9 @@ import (
 
 // Environment variables. When set, these always override values from config files.
 const (
-	EnvAPIKey   = "INTERLOOM_API_KEY"
-	EnvBaseURL  = "INTERLOOM_BASE_URL"
-	EnvInstance = "INTERLOOM_INSTANCE"
+	EnvAPIKey  = "INTERLOOM_API_KEY"
+	EnvBaseURL = "INTERLOOM_BASE_URL"
+	EnvConfig  = "INTERLOOM_CONFIG"
 )
 
 const (
@@ -181,9 +181,9 @@ type Resolved struct {
 //	base URL: --base-url flag > INTERLOOM_BASE_URL > instance file
 //	api key : INTERLOOM_API_KEY > instance file   (never a flag)
 //
-// The instance is chosen from --instance flag > INTERLOOM_INSTANCE > current.
-func Resolve(flagInstance, flagBaseURL string) (Resolved, error) {
-	name := firstNonEmpty(flagInstance, os.Getenv(EnvInstance), CurrentInstance())
+// The config is chosen from --config flag > INTERLOOM_CONFIG > current.
+func Resolve(flagConfig, flagBaseURL string) (Resolved, error) {
+	name := firstNonEmpty(flagConfig, os.Getenv(EnvConfig), CurrentInstance())
 
 	var inst Instance
 	if name != "" {

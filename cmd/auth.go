@@ -36,7 +36,7 @@ func newAuthLoginCmd() *cobra.Command {
 		Short: "Store an API key for an instance",
 		Long: "Store an API key for an instance.\n\n" +
 			"Defaults to app.interloom.com. To target another instance, pass it as an\n" +
-			"argument or via --instance: a short name (dev), a host (dev.interloom.com),\n" +
+			"argument or via --config: a short name (dev), a host (dev.interloom.com),\n" +
 			"or a local address (localhost:8080, always http).\n\n" +
 			"The instance is identified by host and organization, so the same host can\n" +
 			"hold several organizations side by side (e.g. app-acme, app-beta).\n\n" +
@@ -53,7 +53,7 @@ func newAuthLoginCmd() *cobra.Command {
 }
 
 func runAuthLogin(cmd *cobra.Command, args []string) error {
-	// 1. Resolve the host (arg > --instance > default).
+	// 1. Resolve the host (arg > --config > default).
 	host, baseURL, err := config.Normalize(loginInstanceInput(args))
 	if err != nil {
 		return err
@@ -109,17 +109,17 @@ func orgSlugFromUser(user json.RawMessage) (string, error) {
 	return me.Organization.Slug, nil
 }
 
-// defaultLoginInstance is used when no instance is given as an argument or via --instance.
+// defaultLoginInstance is used when no instance is given as an argument or via --config.
 const defaultLoginInstance = "app.interloom.com"
 
-// loginInstanceInput resolves the instance string: positional arg > --instance
+// loginInstanceInput resolves the instance string: positional arg > --config
 // flag > default. The user is never prompted.
 func loginInstanceInput(args []string) string {
 	if len(args) == 1 {
 		return args[0]
 	}
-	if flagInstance != "" {
-		return flagInstance
+	if flagConfig != "" {
+		return flagConfig
 	}
 	return defaultLoginInstance
 }
@@ -130,7 +130,7 @@ func newAuthStatusCmd() *cobra.Command {
 		Short: "Verify the current credentials and show the authenticated user",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			r, err := config.Resolve(flagInstance, flagBaseURL)
+			r, err := config.Resolve(flagConfig, flagBaseURL)
 			if err != nil {
 				return err
 			}
@@ -160,7 +160,7 @@ func newAuthLogoutCmd() *cobra.Command {
 		Short: "Remove a saved instance (defaults to the current one)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			name := flagInstance
+			name := flagConfig
 			if len(args) == 1 {
 				name = args[0]
 			}
