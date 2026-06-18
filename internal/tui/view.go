@@ -270,26 +270,44 @@ func (m model) View() string {
 	)
 }
 
-// introPulse cycles the splash logo through brand shades for a soft glow.
-var introPulse = []lipgloss.Color{cDim, cMuted, cBrand, cBrandHi, cAccent, cBrandHi, cBrand, cMuted}
+// ---- intro animation helpers ----
+//
+// The splash is fully time-based: every element is a continuous function of the
+// elapsed time t (seconds), so motion stays smooth at any frame rate and loops
+// seamlessly until the user presses Enter.
 
-// introHint is a smooth grey "breathing" ramp for the press-enter hint: it
-// fades up from a dim grey to a soft grey and back, one shade per frame.
-var introHint = breatheRamp("#4B5563", "#9CA3AF", 18)
+// clamp01 constrains x to the unit interval [0, 1].
+func clamp01(x float64) float64 {
+	switch {
+	case x < 0:
+		return 0
+	case x > 1:
+		return 1
+	default:
+		return x
+	}
+}
 
-// breatheRamp builds a ping-pong gradient between two "#RRGGBB" colors
-// (from→to→from) so that stepping through it one entry per frame produces a
-// smooth pulse.
-func breatheRamp(from, to string, steps int) []lipgloss.Color {
-	up := make([]lipgloss.Color, steps)
-	for i := range up {
-		up[i] = lerpHex(from, to, float64(i)/float64(steps-1))
+// easeOutCubic eases a 0→1 progress so motion decelerates into place.
+func easeOutCubic(t float64) float64 {
+	u := 1 - t
+	return 1 - u*u*u
+}
+
+// gradientHex interpolates across evenly-spaced "#RRGGBB" stops at t in [0,1].
+func gradientHex(stops []string, t float64) string {
+	switch {
+	case t <= 0:
+		return stops[0]
+	case t >= 1:
+		return stops[len(stops)-1]
 	}
-	ramp := append([]lipgloss.Color{}, up...)
-	for i := steps - 2; i > 0; i-- { // mirror back down, skipping the endpoints
-		ramp = append(ramp, up[i])
+	seg := t * float64(len(stops)-1)
+	i := int(seg)
+	if i >= len(stops)-1 {
+		return stops[len(stops)-1]
 	}
-	return ramp
+	return string(lerpHex(stops[i], stops[i+1], seg-float64(i)))
 }
 
 // lerpHex linearly interpolates between two "#RRGGBB" colors at t in [0,1].
@@ -306,23 +324,77 @@ func hexRGB(s string) (r, g, b int) {
 	return int(v>>16) & 0xFF, int(v>>8) & 0xFF, int(v) & 0xFF
 }
 
-// renderIntro draws the animated startup splash, centered in the terminal.
-// The wordmark resolves letter-by-letter out of dim dots, a teal highlight
-// sweeps across it, an accent rule grows from the center, and the tagline and
-// loading line fade in — all driven by m.introFrame.
+// glyphStyle paints a single bold splash glyph in the given hex color.
+func glyphStyle(hex string) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Bold(true)
+}
+
+// renderIntro draws the animated startup splash, centered in the terminal: the
+// logo fades up with a sheen sweeping across it, the wordmark resolves letter by
+// letter with a looping shimmer, an accent rule grows out, and the tagline and
+// loading hint ease in — all continuous functions of elapsed time.
 func (m model) renderIntro() string {
-	const word = "interloom"
-	letters := []rune(word)
-	f := m.introFrame
+	t := float64(m.introFrame) * introInterval.Seconds()
+	wordmark, wordW := renderWordmark(t)
+	block := lipgloss.JoinVertical(
+		lipgloss.Center,
+		renderLogoSheen(t), "",
+		wordmark, renderRule(t, wordW), "",
+		renderTagline(t), "",
+		m.introLoading(t),
+	)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, block)
+}
 
-	revealed := clamp(f-1, 0, len(letters)) // one letter per frame after a beat
+// renderLogoSheen draws the half-block logo as a steady violet that eases up
+// from dark on first paint, with a faint highlight slowly drifting across it.
+// Every line is padded to the logo's full width so it centers as one block.
+func renderLogoSheen(t float64) string {
+	lines := strings.Split(logoArt, "\n")
+	w := 0
+	for _, ln := range lines {
+		if n := len([]rune(ln)); n > w {
+			w = n
+		}
+	}
+	rev := easeOutCubic(clamp01(t / 1.1)) // gentle fade-in envelope
+	const period = 5.0
+	hx := -0.3 + math.Mod(t, period)/period*1.6 // highlight center drifts across with margins
+	out := make([]string, len(lines))
+	for li, ln := range lines {
+		runes := []rune(ln)
+		var b strings.Builder
+		for x := 0; x < w; x++ {
+			if x >= len(runes) || runes[x] == ' ' {
+				b.WriteByte(' ')
+				continue
+			}
+			base := gradientHex([]string{"#2E2E4A", string(cBrand)}, rev) // dark → brand fade-in
+			d := float64(x)/float64(w-1) - hx
+			hi := math.Exp(-(d * d) / (2 * 0.1 * 0.1)) // defined highlight band
+			hex := string(lerpHex(base, "#E6DEFF", 0.85*hi*rev))
+			b.WriteString(glyphStyle(hex).Render(string(runes[x])))
+		}
+		out[li] = b.String()
+	}
+	return strings.Join(out, "\n")
+}
 
-	// Shimmer position once fully revealed. After the first pass it loops with a
-	// short gap so the wordmark keeps glinting while we wait for Enter.
-	sweep := f - (len(letters) + 3)
-	if revealComplete := f >= len(letters)+3; revealComplete {
-		cycle := len(letters) + 8
-		sweep = (f - (len(letters) + 3)) % cycle
+// wordRevealStops emerge each letter from dim, with a faint glow, then settle.
+var wordRevealStops = []string{string(cBorder), string(cBrandHi), string(cBrand)}
+
+// renderWordmark resolves "interloom" letter by letter out of dim dots; once
+// settled a faint highlight drifts across it on a slow loop. Unrevealed letters
+// render as dots so the wordmark never changes width (no horizontal jitter).
+func renderWordmark(t float64) (string, int) {
+	letters := []rune("interloom")
+	const start, per, fade = 0.7, 0.1, 0.4
+	settle := start + float64(len(letters)-1)*per + fade
+
+	sweepPos := -5.0 // off-screen until the shimmer begins
+	if t > settle+0.5 {
+		const sweepPeriod = 6.0
+		sweepPos = math.Mod(t-settle-0.5, sweepPeriod)/sweepPeriod*float64(len(letters)+6) - 3
 	}
 
 	var b strings.Builder
@@ -330,57 +402,58 @@ func (m model) renderIntro() string {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
-		switch {
-		case i >= revealed:
+		lp := clamp01((t - start - float64(i)*per) / fade)
+		if lp <= 0 {
 			b.WriteString(dimStyle.Render("·"))
-		case i == revealed-1 && revealed < len(letters):
-			b.WriteString(introLetter(r, cBrandHi)) // freshly revealed letter glows
-		case i == sweep || i == sweep-1:
-			b.WriteString(introLetter(r, cAccent)) // shimmer sweep
-		default:
-			b.WriteString(introLetter(r, cBrand))
+			continue
 		}
+		hex := gradientHex(wordRevealStops, lp)
+		if lp >= 1 {
+			d := float64(i) - sweepPos
+			sh := math.Exp(-(d * d) / (2 * 0.9 * 0.9))
+			hex = string(lerpHex(string(cBrand), "#E6DEFF", 0.9*sh))
+		}
+		b.WriteString(glyphStyle(hex).Render(string(r)))
 	}
-	wordmark := b.String()
-	wordW := lipglossWidth(wordmark)
+	s := b.String()
+	return s, lipglossWidth(s)
+}
 
-	logo := lipgloss.NewStyle().Foreground(introPulse[(f/3)%len(introPulse)]).
-		Bold(true).Render(logoArt)
-
-	ruleLen := clamp((f-4)*2, 0, wordW) // grows from the center outward
-	rule := brandSt.Render(strings.Repeat("─", ruleLen))
-
-	tagline := ""
-	if f >= len(letters)+2 {
-		ramp := []lipgloss.Color{cBorder, cDim, cMuted}
-		ti := clamp((f-(len(letters)+2))/2, 0, len(ramp)-1)
-		tagline = lipgloss.NewStyle().Foreground(ramp[ti]).
-			Render("Supercharged Operations")
+// renderRule grows an accent underline out from the center to the wordmark width.
+func renderRule(t float64, wordW int) string {
+	const start, dur = 1.0, 0.6
+	p := easeOutCubic(clamp01((t - start) / dur))
+	n := int(math.Round(p * float64(wordW)))
+	if n <= 0 {
+		return ""
 	}
+	hex := gradientHex([]string{string(cBorder), string(cBrand)}, p)
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(strings.Repeat("─", n))
+}
 
-	block := lipgloss.JoinVertical(
-		lipgloss.Center,
-		logo, "", wordmark, rule, "", tagline, "", m.introLoading(f),
-	)
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, block)
+// renderTagline fades the tagline up from the background once the mark has set.
+func renderTagline(t float64) string {
+	const start, dur = 1.45, 0.6
+	p := clamp01((t - start) / dur)
+	if p <= 0 {
+		return ""
+	}
+	hex := gradientHex([]string{string(cBorder), string(cDim), string(cMuted)}, p)
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("Supercharged Operations")
 }
 
 // introLoading renders the splash's bottom status line: a spinner while the
-// workspace loads, then a gently pulsing "press enter" hint once it is ready.
-func (m model) introLoading(f int) string {
-	if f < 4 {
+// workspace loads, then a softly breathing "press enter" hint once it is ready.
+func (m model) introLoading(t float64) string {
+	if t < 0.5 {
 		return ""
 	}
 	if m.sp.loading || m.sp.len() == 0 {
 		return m.spin.View() + mutedSt.Render(" loading workspace…")
 	}
-	// Step one shade per frame through the breathing ramp for a smooth pulse.
-	return lipgloss.NewStyle().Foreground(introHint[f%len(introHint)]).
-		Render("press enter to continue")
-}
-
-func introLetter(r rune, c lipgloss.Color) string {
-	return lipgloss.NewStyle().Foreground(c).Bold(true).Render(string(r))
+	v := 0.5 - 0.5*math.Cos(t*2.2) // continuous grey breathing
+	hex := gradientHex([]string{"#4B5563", "#9CA3AF"}, v)
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("press enter to continue")
 }
 
 func (m model) renderHeader() string {

@@ -25,13 +25,23 @@ var (
 	cCancelled = cDim
 )
 
-// logoArt is the interloom brand mark in ASCII: outer chevrons ❯ ❮ drawing the
-// inner threads )( together on a loom. Every line is the same display width so
-// it centers cleanly.
-const logoArt = "╲   ╲ ╱   ╱\n" +
-	" ╲  │ │  ╱ \n" +
-	" ╱  │ │  ╲ \n" +
-	"╱   ╱ ╲   ╲"
+// logoArt is the interloom brand mark rendered as a half-block silhouette of
+// the real logo: two inward chevrons > < framing the loom's twin curved
+// threads. It is rasterized from the brand SVG so it reads as the filled mark
+// rather than thin strokes.
+const logoArt = "       ▄▄▄     ▄▄\n" +
+	"      ████     ████\n" +
+	"       ████   ████\n" +
+	" ▄▄    ▀███   ███     ▄▄\n" +
+	"█████▄  ███▄ ████  ▄█████\n" +
+	"▀▀▀████▄ ███ ███ ▄████▀▀\n" +
+	"    ▀███ ███ ███ ███\n" +
+	"  ▄▄████ ███ ███ ████▄▄\n" +
+	"██████▀ ▄██▀ ███▄ ▀██████\n" +
+	"▀█▀▀   ▄███  ▀███    ▀▀█▀\n" +
+	"       ████   ████\n" +
+	"      ▄███    ▀███▄\n" +
+	"      ▀▀██     ██▀▀"
 
 // logoMark is the compact one-line mark used in the header.
 const logoMark = ">)(<"

@@ -72,10 +72,10 @@ const (
 	phaseCase
 )
 
-// Intro animation timing: a frame tick every introInterval (kept slow for a
-// calm splash). The animation runs indefinitely (the wordmark reveal plays
-// once, then a shimmer and logo pulse loop) until the user presses Enter.
-const introInterval = 70 * time.Millisecond
+// Intro animation timing: a high frame rate so the time-based splash animation
+// (eased fade-ins, a sheen sweeping the logo, a per-letter reveal and looping
+// shimmer) stays fluid. The animation runs indefinitely until Enter is pressed.
+const introInterval = 33 * time.Millisecond // ~30fps
 
 // Common key names reused across handlers.
 const (
