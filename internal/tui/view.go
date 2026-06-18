@@ -694,6 +694,8 @@ func (m model) appendMoreCue(lines []string, c colSpec, innerW, visRows int) []s
 
 // overlayRight right-aligns cue onto line, truncating line so the cue always
 // fits within width w. Used to keep a "more below" hint visible on a full row.
+// Rows arrive padded with trailing spaces, so an ellipsis is only added when
+// real content (not padding) is clipped — otherwise the trim is silent.
 func overlayRight(line, cue string, w int) string {
 	if w <= 0 {
 		return ""
@@ -702,7 +704,13 @@ func overlayRight(line, cue string, w int) string {
 	if cueW >= w {
 		return truncate(cue, w)
 	}
-	left := truncate(line, w-cueW-1)
+	avail := w - cueW - 1 // reserve at least one space before the cue
+	var left string
+	if lipglossWidth(strings.TrimRight(ansi.Strip(line), " ")) > avail {
+		left = truncate(line, avail) // real content clipped → ellipsis
+	} else {
+		left = ansi.Truncate(line, avail, "") // only padding clipped → silent
+	}
 	gap := w - lipglossWidth(left) - cueW
 	if gap < 1 {
 		gap = 1
