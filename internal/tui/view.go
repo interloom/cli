@@ -54,32 +54,48 @@ func (m model) columnWidths(w int) []int {
 	return []int{a, w - a}       // cases takes the rest
 }
 
+// layoutHeader/layoutFooter/layoutMinBox are the fixed costs of the chrome. A
+// bordered pane needs minBox lines (2 borders + a title + at least one row).
+const (
+	layoutHeaderH = 3
+	layoutFooterH = 1
+	layoutMinBox  = 4
+)
+
 func (m model) layout() layoutInfo {
 	w, h := m.width, m.height
 	colW := m.columnWidths(w)
 
-	const headerH, footerH = 3, 1
-	bodyH := h - headerH - footerH
-	if bodyH < 8 {
-		bodyH = 8
+	bodyH := h - layoutHeaderH - layoutFooterH
+	if bodyH < 0 {
+		bodyH = 0
 	}
-	colsH := bodyH * 42 / 100
-	if colsH < 7 {
-		colsH = 7
+
+	// Partition the body between the list columns (top) and the detail pane
+	// (bottom). Both are bordered boxes, so colsH+detailH must equal bodyH
+	// exactly — otherwise the view renders more lines than the terminal has,
+	// which scrolls the top off and desyncs the renderer (stale/duplicated
+	// rows that only a resize clears).
+	var colsH, detailH int
+	if bodyH < 2*layoutMinBox {
+		// Not enough room for two panes: give it all to the columns.
+		colsH, detailH = bodyH, 0
+	} else {
+		colsH = bodyH * 45 / 100
+		if colsH < layoutMinBox {
+			colsH = layoutMinBox
+		}
+		if bodyH-colsH < layoutMinBox {
+			colsH = bodyH - layoutMinBox
+		}
+		detailH = bodyH - colsH
 	}
-	if bodyH-colsH < 6 {
-		colsH = bodyH - 6
-	}
-	if colsH < 5 {
-		colsH = bodyH
-	}
-	detailH := bodyH - colsH
 
 	li := layoutInfo{
 		colW:      colW,
-		colTop:    headerH,
+		colTop:    layoutHeaderH,
 		colsH:     colsH,
-		detailTop: headerH + colsH,
+		detailTop: layoutHeaderH + colsH,
 		detailH:   detailH,
 	}
 	li.detailInnerW = max(10, w-4)
@@ -257,17 +273,23 @@ func (m model) View() string {
 		return m.renderConfigPicker()
 	}
 	l := m.layout()
-	bottom := m.renderDetail(l)
-	if m.debug {
-		bottom = m.renderDebugPanel(l)
+	if l.colsH < 3 {
+		// Too short to render a usable pane; show a centered notice that fills
+		// the screen exactly (no overflow).
+		msg := mutedSt.Render("⌜ terminal too small ⌟")
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, msg)
 	}
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.renderHeader(),
-		m.renderColumns(l),
-		bottom,
-		m.renderFooter(),
-	)
+
+	parts := []string{m.renderHeader(), m.renderColumns(l)}
+	if l.detailH > 0 { // the detail pane is dropped when the body is too short
+		bottom := m.renderDetail(l)
+		if m.debug {
+			bottom = m.renderDebugPanel(l)
+		}
+		parts = append(parts, bottom)
+	}
+	parts = append(parts, m.renderFooter())
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
 // ---- intro animation helpers ----
@@ -783,8 +805,10 @@ func (m model) renderFooter() string {
 	for _, h := range hints {
 		parts = append(parts, helpKey.Render(h[0])+" "+helpDesc.Render(h[1]))
 	}
+	// Keep the footer to a single line: truncating (rather than wrapping to a
+	// second line) preserves the fixed footer height the layout assumes.
 	line := " " + strings.Join(parts, helpSep)
-	return lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Render(line)
+	return truncate(line, m.width)
 }
 
 // ---- config switcher modal ----
