@@ -90,6 +90,7 @@ Request bodies for `create`/`update` come from `--data/-d` (inline JSON),
 
 ```sh
 interloom cases list --space_id <id> --sort created_at --direction desc
+interloom cases list --status open --status started   # repeat for multiple statuses
 interloom cases list --limit 50 --cursor <next_cursor>
 interloom notes list --all          # fetch every page into one list
 ```
@@ -99,7 +100,7 @@ Available list filters per resource:
 | Resource     | Filters                                                       |
 | ------------ | ------------------------------------------------------------- |
 | `spaces`     | —                                                             |
-| `cases`      | `space_id`, `parent_case_id`, `assignee_id`, `sort`, `direction` |
+| `cases`      | `space_id`, `parent_case_id`, `assignee_id`, `status` (repeatable), `sort`, `direction` |
 | `notes`      | `space_id`, `case_id`, `thread_id`, `sort`, `direction`       |
 | `procedures` | `space_id`                                                    |
 | `files`      | `space_id`, `case_id`, `sort`, `direction`                    |

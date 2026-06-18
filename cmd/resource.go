@@ -9,15 +9,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// filter is a string query parameter exposed as a list flag.
-type filter struct{ name, usage string }
+// filter is a query parameter exposed as a list flag. When multi is set it is a
+// repeatable string-slice flag sent as repeated query params.
+type filter struct {
+	name  string
+	usage string
+	multi bool
+}
 
 // Common list filters reused across resources.
 var (
-	filterSpaceID   = filter{"space_id", "filter by Space ID"}
-	filterCaseID    = filter{"case_id", "filter by Case ID"}
-	filterSort      = filter{"sort", "sort field: created_at or updated_at"}
-	filterDirection = filter{"direction", "sort direction: asc or desc"}
+	filterSpaceID   = filter{name: "space_id", usage: "filter by Space ID"}
+	filterCaseID    = filter{name: "case_id", usage: "filter by Case ID"}
+	filterSort      = filter{name: "sort", usage: "sort field: created_at or updated_at"}
+	filterDirection = filter{name: "direction", usage: "sort direction: asc or desc"}
 )
 
 // resource describes a uniform REST resource. The same five verbs
@@ -52,6 +57,34 @@ func newResourceCmd(r resource) *cobra.Command {
 	return cmd
 }
 
+// listQuery builds the query string for a list call from the paging flags and
+// the resource's filters (single-value or repeatable).
+func (r resource) listQuery(cmd *cobra.Command) url.Values {
+	q := url.Values{}
+	if cmd.Flags().Changed("limit") {
+		limit, _ := cmd.Flags().GetInt("limit")
+		q.Set("limit", fmt.Sprint(limit))
+	}
+	if cur, _ := cmd.Flags().GetString("cursor"); cur != "" {
+		q.Set("cursor", cur)
+	}
+	for _, f := range r.filters {
+		if f.multi {
+			vals, _ := cmd.Flags().GetStringSlice(f.name)
+			for _, v := range vals {
+				if v != "" {
+					q.Add(f.name, v)
+				}
+			}
+			continue
+		}
+		if v, _ := cmd.Flags().GetString(f.name); v != "" {
+			q.Set(f.name, v)
+		}
+	}
+	return q
+}
+
 func (r resource) listCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -62,19 +95,7 @@ func (r resource) listCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			q := url.Values{}
-			if cmd.Flags().Changed("limit") {
-				limit, _ := cmd.Flags().GetInt("limit")
-				q.Set("limit", fmt.Sprint(limit))
-			}
-			if cur, _ := cmd.Flags().GetString("cursor"); cur != "" {
-				q.Set("cursor", cur)
-			}
-			for _, f := range r.filters {
-				if v, _ := cmd.Flags().GetString(f.name); v != "" {
-					q.Set(f.name, v)
-				}
-			}
+			q := r.listQuery(cmd)
 			all, _ := cmd.Flags().GetBool("all")
 			var raw []byte
 			if all {
@@ -92,7 +113,11 @@ func (r resource) listCmd() *cobra.Command {
 	cmd.Flags().String("cursor", "", "pagination cursor from a previous next_cursor")
 	cmd.Flags().Bool("all", false, "fetch all pages and aggregate into a single list")
 	for _, f := range r.filters {
-		cmd.Flags().String(f.name, "", f.usage)
+		if f.multi {
+			cmd.Flags().StringSlice(f.name, nil, f.usage)
+		} else {
+			cmd.Flags().String(f.name, "", f.usage)
+		}
 	}
 	return cmd
 }
