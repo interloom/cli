@@ -27,55 +27,86 @@ func newAuthCmd() *cobra.Command {
 	return cmd
 }
 
+// flagOrgSlug scopes the personal-tokens page opened during interactive login.
+var flagOrgSlug string
+
 func newAuthLoginCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "login [instance]",
 		Short: "Store an API key for an instance",
 		Long: "Store an API key for an instance.\n\n" +
 			"Defaults to app.interloom.com. To target another instance, pass it as an\n" +
 			"argument or via --instance: a short name (dev), a host (dev.interloom.com),\n" +
 			"or a local address (localhost:8080, always http).\n\n" +
+			"The instance is identified by host and organization, so the same host can\n" +
+			"hold several organizations side by side (e.g. app-acme, app-beta).\n\n" +
 			"The API key is never read from a flag: pipe it via stdin, set INTERLOOM_API_KEY,\n" +
 			"or paste it when prompted. When prompting, the instance's personal-tokens page\n" +
-			"is opened in your browser so you can create a key.",
+			"is opened in your browser so you can create a key; pass --organization-slug to\n" +
+			"open that organization's page (/<slug>/personal-tokens).",
 		Args: cobra.MaximumNArgs(1),
 		RunE: runAuthLogin,
 	}
+	cmd.Flags().StringVar(&flagOrgSlug, "organization-slug", "",
+		"organization slug used to scope the token-creation page opened in the browser")
+	return cmd
 }
 
 func runAuthLogin(cmd *cobra.Command, args []string) error {
-	// 1. Resolve the instance (arg > --instance > default).
-	name, baseURL, err := config.Normalize(loginInstanceInput(args))
+	// 1. Resolve the host (arg > --instance > default).
+	host, baseURL, err := config.Normalize(loginInstanceInput(args))
 	if err != nil {
 		return err
 	}
 
 	// 2. Resolve the API key (piped stdin > env > hidden prompt). Never a flag.
-	apiKey, err := readAPIKey(baseURL)
+	apiKey, err := readAPIKey(baseURL, flagOrgSlug)
 	if err != nil {
 		return err
 	}
 
-	// 3. Verify the key against /users/me before persisting anything.
+	// 3. Verify the key against /users/me and learn the key's organization.
 	c := client.New(baseURL, apiKey)
-	if _, err := c.Get(cmd.Context(), "users", "me"); err != nil {
+	user, err := c.Get(cmd.Context(), "users", "me")
+	if err != nil {
 		var apiErr *client.APIError
 		if errors.As(err, &apiErr) && (apiErr.StatusCode == 401 || apiErr.StatusCode == 403) {
 			return fmt.Errorf("authentication failed for %s: invalid API key", baseURL)
 		}
 		return fmt.Errorf("could not reach %s: %w", baseURL, err)
 	}
+	orgSlug, err := orgSlugFromUser(user)
+	if err != nil {
+		return err
+	}
 
-	// 4. Persist and make current.
-	if err := config.SaveInstance(name, config.Instance{APIKey: apiKey, BaseURL: baseURL}); err != nil {
+	// 4. Persist under the (host, org) identity and make current.
+	name := config.InstanceName(host, orgSlug)
+	if err := config.SaveInstance(name, config.Instance{APIKey: apiKey, BaseURL: baseURL, OrganizationSlug: orgSlug}); err != nil {
 		return err
 	}
 	if err := config.SetCurrentInstance(name); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Logged in to %s (instance %q) and set as current.\n", baseURL, name)
-	return printResult([]byte(fmt.Sprintf(`{"instance":%q,"base_url":%q,"status":"authenticated"}`, name, baseURL)))
+	fmt.Fprintf(os.Stderr, "Logged in to %s as organization %q (instance %q) and set as current.\n", baseURL, orgSlug, name)
+	return printResult([]byte(fmt.Sprintf(`{"instance":%q,"base_url":%q,"organization_slug":%q,"status":"authenticated"}`, name, baseURL, orgSlug)))
+}
+
+// orgSlugFromUser extracts the organization slug from a /users/me response.
+func orgSlugFromUser(user json.RawMessage) (string, error) {
+	var me struct {
+		Organization struct {
+			Slug string `json:"slug"`
+		} `json:"organization"`
+	}
+	if err := json.Unmarshal(user, &me); err != nil {
+		return "", fmt.Errorf("parse /users/me response: %w", err)
+	}
+	if me.Organization.Slug == "" {
+		return "", fmt.Errorf("no organization in /users/me response")
+	}
+	return me.Organization.Slug, nil
 }
 
 // defaultLoginInstance is used when no instance is given as an argument or via --instance.
@@ -108,6 +139,7 @@ func newAuthStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			backfillOrgSlug(r.Instance, user)
 			out, err := json.Marshal(struct {
 				Instance string          `json:"instance"`
 				BaseURL  string          `json:"base_url"`
@@ -146,11 +178,32 @@ func newAuthLogoutCmd() *cobra.Command {
 	}
 }
 
+// backfillOrgSlug records the organization slug on a stored instance that
+// predates org tracking. The slug is stable, so it is written only when absent.
+// Failures are non-fatal: status should still print even if the file is missing
+// (e.g. credentials came purely from environment variables).
+func backfillOrgSlug(name string, user json.RawMessage) {
+	if name == "" {
+		return
+	}
+	inst, err := config.LoadInstance(name)
+	if err != nil || inst.OrganizationSlug != "" {
+		return
+	}
+	slug, err := orgSlugFromUser(user)
+	if err != nil {
+		return
+	}
+	inst.OrganizationSlug = slug
+	_ = config.SaveInstance(name, inst)
+}
+
 // readAPIKey returns the key from piped stdin, then INTERLOOM_API_KEY, then a
 // hidden interactive prompt. It never accepts the key from a flag. When
 // prompting interactively it first opens the instance's personal-tokens page so
-// the user can create a key.
-func readAPIKey(baseURL string) (string, error) {
+// the user can create a key; orgSlug, when set, scopes that page to the
+// organization (/<slug>/personal-tokens).
+func readAPIKey(baseURL, orgSlug string) (string, error) {
 	if !stdinIsTTY() {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -164,7 +217,7 @@ func readAPIKey(baseURL string) (string, error) {
 		return key, nil
 	}
 	if stdinIsTTY() {
-		tokenURL := strings.TrimRight(baseURL, "/") + "/personal-tokens?autoCreate=true&name=Interloom%20CLI"
+		tokenURL := tokenPageURL(baseURL, orgSlug)
 		if err := openBrowser(tokenURL); err != nil {
 			fmt.Fprintf(os.Stderr, "Open this page to create an API key:\n  %s\n\n", tokenURL)
 		} else {
@@ -173,6 +226,16 @@ func readAPIKey(baseURL string) (string, error) {
 		return promptHidden("Paste your API key: ")
 	}
 	return "", fmt.Errorf("no API key: pipe it via stdin or set %s", config.EnvAPIKey)
+}
+
+// tokenPageURL builds the personal-tokens page URL, optionally scoped to an
+// organization slug: <base>/personal-tokens or <base>/<slug>/personal-tokens.
+func tokenPageURL(baseURL, orgSlug string) string {
+	base := strings.TrimRight(baseURL, "/")
+	if orgSlug != "" {
+		base += "/" + orgSlug
+	}
+	return base + "/personal-tokens?autoCreate=true&name=Interloom%20CLI"
 }
 
 // openBrowser opens rawURL in the user's default browser.

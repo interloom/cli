@@ -7,6 +7,8 @@ const (
 	devURL    = "https://dev.interloom.com"
 	localURL  = "http://localhost:8080"
 	localName = "localhost-8080"
+	orgSlug   = "acme"
+	appName   = "app"
 )
 
 func TestNormalize(t *testing.T) {
@@ -49,10 +51,27 @@ func TestNormalizeEmpty(t *testing.T) {
 	}
 }
 
+func TestInstanceName(t *testing.T) {
+	cases := []struct {
+		host, slug, want string
+	}{
+		{appName, orgSlug, "app-acme"},
+		{appName, "beta", "app-beta"},
+		{devName, "test-org", "dev-test-org"},
+		{localName, orgSlug, "localhost-8080-acme"},
+		{appName, "", appName}, // slug unknown
+	}
+	for _, tc := range cases {
+		if got := InstanceName(tc.host, tc.slug); got != tc.want {
+			t.Errorf("InstanceName(%q, %q) = %q, want %q", tc.host, tc.slug, got, tc.want)
+		}
+	}
+}
+
 func TestInstanceRoundtrip(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	in := Instance{APIKey: "secret-key", BaseURL: devURL}
+	in := Instance{APIKey: "secret-key", BaseURL: devURL, OrganizationSlug: orgSlug}
 	if err := SaveInstance(devName, in); err != nil {
 		t.Fatalf("SaveInstance: %v", err)
 	}

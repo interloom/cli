@@ -27,9 +27,14 @@ const (
 )
 
 // Instance is the credential set persisted per instance.
+//
+// An instance is identified by the pair (host, organization): the same host
+// may hold several organizations, each in its own file. OrganizationSlug is the
+// stable slug returned by /users/me; it never changes for a given key.
 type Instance struct {
-	APIKey  string `json:"api_key"`
-	BaseURL string `json:"base_url"`
+	APIKey           string `json:"api_key"`
+	BaseURL          string `json:"base_url"`
+	OrganizationSlug string `json:"organization_slug,omitempty"`
 }
 
 type rootConfig struct {
@@ -49,6 +54,17 @@ func Dir() (string, error) {
 }
 
 func instancePath(dir, name string) string { return filepath.Join(dir, name+".json") }
+
+// InstanceName builds the instance identifier from a normalized host name and an
+// organization slug. Each (host, org) pair is a distinct instance, so the same
+// host can hold several organizations side by side. An empty slug yields the
+// bare host name (used only before an org is known).
+func InstanceName(host, orgSlug string) string {
+	if orgSlug == "" {
+		return host
+	}
+	return host + "-" + orgSlug
+}
 
 // SaveInstance writes the instance file (0600) and ensures the dir exists (0700).
 func SaveInstance(name string, inst Instance) error {
