@@ -28,7 +28,8 @@ which always uses http).
 The API key is **never** read from a flag. It comes from piped stdin, then
 `INTERLOOM_API_KEY`, then a hidden interactive prompt. When prompting, the
 instance's personal-tokens page is opened in your browser so you can create a
-key, then paste it back:
+key, then paste it back. Pass `--organization-slug` to open a specific
+organization's page (`/<slug>/personal-tokens`):
 
 ```sh
 # Pipe the key (recommended for CI / agents)
@@ -37,20 +38,23 @@ echo "$MY_KEY" | interloom auth login dev
 # Opens <base-url>/personal-tokens to create a key, then prompts for it
 interloom auth login
 
-# Verify the credentials and show the authenticated user
+# Verify the credentials and show the authenticated user and organization
 interloom auth status
 ```
 
-Credentials live in `~/.config/interloom/<config-name>.json`; the selected config
-is tracked in `~/.config/interloom/config.json`.
+Each saved set of credentials is a **config**, identified by the instance host
+and the key's organization and named `<host>-<org>` (e.g. `dev-acme`), so the
+same host can hold several organizations side by side. Configs live in
+`~/.config/interloom/<config-name>.json`; the current one is tracked in
+`~/.config/interloom/config.json`.
 
 ### Switching configs
 
 ```sh
-interloom config list          # list saved configs (marks the current one)
-interloom config use dev       # set the current config
-interloom config current       # print the current config
-interloom config delete dev    # remove a saved config (does not revoke the key)
+interloom config list              # list saved configs (marks the current one)
+interloom config use dev-acme      # set the current config
+interloom config current           # print the current config
+interloom config delete dev-acme   # remove a saved config (does not revoke the key)
 ```
 
 ### Environment overrides
