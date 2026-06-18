@@ -181,9 +181,9 @@ type Resolved struct {
 //	base URL: --base-url flag > INTERLOOM_BASE_URL > instance file
 //	api key : INTERLOOM_API_KEY > instance file   (never a flag)
 //
-// The config is chosen from --config flag > INTERLOOM_CONFIG > current.
-func Resolve(flagConfig, flagBaseURL string) (Resolved, error) {
-	name := firstNonEmpty(flagConfig, os.Getenv(EnvConfig), CurrentInstance())
+// The config is chosen from --config-name flag > INTERLOOM_CONFIG > current.
+func Resolve(flagConfigName, flagBaseURL string) (Resolved, error) {
+	name := firstNonEmpty(flagConfigName, os.Getenv(EnvConfig), CurrentInstance())
 
 	var inst Instance
 	if name != "" {

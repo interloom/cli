@@ -37,6 +37,7 @@ func newResourceCmd(r resource) *cobra.Command {
 		Use:   r.name,
 		Short: fmt.Sprintf("Manage %s", r.name),
 	}
+	addConfigNameFlag(cmd)
 	cmd.AddCommand(r.listCmd(), r.getCmd())
 	if r.readOnly {
 		return cmd

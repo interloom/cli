@@ -23,6 +23,7 @@ func newAuthCmd() *cobra.Command {
 		Use:   "auth",
 		Short: "Manage authentication and instances",
 	}
+	addConfigNameFlag(cmd)
 	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
 	return cmd
 }
@@ -36,7 +37,7 @@ func newAuthLoginCmd() *cobra.Command {
 		Short: "Store an API key for an instance",
 		Long: "Store an API key for an instance.\n\n" +
 			"Defaults to app.interloom.com. To target another instance, pass it as an\n" +
-			"argument or via --config: a short name (dev), a host (dev.interloom.com),\n" +
+			"argument or via --config-name: a short name (dev), a host (dev.interloom.com),\n" +
 			"or a local address (localhost:8080, always http).\n\n" +
 			"The instance is identified by host and organization, so the same host can\n" +
 			"hold several organizations side by side (e.g. app-acme, app-beta).\n\n" +
@@ -53,7 +54,7 @@ func newAuthLoginCmd() *cobra.Command {
 }
 
 func runAuthLogin(cmd *cobra.Command, args []string) error {
-	// 1. Resolve the host (arg > --config > default).
+	// 1. Resolve the host (arg > --config-name > default).
 	host, baseURL, err := config.Normalize(loginInstanceInput(args))
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Logged in to %s as organization %q (instance %q) and set as current.\n", baseURL, orgSlug, name)
-	return printResult([]byte(fmt.Sprintf(`{"instance":%q,"base_url":%q,"organization_slug":%q,"status":"authenticated"}`, name, baseURL, orgSlug)))
+	return printResult([]byte(fmt.Sprintf(`{"config_name":%q,"base_url":%q,"organization_slug":%q,"status":"authenticated"}`, name, baseURL, orgSlug)))
 }
 
 // orgSlugFromUser extracts the organization slug from a /users/me response.
@@ -109,17 +110,17 @@ func orgSlugFromUser(user json.RawMessage) (string, error) {
 	return me.Organization.Slug, nil
 }
 
-// defaultLoginInstance is used when no instance is given as an argument or via --config.
+// defaultLoginInstance is used when no instance is given as an argument or via --config-name.
 const defaultLoginInstance = "app.interloom.com"
 
-// loginInstanceInput resolves the instance string: positional arg > --config
+// loginInstanceInput resolves the instance string: positional arg > --config-name
 // flag > default. The user is never prompted.
 func loginInstanceInput(args []string) string {
 	if len(args) == 1 {
 		return args[0]
 	}
-	if flagConfig != "" {
-		return flagConfig
+	if flagConfigName != "" {
+		return flagConfigName
 	}
 	return defaultLoginInstance
 }
@@ -130,7 +131,7 @@ func newAuthStatusCmd() *cobra.Command {
 		Short: "Verify the current credentials and show the authenticated user",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			r, err := config.Resolve(flagConfig, flagBaseURL)
+			r, err := config.Resolve(flagConfigName, flagBaseURL)
 			if err != nil {
 				return err
 			}
@@ -141,10 +142,10 @@ func newAuthStatusCmd() *cobra.Command {
 			}
 			backfillOrgSlug(r.Instance, user)
 			out, err := json.Marshal(struct {
-				Instance string          `json:"instance"`
-				BaseURL  string          `json:"base_url"`
-				Status   string          `json:"status"`
-				User     json.RawMessage `json:"user"`
+				ConfigName string          `json:"config_name"`
+				BaseURL    string          `json:"base_url"`
+				Status     string          `json:"status"`
+				User       json.RawMessage `json:"user"`
 			}{r.Instance, r.BaseURL, "ok", user})
 			if err != nil {
 				return err
@@ -160,7 +161,7 @@ func newAuthLogoutCmd() *cobra.Command {
 		Short: "Remove a saved instance (defaults to the current one)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			name := flagConfig
+			name := flagConfigName
 			if len(args) == 1 {
 				name = args[0]
 			}
@@ -173,7 +174,7 @@ func newAuthLogoutCmd() *cobra.Command {
 			if err := config.DeleteInstance(name); err != nil {
 				return err
 			}
-			return printResult([]byte(fmt.Sprintf(`{"instance":%q,"status":"logged_out"}`, name)))
+			return printResult([]byte(fmt.Sprintf(`{"config_name":%q,"status":"logged_out"}`, name)))
 		},
 	}
 }

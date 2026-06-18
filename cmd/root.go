@@ -12,10 +12,18 @@ import (
 )
 
 var (
-	flagConfig  string
-	flagBaseURL string
-	flagOutput  string
+	flagConfigName string
+	flagBaseURL    string
+	flagOutput     string
 )
+
+// addConfigNameFlag registers the --config-name/-c flag on commands that resolve
+// API credentials. It is intentionally absent from `config` and `version`, where
+// it would have no effect. A separate --config-file flag may be added later.
+func addConfigNameFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVarP(&flagConfigName, "config-name", "c", "",
+		"name of the config to use (defaults to the current config)")
+}
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
@@ -28,7 +36,6 @@ func newRootCmd() *cobra.Command {
 	}
 
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagConfig, "config", "c", "", "config to use (defaults to the current config)")
 	pf.StringVar(&flagBaseURL, "base-url", "", "override the API base URL")
 	pf.StringVarP(&flagOutput, "output", "o", "json", "output format: json")
 
@@ -74,7 +81,7 @@ func newClient() (*client.Client, error) {
 	if flagOutput != "json" {
 		return nil, fmt.Errorf("unsupported output format %q (only json is supported)", flagOutput)
 	}
-	r, err := config.Resolve(flagConfig, flagBaseURL)
+	r, err := config.Resolve(flagConfigName, flagBaseURL)
 	if err != nil {
 		return nil, err
 	}

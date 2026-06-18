@@ -65,7 +65,7 @@ These always override the saved config:
 | `INTERLOOM_BASE_URL` | API base URL                     |
 | `INTERLOOM_CONFIG`   | config to use                    |
 
-You can also override per-invocation with `--config/-c` and `--base-url`.
+You can also override per-invocation with `--config-name/-c` and `--base-url`.
 
 ## Resources
 
