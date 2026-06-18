@@ -38,7 +38,7 @@ type Instance struct {
 }
 
 type rootConfig struct {
-	CurrentInstance string `json:"current_instance"`
+	CurrentConfigName string `json:"current_config_name"`
 }
 
 // Dir returns ~/.config/interloom (honoring XDG_CONFIG_HOME), creating nothing.
@@ -150,7 +150,7 @@ func CurrentInstance() string {
 	if json.Unmarshal(data, &rc) != nil {
 		return ""
 	}
-	return rc.CurrentInstance
+	return rc.CurrentConfigName
 }
 
 // SetCurrentInstance records the active instance name.
@@ -162,7 +162,7 @@ func SetCurrentInstance(name string) error {
 	if err = os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(rootConfig{CurrentInstance: name}, "", "  ")
+	data, err := json.MarshalIndent(rootConfig{CurrentConfigName: name}, "", "  ")
 	if err != nil {
 		return err
 	}
