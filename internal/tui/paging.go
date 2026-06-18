@@ -13,10 +13,6 @@ const pageSize = 30
 // rows of the end of the loaded items.
 const loadThreshold = 6
 
-// maxFilterPages caps how many pages auto-fill will pull while a status filter
-// is leaving the pane empty, so a rare status can't page through everything.
-const maxFilterPages = 10
-
 // listKind identifies which pane a page response belongs to. Cases and
 // sub-cases share the same item type, so the kind disambiguates them.
 type listKind int
@@ -32,16 +28,12 @@ const (
 // paged is the cursor-paginated, lazily-loaded state for one list pane. The
 // generic parameter is the list item type (space/case/note list item).
 //
-// Items are fetched and stored raw (unfiltered). An optional client-side
-// filter defines the *visible* subset: view holds the indices of items that
-// pass it, and the cursor/offset and all navigation operate on that visible
-// list. Changing the filter only rebuilds view — it never refetches — so the
-// status filter stays responsive while paging through a long list.
+// Items are fetched and stored in server order; any filtering (e.g. the case
+// status filter) happens server-side, so the loaded items are exactly what the
+// pane shows and the cursor/offset operate directly on them.
 type paged[T any] struct {
-	items    []T          // all fetched items, in server order (raw)
-	filter   func(T) bool // nil == show everything
-	view     []int        // indices into items that pass filter (filter != nil)
-	cur, off int          // cursor/scroll offset into the visible list
+	items    []T // all fetched items, in server order
+	cur, off int // cursor/scroll offset into the list
 
 	cursor  string // server cursor for the next page ("" when exhausted)
 	hasMore bool
@@ -59,57 +51,23 @@ type paged[T any] struct {
 	cancel context.CancelFunc
 }
 
-// len is the number of *visible* items (after the filter).
+// len is the number of loaded items.
 func (p *paged[T]) len() int {
-	if p.filter == nil {
-		return len(p.items)
-	}
-	return len(p.view)
+	return len(p.items)
 }
 
-// at returns the i-th visible item (mapping through the filter view).
+// at returns the i-th item, if it exists.
 func (p *paged[T]) at(i int) (T, bool) {
+	if i >= 0 && i < len(p.items) {
+		return p.items[i], true
+	}
 	var zero T
-	if p.filter == nil {
-		if i >= 0 && i < len(p.items) {
-			return p.items[i], true
-		}
-		return zero, false
-	}
-	if i >= 0 && i < len(p.view) {
-		return p.items[p.view[i]], true
-	}
 	return zero, false
-}
-
-// rebuildView recomputes the visible index set from items and the filter.
-func (p *paged[T]) rebuildView() {
-	if p.filter == nil {
-		p.view = nil
-		return
-	}
-	p.view = p.view[:0]
-	for i := range p.items {
-		if p.filter(p.items[i]) {
-			p.view = append(p.view, i)
-		}
-	}
-}
-
-// setFilter swaps the filter, rebuilds the visible view and resets browsing to
-// the top of the new view (cur/off are coordinates in the filtered view, so a
-// filter change invalidates them). It does not touch the fetched items, so no
-// network request is needed.
-func (p *paged[T]) setFilter(f func(T) bool) {
-	p.filter = f
-	p.rebuildView()
-	p.cur, p.off = 0, 0
 }
 
 // reset cancels any in-flight load and clears the list for a new parent.
 // Bumping gen makes the reset itself an invalidation event, so any response
-// already in flight is rejected even if no replacement request follows. The
-// filter is preserved so a fresh list keeps the active status filter.
+// already in flight is rejected even if no replacement request follows.
 func (p *paged[T]) reset(parentID string) {
 	if p.cancel != nil {
 		p.cancel()
@@ -117,7 +75,6 @@ func (p *paged[T]) reset(parentID string) {
 	}
 	p.gen++
 	p.items = nil
-	p.view = nil
 	p.cur, p.off = 0, 0
 	p.cursor = ""
 	p.hasMore = false
@@ -189,7 +146,6 @@ func (p *paged[T]) applyPage(items []T, cursor string, hasMore, appendPage bool)
 	p.pagesFetched++
 	p.cursor = cursor
 	p.hasMore = hasMore
-	p.rebuildView()
 }
 
 // pageFetcher loads a single page given a cursor. Returns items, the next

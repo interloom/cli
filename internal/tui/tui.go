@@ -253,8 +253,8 @@ func (m *model) cycleFocus(delta int) {
 	m.setFocus(order[idx])
 }
 
-// ---- page fetchers (raw; the status filter is applied client-side as a view,
-// since the API has no server-side status filter) ----
+// ---- page fetchers. Cases and sub-cases are filtered server-side by the
+// active status filter (passed through as the `status` query param). ----
 
 func (m model) spacesFetcher() pageFetcher[api.SpaceListItem] {
 	c := m.client
@@ -264,16 +264,16 @@ func (m model) spacesFetcher() pageFetcher[api.SpaceListItem] {
 }
 
 func (m model) casesFetcher(spaceID string) pageFetcher[api.CaseListItem] {
-	c := m.client
+	c, status := m.client, string(m.statusFilter)
 	return func(ctx context.Context, cursor string) ([]api.CaseListItem, string, bool, error) {
-		return fetchCasesPage(ctx, c, spaceID, cursor)
+		return fetchCasesPage(ctx, c, spaceID, status, cursor)
 	}
 }
 
 func (m model) subcasesFetcher(parentCaseID string) pageFetcher[api.CaseListItem] {
-	c := m.client
+	c, status := m.client, string(m.statusFilter)
 	return func(ctx context.Context, cursor string) ([]api.CaseListItem, string, bool, error) {
-		return fetchSubCasesPage(ctx, c, parentCaseID, cursor)
+		return fetchSubCasesPage(ctx, c, parentCaseID, status, cursor)
 	}
 }
 
@@ -289,22 +289,6 @@ func (m model) notesFetcher(caseID string) pageFetcher[api.NoteListItem] {
 	return func(ctx context.Context, cursor string) ([]api.NoteListItem, string, bool, error) {
 		return fetchNotesPage(ctx, c, caseID, cursor)
 	}
-}
-
-// statusFilterFn builds the client-side case filter for status s ("" == all).
-func statusFilterFn(s api.CaseStatus) func(api.CaseListItem) bool {
-	if s == "" {
-		return nil
-	}
-	return func(c api.CaseListItem) bool { return c.Status == s }
-}
-
-// applyStatusFilter points the case and sub-case views at the current status
-// filter. This only rebuilds the visible view; it never refetches.
-func (m *model) applyStatusFilter() {
-	f := statusFilterFn(m.statusFilter)
-	m.cs.setFilter(f)
-	m.scs.setFilter(f)
 }
 
 func nextStatus(s api.CaseStatus) api.CaseStatus {
@@ -869,7 +853,6 @@ func (m model) handleCasesPage(msg pageResult[api.CaseListItem]) (tea.Model, tea
 	if m.phase == phaseBrowse && (!msg.appendPage || (wasEmpty && m.cs.len() > 0)) {
 		cmds = append(cmds, m.onBrowseCaseChange())
 	}
-	cmds = append(cmds, m.autofillCases())
 	m.refreshDetail()
 	return m, tea.Batch(cmds...)
 }
@@ -889,7 +872,6 @@ func (m model) handleSubcasesPage(msg pageResult[api.CaseListItem]) (tea.Model, 
 	if !msg.appendPage && m.detailSource == focusSubcases {
 		cmds = append(cmds, m.previewLoad(focusSubcases))
 	}
-	cmds = append(cmds, m.autofillSubcases())
 	m.refreshDetail()
 	return m, tea.Batch(cmds...)
 }
@@ -938,40 +920,6 @@ func (m model) recordErr(err error) tea.Model {
 		m.err = err
 	}
 	return m
-}
-
-// filterFillTarget is how many visible (filtered) rows to keep loaded so a
-// filtered column doesn't look near-empty: roughly one screenful.
-func (m model) filterFillTarget() int {
-	rows := m.layout().colsH - 3
-	if rows < pageSize/3 {
-		rows = pageSize / 3
-	}
-	return rows
-}
-
-// needFilterFill reports whether a filtered case list is still too short to
-// fill its column and another raw page can be pulled (bounded by
-// maxFilterPages so a rare status can't page through everything).
-func (m *model) needFilterFill(p *paged[api.CaseListItem]) bool {
-	return m.statusFilter != "" &&
-		p.hasMore && !p.loading && !p.loadingMore &&
-		p.len() < m.filterFillTarget() &&
-		p.pagesFetched < maxFilterPages
-}
-
-func (m *model) autofillCases() tea.Cmd {
-	if m.needFilterFill(&m.cs) {
-		return m.issueCases(m.cs.cursor, true)
-	}
-	return nil
-}
-
-func (m *model) autofillSubcases() tea.Cmd {
-	if m.needFilterFill(&m.scs) {
-		return m.issueSubcases(m.scs.cursor, true)
-	}
-	return nil
 }
 
 func (m model) handleCaseDetailMsg(msg caseDetailMsg) (tea.Model, tea.Cmd) {
@@ -1224,24 +1172,22 @@ func (m *model) focusLoadCmd() tea.Cmd {
 	return m.previewLoad(m.focus)
 }
 
-// cycleStatus advances the status filter. The filter is applied client-side as
-// a view over the already-loaded items, so it takes effect instantly without
-// refetching; if the new filter leaves the column sparse, more pages are
-// pulled in to fill it.
+// cycleStatus advances the status filter and refetches the affected case lists
+// from the top with the new server-side `status` param. Any loaded case and
+// sub-case pane is reloaded so both stay consistent across the browse/case
+// screens; their previews are refreshed when the new first page arrives.
 func (m model) cycleStatus() (tea.Model, tea.Cmd) {
 	m.statusFilter = nextStatus(m.statusFilter)
-	m.applyStatusFilter()
-	var cmd tea.Cmd
-	switch m.phase {
-	case phaseCase:
-		cmd = m.autofillSubcases()
-	case phaseBrowse:
-		cmd = m.autofillCases()
+	var cmds []tea.Cmd
+	if m.cs.parentID != "" {
+		cmds = append(cmds, m.issueCases("", false))
 	}
-	m.syncOffsets(m.layout())
+	if m.scs.parentID != "" {
+		cmds = append(cmds, m.issueSubcases("", false))
+	}
 	m.lastDetailKey = ""
 	m.refreshDetail()
-	return m, tea.Batch(cmd, m.previewLoad(m.detailSource))
+	return m, tea.Batch(cmds...)
 }
 
 // moveCursor moves the selection in the focused pane (loading more if needed),

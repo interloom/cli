@@ -61,15 +61,27 @@ func newestFirst(key, val string) url.Values {
 	}
 }
 
-// fetchCasesPage loads one page of cases in a space, newest update first.
-func fetchCasesPage(ctx context.Context, c *client.Client, spaceID, cursor string) ([]api.CaseListItem, string, bool, error) {
-	raw, err := c.List(ctx, "cases", pageQuery(cursor, newestFirst("space_id", spaceID)))
+// withStatus adds a server-side status filter to q when status is non-empty.
+func withStatus(q url.Values, status string) url.Values {
+	if status != "" {
+		q.Set("status", status)
+	}
+	return q
+}
+
+// fetchCasesPage loads one page of cases in a space, newest update first,
+// filtered server-side by status when set.
+func fetchCasesPage(ctx context.Context, c *client.Client, spaceID, status, cursor string) ([]api.CaseListItem, string, bool, error) {
+	q := withStatus(newestFirst("space_id", spaceID), status)
+	raw, err := c.List(ctx, "cases", pageQuery(cursor, q))
 	return decodePage[api.CaseListItem](raw, err)
 }
 
-// fetchSubCasesPage loads one page of a case's child cases, newest first.
-func fetchSubCasesPage(ctx context.Context, c *client.Client, parentCaseID, cursor string) ([]api.CaseListItem, string, bool, error) {
-	raw, err := c.List(ctx, "cases", pageQuery(cursor, newestFirst("parent_case_id", parentCaseID)))
+// fetchSubCasesPage loads one page of a case's child cases, newest first,
+// filtered server-side by status when set.
+func fetchSubCasesPage(ctx context.Context, c *client.Client, parentCaseID, status, cursor string) ([]api.CaseListItem, string, bool, error) {
+	q := withStatus(newestFirst("parent_case_id", parentCaseID), status)
+	raw, err := c.List(ctx, "cases", pageQuery(cursor, q))
 	return decodePage[api.CaseListItem](raw, err)
 }
 
