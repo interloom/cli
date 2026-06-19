@@ -1,0 +1,3 @@
+- Run `golangci-lint run ./...` (v2.12.2, matches CI) after Go changes and fix all issues.
+- Ensure `go build ./...` and `go test ./...` pass.
+- Use Conventional Commits for commit messages (`feat:`, `fix:`, `chore:`, etc.).
