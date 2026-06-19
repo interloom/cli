@@ -9,8 +9,7 @@
 // Lists are cursor-paginated: each pane loads one page at a time and prefetches
 // the next as you scroll near the end. Navigating quickly cancels superseded
 // in-flight requests so only the latest selection's data is fetched. Cases and
-// sub-cases can be filtered by status (client-side, since the API has no
-// status filter).
+// sub-cases can be filtered by status.
 package tui
 
 import (
@@ -103,7 +102,13 @@ type model struct {
 	detailSource  focus // what the detail pane renders (a pane, or focusCurrentCase)
 	rawMode       bool  // raw source instead of rendered markdown (notes, descriptions, text files)
 
-	statusFilter api.CaseStatus // "" == all; applied to cases and sub-cases
+	statusFilter api.CaseStatus // "" == all; active for the current space/case case-list context
+
+	// Last-used status filters by container. Space filters apply to the browse
+	// cases pane; case filters apply to that case's sub-cases pane. This keeps a
+	// filter from leaking across tasks while restoring it when the user returns.
+	spaceStatusFilters map[string]api.CaseStatus
+	caseStatusFilters  map[string]api.CaseStatus
 
 	// Debug request log (toggled with `d`): every API request is tracked with
 	// its label, status and duration, even while the panel is hidden.
@@ -174,22 +179,24 @@ func newModel(ctx context.Context, c *client.Client, cfgName string) model {
 	sp.Spinner = loomSpinner
 	sp.Style = brandSt
 	m := model{
-		ctx:               ctx,
-		client:            c,
-		cfgName:           cfgName,
-		focus:             focusSpaces,
-		caseDetail:        map[string]*api.Case{},
-		noteDetail:        map[string]*api.Note{},
-		caseDetailLoading: map[string]bool{},
-		noteDetailLoading: map[string]bool{},
-		users:             map[string]api.User{},
-		imgCache:          map[string]imagePrepared{},
-		imgLoading:        map[string]bool{},
-		imgErr:            map[string]error{},
-		fileText:          map[string]textContent{},
-		fileTextLoading:   map[string]bool{},
-		fileTextErr:       map[string]error{},
-		spin:              sp,
+		ctx:                ctx,
+		client:             c,
+		cfgName:            cfgName,
+		focus:              focusSpaces,
+		caseDetail:         map[string]*api.Case{},
+		noteDetail:         map[string]*api.Note{},
+		caseDetailLoading:  map[string]bool{},
+		noteDetailLoading:  map[string]bool{},
+		spaceStatusFilters: map[string]api.CaseStatus{},
+		caseStatusFilters:  map[string]api.CaseStatus{},
+		users:              map[string]api.User{},
+		imgCache:           map[string]imagePrepared{},
+		imgLoading:         map[string]bool{},
+		imgErr:             map[string]error{},
+		fileText:           map[string]textContent{},
+		fileTextLoading:    map[string]bool{},
+		fileTextErr:        map[string]error{},
+		spin:               sp,
 	}
 	// Prime the initial requests so their generations match the responses and
 	// both requests show up in the debug panel from the first frame.
@@ -754,6 +761,7 @@ func (m *model) currentCaseID() string {
 // onSpaceChange resets and loads the first page of cases for the current space.
 func (m *model) onSpaceChange() tea.Cmd {
 	id := m.curSpaceID()
+	m.restoreSpaceStatusFilter(id)
 	m.cs.reset(id)
 	if id == "" {
 		return nil
@@ -789,35 +797,67 @@ func (m *model) onCurrentCaseChange() tea.Cmd {
 	return tea.Batch(cmd, m.refreshDetail())
 }
 
-// clearStatusFilter drops the case/sub-case status filter at task navigation
-// boundaries and reloads the hidden browse case list so it stays consistent
-// with the now-unfiltered pane title when the user returns to it.
-func (m *model) clearStatusFilter() tea.Cmd {
-	if m.statusFilter == "" {
-		return nil
+func (m *model) saveActiveStatusFilter() {
+	if m.phase == phaseCase {
+		m.saveCaseStatusFilter(m.currentCaseID(), m.statusFilter)
+		return
 	}
-	m.statusFilter = ""
-	if m.cs.parentID == "" {
-		return nil
+	m.saveSpaceStatusFilter(m.curSpaceID(), m.statusFilter)
+}
+
+func (m *model) saveSpaceStatusFilter(id string, status api.CaseStatus) {
+	if id == "" {
+		return
 	}
-	return m.issueCases("", false)
+	if m.spaceStatusFilters == nil {
+		m.spaceStatusFilters = map[string]api.CaseStatus{}
+	}
+	if status == "" {
+		delete(m.spaceStatusFilters, id)
+		return
+	}
+	m.spaceStatusFilters[id] = status
+}
+
+func (m *model) saveCaseStatusFilter(id string, status api.CaseStatus) {
+	if id == "" {
+		return
+	}
+	if m.caseStatusFilters == nil {
+		m.caseStatusFilters = map[string]api.CaseStatus{}
+	}
+	if status == "" {
+		delete(m.caseStatusFilters, id)
+		return
+	}
+	m.caseStatusFilters[id] = status
+}
+
+func (m *model) restoreSpaceStatusFilter(id string) {
+	m.statusFilter = m.spaceStatusFilters[id]
+}
+
+func (m *model) restoreCaseStatusFilter(id string) {
+	m.statusFilter = m.caseStatusFilters[id]
 }
 
 // openCase drills from the browse screen into a case's detail view.
 func (m model) openCase(c api.CaseListItem) (tea.Model, tea.Cmd) {
-	filterCmd := m.clearStatusFilter()
+	m.saveActiveStatusFilter()
+	m.restoreCaseStatusFilter(c.Id.String())
 	m.phase = phaseCase
 	m.caseStack = []api.CaseListItem{c}
 	m.focus = focusSubcases
-	return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
+	return m, m.onCurrentCaseChange()
 }
 
 // drillInto pushes a sub-case onto the stack, making it the current case.
 func (m model) drillInto(c api.CaseListItem) (tea.Model, tea.Cmd) {
-	filterCmd := m.clearStatusFilter()
+	m.saveActiveStatusFilter()
+	m.restoreCaseStatusFilter(c.Id.String())
 	m.caseStack = append(m.caseStack, c)
 	m.focus = focusSubcases
-	return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
+	return m, m.onCurrentCaseChange()
 }
 
 // previewLoad fetches the detail for a pane's current selection, if any.
@@ -1418,7 +1458,7 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 		m.setFocus(m.detailSource)
 		return m, nil
 	}
-	filterCmd := m.clearStatusFilter()
+	m.saveActiveStatusFilter()
 	// Cancel child loads for the current case before changing context.
 	m.scs.reset("")
 	m.fl.reset("")
@@ -1426,16 +1466,18 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	m.th.reset("")
 	if len(m.caseStack) > 1 {
 		m.caseStack = m.caseStack[:len(m.caseStack)-1]
+		m.restoreCaseStatusFilter(m.currentCaseID())
 		m.focus = focusSubcases
-		return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
+		return m, m.onCurrentCaseChange()
 	}
 	m.caseStack = nil
 	m.phase = phaseBrowse
+	m.restoreSpaceStatusFilter(m.curSpaceID())
 	m.focus = focusCases
 	m.detailSource = focusCases
 	m.lastDetailKey = ""
 	cmd := m.onBrowseCaseChange()
-	return m, tea.Batch(filterCmd, cmd, m.refreshDetail())
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 // handleNavKey handles pane focus and cursor movement keys.
@@ -1475,18 +1517,19 @@ func (m *model) focusLoadCmd() tea.Cmd {
 	return m.previewLoad(m.focus)
 }
 
-// cycleStatus advances the status filter and refetches the affected case lists
-// from the top with the new server-side `status` param. Any loaded case and
-// sub-case pane is reloaded so both stay consistent across the browse/case
-// screens; their previews are refreshed when the new first page arrives.
+// cycleStatus advances the status filter for the current space/case context and
+// refetches that context's case list from the top with the new server-side
+// `status` param. Other spaces/cases keep their remembered filter.
 func (m model) cycleStatus() (tea.Model, tea.Cmd) {
 	m.statusFilter = nextStatus(m.statusFilter)
+	m.saveActiveStatusFilter()
 	var cmds []tea.Cmd
-	if m.cs.parentID != "" {
+	if m.phase == phaseCase {
+		if m.scs.parentID != "" {
+			cmds = append(cmds, m.issueSubcases("", false))
+		}
+	} else if m.cs.parentID != "" {
 		cmds = append(cmds, m.issueCases("", false))
-	}
-	if m.scs.parentID != "" {
-		cmds = append(cmds, m.issueSubcases("", false))
 	}
 	m.lastDetailKey = ""
 	cmds = append(cmds, m.refreshDetail())
@@ -1510,6 +1553,7 @@ func (m model) moveCursor(delta int) (tea.Model, tea.Cmd) {
 func (m *model) moveFocusedList(delta int) tea.Cmd {
 	switch m.focus {
 	case focusSpaces:
+		m.saveActiveStatusFilter()
 		if m.sp.move(delta) {
 			return tea.Batch(m.maybeMoreSpaces(), m.onSpaceChange())
 		}
@@ -1546,6 +1590,7 @@ func (m model) jumpCursor(toStart bool) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch m.focus {
 	case focusSpaces:
+		m.saveActiveStatusFilter()
 		m.sp.jump(toStart)
 		cmd = tea.Batch(m.maybeMoreSpaces(), m.onSpaceChange())
 	case focusCases:

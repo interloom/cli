@@ -237,6 +237,7 @@ func (m model) selectRow(f focus, row, visRows int, l layoutInfo) (tea.Model, te
 	var cmd tea.Cmd
 	switch f {
 	case focusSpaces:
+		m.saveActiveStatusFilter()
 		if m.sp.selectAt(windowOffset(m.sp.cur, m.sp.off, m.sp.len(), visRows) + row) {
 			cmd = tea.Batch(m.maybeMoreSpaces(), m.onSpaceChange())
 		}

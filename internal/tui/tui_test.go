@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/interloom/cli/internal/api"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func testModel() model {
@@ -63,6 +64,12 @@ func requireEqual[T comparable](t *testing.T, label string, got, want T) {
 func requireTrue(t *testing.T, label string, got bool) {
 	t.Helper()
 	requireEqual(t, label, got, true)
+}
+
+func testUUID(seed byte) openapi_types.UUID {
+	var id openapi_types.UUID
+	id[15] = seed
+	return id
 }
 
 func TestBrowseEscAndQDoNotQuit(t *testing.T) {
@@ -141,75 +148,81 @@ const (
 	testChildTitle = "child"
 )
 
-func TestTaskNavigationClearsStatusFilter(t *testing.T) {
-	t.Run("open case", func(t *testing.T) {
-		m := filteredBoundaryModel()
-		mdl, cmd := m.openCase(api.CaseListItem{Title: "case"})
-		got := mdl.(model)
+func TestStatusFilterRememberedPerSpace(t *testing.T) {
+	spaceA := testUUID(1)
+	spaceB := testUUID(2)
+	m := testModel()
+	m.phase = phaseBrowse
+	m.focus = focusSpaces
+	m.sp.items = []api.SpaceListItem{{Id: spaceA, Name: "A"}, {Id: spaceB, Name: "B"}}
+	m.cs.parentID = spaceA.String()
+	m.statusFilter = api.Started
 
-		requireTrue(t, "open returned command", cmd != nil)
-		requireFilterClearedAndBrowseCasesReloading(t, got)
-		requireEqual(t, "phase", got.phase, phaseCase)
-		requireEqual(t, "case stack length", len(got.caseStack), 1)
-		requireTrue(t, "subcases loading", got.scs.loading)
-	})
+	cmd := m.moveFocusedList(1)
+	requireTrue(t, "move to space B returned command", cmd != nil)
+	requireEqual(t, "space A remembered filter", m.spaceStatusFilters[spaceA.String()], api.Started)
+	requireEqual(t, "space B restored default filter", m.statusFilter, api.CaseStatus(""))
+	requireEqual(t, "cases parent", m.cs.parentID, spaceB.String())
+	requireTrue(t, "space B cases loading", m.cs.loading)
 
-	t.Run("drill into sub-case", func(t *testing.T) {
-		m := filteredBoundaryModel()
-		m.phase = phaseCase
-		m.caseStack = []api.CaseListItem{{Title: testRootTitle}}
-
-		mdl, cmd := m.drillInto(api.CaseListItem{Title: testChildTitle})
-		got := mdl.(model)
-
-		requireTrue(t, "drill returned command", cmd != nil)
-		requireFilterClearedAndBrowseCasesReloading(t, got)
-		requireEqual(t, "case stack length", len(got.caseStack), 2)
-		requireTrue(t, "subcases loading", got.scs.loading)
-	})
-
-	t.Run("escape to parent case", func(t *testing.T) {
-		m := filteredBoundaryModel()
-		m.phase = phaseCase
-		m.caseStack = []api.CaseListItem{{Title: testRootTitle}, {Title: testChildTitle}}
-
-		mdl, cmd := m.escapePressed()
-		got := mdl.(model)
-
-		requireTrue(t, "escape returned command", cmd != nil)
-		requireFilterClearedAndBrowseCasesReloading(t, got)
-		requireEqual(t, "phase", got.phase, phaseCase)
-		requireEqual(t, "case stack length", len(got.caseStack), 1)
-		requireTrue(t, "subcases loading", got.scs.loading)
-	})
-
-	t.Run("escape to browse", func(t *testing.T) {
-		m := filteredBoundaryModel()
-		m.phase = phaseCase
-		m.caseStack = []api.CaseListItem{{Title: testRootTitle}}
-
-		mdl, cmd := m.escapePressed()
-		got := mdl.(model)
-
-		requireTrue(t, "escape returned command", cmd != nil)
-		requireFilterClearedAndBrowseCasesReloading(t, got)
-		requireEqual(t, "phase", got.phase, phaseBrowse)
-		requireEqual(t, "focus", got.focus, focusCases)
-		requireEqual(t, "detail source", got.detailSource, focusCases)
-	})
+	m.statusFilter = api.Blocked
+	cmd = m.moveFocusedList(-1)
+	requireTrue(t, "move back to space A returned command", cmd != nil)
+	requireEqual(t, "space B remembered filter", m.spaceStatusFilters[spaceB.String()], api.Blocked)
+	requireEqual(t, "space A restored filter", m.statusFilter, api.Started)
+	requireEqual(t, "cases parent", m.cs.parentID, spaceA.String())
 }
 
-func filteredBoundaryModel() model {
+func TestStatusFilterRememberedPerCase(t *testing.T) {
+	spaceID := testUUID(10)
+	rootID := testUUID(11)
+	childID := testUUID(12)
+	root := api.CaseListItem{Id: rootID, Title: testRootTitle}
+	child := api.CaseListItem{Id: childID, Title: testChildTitle}
+
+	m := filteredBoundaryModel(spaceID)
+	mdl, cmd := m.openCase(root)
+	got := mdl.(model)
+	requireTrue(t, "open returned command", cmd != nil)
+	requireEqual(t, "space remembered filter", got.spaceStatusFilters[spaceID.String()], api.Blocked)
+	requireEqual(t, "new case starts unfiltered", got.statusFilter, api.CaseStatus(""))
+	requireEqual(t, "phase", got.phase, phaseCase)
+	requireTrue(t, "root subcases loading", got.scs.loading)
+
+	got.statusFilter = api.Started
+	mdl, cmd = got.drillInto(child)
+	got = mdl.(model)
+	requireTrue(t, "drill returned command", cmd != nil)
+	requireEqual(t, "root remembered filter", got.caseStatusFilters[rootID.String()], api.Started)
+	requireEqual(t, "new child starts unfiltered", got.statusFilter, api.CaseStatus(""))
+	requireEqual(t, "case stack length", len(got.caseStack), 2)
+	requireTrue(t, "child subcases loading", got.scs.loading)
+
+	got.statusFilter = api.Completed
+	mdl, cmd = got.escapePressed()
+	got = mdl.(model)
+	requireTrue(t, "escape to parent returned command", cmd != nil)
+	requireEqual(t, "child remembered filter", got.caseStatusFilters[childID.String()], api.Completed)
+	requireEqual(t, "parent restored filter", got.statusFilter, api.Started)
+	requireEqual(t, "case stack length", len(got.caseStack), 1)
+
+	mdl, _ = got.escapePressed()
+	got = mdl.(model)
+	requireEqual(t, "space restored filter", got.statusFilter, api.Blocked)
+	requireEqual(t, "phase", got.phase, phaseBrowse)
+
+	mdl, cmd = got.openCase(root)
+	got = mdl.(model)
+	requireTrue(t, "reopen returned command", cmd != nil)
+	requireEqual(t, "root restored filter", got.statusFilter, api.Started)
+}
+
+func filteredBoundaryModel(spaceID openapi_types.UUID) model {
 	m := testModel()
 	m.statusFilter = api.Blocked
-	m.cs.parentID = "space-1"
+	m.sp.items = []api.SpaceListItem{{Id: spaceID, Name: "A"}}
+	m.cs.parentID = spaceID.String()
 	return m
-}
-
-func requireFilterClearedAndBrowseCasesReloading(t *testing.T, got model) {
-	t.Helper()
-	requireEqual(t, "status filter", got.statusFilter, api.CaseStatus(""))
-	requireTrue(t, "browse cases reloading", got.cs.loading)
 }
 
 func seededReloadModel() (model, string) {
