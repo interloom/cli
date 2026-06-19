@@ -27,6 +27,7 @@ const (
 	kindSubcases
 	kindFiles
 	kindNotes
+	kindThread
 )
 
 // paged is the cursor-paginated, lazily-loaded state for one list pane. The

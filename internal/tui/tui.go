@@ -53,8 +53,8 @@ const (
 	focusSpaces focus = iota
 	focusCases
 	focusSubcases
-	focusFiles
-	focusNotes
+	focusAttachments // combined notes + files pane
+	focusThread      // thread message pane
 	focusDetail
 
 	// focusCurrentCase is not a navigable pane; it is the detail-source value
@@ -129,6 +129,11 @@ type model struct {
 	scs       paged[api.CaseListItem]
 	fl        paged[api.File]
 	nt        paged[api.NoteListItem]
+	th        paged[threadMessage] // the current case's thread messages
+
+	// The combined notes+files pane is a virtual concatenation of nt and fl
+	// (notes first), so its cursor/offset live here rather than on a paged.
+	attachmentsCur, attachmentsOff int
 
 	// Full-object caches for the detail panel, keyed by id, plus the in-flight
 	// set. detailGen invalidates stale detail responses after a reload/switch.
@@ -267,7 +272,7 @@ func introTick() tea.Cmd {
 // listPanes returns the navigable list panes for the current screen, in order.
 func (m model) listPanes() []focus {
 	if m.phase == phaseCase {
-		return []focus{focusSubcases, focusFiles, focusNotes}
+		return []focus{focusSubcases, focusAttachments, focusThread}
 	}
 	return []focus{focusSpaces, focusCases}
 }
@@ -329,6 +334,13 @@ func (m model) notesFetcher(caseID string) pageFetcher[api.NoteListItem] {
 	}
 }
 
+func (m model) threadFetcher(threadID string) pageFetcher[threadMessage] {
+	c := m.client
+	return func(ctx context.Context, cursor string) ([]threadMessage, string, bool, error) {
+		return fetchThreadMessagesPage(ctx, c, threadID, cursor)
+	}
+}
+
 func nextStatus(s api.CaseStatus) api.CaseStatus {
 	for i, v := range statusCycle {
 		if v == s {
@@ -380,6 +392,14 @@ func (m *model) issueNotes(cursor string, appendPage bool) tea.Cmd {
 	return loadPage(ctx, kindNotes, m.nt.gen, id, m.nt.parentID, cursor, appendPage, m.notesFetcher(m.nt.parentID))
 }
 
+func (m *model) issueThread(cursor string, appendPage bool) tea.Cmd {
+	ctx := m.newCtx(&m.th.cancel)
+	m.th.gen++
+	m.th.setLoading(appendPage)
+	id := m.logStart(pageLabel("thread", m.th.parentID, appendPage, m.th.pagesFetched))
+	return loadPage(ctx, kindThread, m.th.gen, id, m.th.parentID, cursor, appendPage, m.threadFetcher(m.th.parentID))
+}
+
 // newCtx cancels whatever *slot points at and stores a fresh cancel there.
 func (m *model) newCtx(slot *context.CancelFunc) context.Context {
 	if *slot != nil {
@@ -388,6 +408,27 @@ func (m *model) newCtx(slot *context.CancelFunc) context.Context {
 	ctx, cancel := context.WithCancel(m.ctx)
 	*slot = cancel
 	return ctx
+}
+
+// maybeLoadThreadForCase starts the first page of the case's thread once its
+// full detail (which carries the thread link) is available. The thread pane is
+// keyed by the thread id, so reset/gen guards key on it rather than the case id.
+func (m *model) maybeLoadThreadForCase(id string) tea.Cmd {
+	full := m.caseDetail[id]
+	if full == nil {
+		return nil
+	}
+	threadID := full.Thread.Id.String()
+	if threadID == "" {
+		return nil
+	}
+	if m.th.parentID != threadID {
+		m.th.reset(threadID)
+	}
+	if m.th.pagesFetched == 0 && !m.th.loading && !m.th.loadingMore {
+		return m.issueThread("", false)
+	}
+	return nil
 }
 
 // loadCaseDetail fetches a case's full detail once, keyed by id. Stale or
@@ -546,11 +587,160 @@ func (m *model) curSubcaseID() string {
 	return ""
 }
 
-func (m *model) curNoteID() string {
-	if n, ok := m.nt.current(); ok {
-		return n.Id.String()
+// ---- combined notes+files pane ----
+//
+// The pane is a virtual concatenation of the notes list followed by the files
+// list. attachmentsCur indexes into that concatenation; the underlying paged
+// cursors are kept in sync so each segment can lazy-load independently.
+
+type attachmentKind int
+
+const (
+	attachmentNote attachmentKind = iota
+	attachmentFile
+)
+
+// attachmentRow is the resolved item at a combined index: a note or a file.
+type attachmentRow struct {
+	kind    attachmentKind
+	noteIdx int
+	fileIdx int
+	note    api.NoteListItem
+	file    api.File
+}
+
+// attachmentKey identifies a selected row independent of its combined index, so
+// the selection survives pages arriving in either segment (which shift indices).
+type attachmentKey struct {
+	kind attachmentKind
+	id   string
+}
+
+func (m *model) attachmentsLen() int { return m.nt.len() + m.fl.len() }
+
+// attachmentAt resolves the combined index i (notes first, then files).
+func (m *model) attachmentAt(i int) (attachmentRow, bool) {
+	if i < 0 {
+		return attachmentRow{}, false
 	}
-	return ""
+	if i < m.nt.len() {
+		n, _ := m.nt.at(i)
+		return attachmentRow{kind: attachmentNote, noteIdx: i, note: n}, true
+	}
+	j := i - m.nt.len()
+	if f, ok := m.fl.at(j); ok {
+		return attachmentRow{kind: attachmentFile, fileIdx: j, file: f}, true
+	}
+	return attachmentRow{}, false
+}
+
+func (m *model) currentAttachment() (attachmentRow, bool) {
+	return m.attachmentAt(m.attachmentsCur)
+}
+
+// syncAttachmentCursor points the underlying paged cursor at the selected row,
+// so paged.needMore() reports correctly for the active segment.
+func (m *model) syncAttachmentCursor(row attachmentRow) {
+	switch row.kind {
+	case attachmentNote:
+		m.nt.cur = row.noteIdx
+	case attachmentFile:
+		m.fl.cur = row.fileIdx
+	}
+}
+
+func (m *model) currentAttachmentKey() (attachmentKey, bool) {
+	row, ok := m.currentAttachment()
+	if !ok {
+		return attachmentKey{}, false
+	}
+	if row.kind == attachmentNote {
+		return attachmentKey{kind: attachmentNote, id: row.note.Id.String()}, true
+	}
+	return attachmentKey{kind: attachmentFile, id: row.file.Id.String()}, true
+}
+
+// restoreAttachmentKey re-points attachmentsCur at the row previously selected
+// (by id) after a page changed the concatenation, falling back to a clamp.
+func (m *model) restoreAttachmentKey(k attachmentKey, had bool) {
+	if had {
+		for i := 0; i < m.attachmentsLen(); i++ {
+			row, _ := m.attachmentAt(i)
+			if row.kind == k.kind &&
+				((row.kind == attachmentNote && row.note.Id.String() == k.id) ||
+					(row.kind == attachmentFile && row.file.Id.String() == k.id)) {
+				m.attachmentsCur = i
+				m.syncAttachmentCursor(row)
+				return
+			}
+		}
+	}
+	m.attachmentsCur = clamp(m.attachmentsCur, 0, max(0, m.attachmentsLen()-1))
+	if row, ok := m.currentAttachment(); ok {
+		m.syncAttachmentCursor(row)
+	}
+}
+
+// selectAttachmentAt moves the combined cursor to idx; reports a real change.
+func (m *model) selectAttachmentAt(idx int) bool {
+	if idx < 0 || idx >= m.attachmentsLen() {
+		return false
+	}
+	old := m.attachmentsCur
+	m.attachmentsCur = idx
+	if row, ok := m.currentAttachment(); ok {
+		m.syncAttachmentCursor(row)
+	}
+	return old != idx
+}
+
+func (m *model) moveAttachments(delta int) bool {
+	old := m.attachmentsCur
+	m.attachmentsCur = clamp(m.attachmentsCur+delta, 0, max(0, m.attachmentsLen()-1))
+	if row, ok := m.currentAttachment(); ok {
+		m.syncAttachmentCursor(row)
+	}
+	return m.attachmentsCur != old
+}
+
+func (m *model) jumpAttachments(toStart bool) {
+	if toStart {
+		m.attachmentsCur = 0
+	} else {
+		m.attachmentsCur = max(0, m.attachmentsLen()-1)
+	}
+	if row, ok := m.currentAttachment(); ok {
+		m.syncAttachmentCursor(row)
+	}
+}
+
+// maybeMoreAttachments prefetches the next page of whichever segment (notes or
+// files) the combined cursor currently sits in.
+func (m *model) maybeMoreAttachments() tea.Cmd {
+	row, ok := m.currentAttachment()
+	if !ok {
+		return nil
+	}
+	switch row.kind {
+	case attachmentNote:
+		m.nt.cur = row.noteIdx
+		if m.nt.needMore() {
+			return m.issueNotes(m.nt.cursor, true)
+		}
+	case attachmentFile:
+		m.fl.cur = row.fileIdx
+		if m.fl.needMore() {
+			return m.issueFiles(m.fl.cursor, true)
+		}
+	}
+	return nil
+}
+
+func (m *model) maybeMoreThread() tea.Cmd {
+	if m.th.needMore() {
+		return m.issueThread(m.th.cursor, true)
+	}
+	return nil
 }
 
 // currentCaseID is the id of the case being viewed in the case screen.
@@ -582,6 +772,8 @@ func (m *model) onCurrentCaseChange() tea.Cmd {
 	m.scs.reset(id)
 	m.fl.reset(id)
 	m.nt.reset(id)
+	m.th.reset("")
+	m.attachmentsCur, m.attachmentsOff = 0, 0
 	m.detailSource = focusCurrentCase
 	m.lastDetailKey = ""
 	if id == "" {
@@ -593,6 +785,7 @@ func (m *model) onCurrentCaseChange() tea.Cmd {
 		m.issueFiles("", false),
 		m.issueNotes("", false),
 		m.loadCaseDetail(id),
+		m.maybeLoadThreadForCase(id), // fires when the full case is already cached
 	)
 	m.refreshDetail()
 	return cmd
@@ -620,18 +813,20 @@ func (m *model) previewLoad(f focus) tea.Cmd {
 		return m.loadCaseDetail(m.curCaseID())
 	case focusSubcases:
 		return m.loadCaseDetail(m.curSubcaseID())
-	case focusNotes:
-		return m.loadNoteDetail(m.curNoteID())
-	case focusFiles:
-		file, ok := m.fl.current()
+	case focusAttachments:
+		row, ok := m.currentAttachment()
 		if !ok {
 			return nil
 		}
-		if imageSupported() && isImageMime(file.MimeType) {
-			return m.loadImage(file) // bytes cached; rendered inline in the detail pane
+		if row.kind == attachmentNote {
+			return m.loadNoteDetail(row.note.Id.String())
 		}
-		return m.loadFileText(file)
+		if imageSupported() && isImageMime(row.file.MimeType) {
+			return m.loadImage(row.file) // bytes cached; rendered inline in the detail pane
+		}
+		return m.loadFileText(row.file)
 	default:
+		// focusThread messages are already loaded with the page; nothing to fetch.
 		return nil
 	}
 }
@@ -788,6 +983,8 @@ func (m model) handleDataMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleFilesPage(msg)
 	case pageResult[api.NoteListItem]:
 		return m.handleNotesPage(msg)
+	case pageResult[threadMessage]:
+		return m.handleThreadPage(msg)
 	case usersLoadedMsg:
 		return m.handleUsersLoadedMsg(msg)
 	case caseDetailMsg:
@@ -946,10 +1143,14 @@ func (m model) handleFilesPage(msg pageResult[api.File]) (tea.Model, tea.Cmd) {
 		return m.recordErr(msg.err), nil
 	}
 	m.err = nil
+	// Files sit after notes in the combined pane, so a files page never shifts
+	// existing indices, but preserve the selected row by identity regardless.
+	prev, had := m.currentAttachmentKey()
 	m.fl.applyPage(msg.items, msg.cursor, msg.hasMore, msg.appendPage)
+	m.restoreAttachmentKey(prev, had)
 	var cmd tea.Cmd
-	if !msg.appendPage && m.detailSource == focusFiles {
-		cmd = m.previewLoad(focusFiles)
+	if !msg.appendPage && m.detailSource == focusAttachments {
+		cmd = m.previewLoad(focusAttachments)
 	}
 	m.refreshDetail()
 	return m, cmd
@@ -965,13 +1166,37 @@ func (m model) handleNotesPage(msg pageResult[api.NoteListItem]) (tea.Model, tea
 		return m.recordErr(msg.err), nil
 	}
 	m.err = nil
+	// Notes lead the combined pane, so appending notes shifts every file's
+	// index; preserve the selected row by identity across the change.
+	prev, had := m.currentAttachmentKey()
 	m.nt.applyPage(msg.items, msg.cursor, msg.hasMore, msg.appendPage)
+	m.restoreAttachmentKey(prev, had)
 	var cmd tea.Cmd
-	if !msg.appendPage && m.detailSource == focusNotes {
-		cmd = m.previewLoad(focusNotes)
+	if !msg.appendPage && m.detailSource == focusAttachments {
+		cmd = m.previewLoad(focusAttachments)
 	}
 	m.refreshDetail()
 	return m, cmd
+}
+
+func (m model) handleThreadPage(msg pageResult[threadMessage]) (tea.Model, tea.Cmd) {
+	m.logFinishNote(msg.reqID, msg.err, pageNote(len(msg.items), msg.hasMore))
+	if msg.gen != m.th.gen || msg.parentID != m.th.parentID {
+		return m, nil // superseded or for another thread
+	}
+	m.th.loading, m.th.loadingMore = false, false
+	if msg.err != nil {
+		return m.recordErr(msg.err), nil
+	}
+	m.err = nil
+	m.th.applyPage(msg.items, msg.cursor, msg.hasMore, msg.appendPage)
+	// An events page can contain only file payloads, yielding no message rows;
+	// keep scanning until a message turns up or the thread is exhausted.
+	if m.th.len() == 0 && m.th.hasMore {
+		return m, m.issueThread(m.th.cursor, true)
+	}
+	m.refreshDetail()
+	return m, nil
 }
 
 // recordErr stores a non-cancellation error for display.
@@ -988,13 +1213,19 @@ func (m model) handleCaseDetailMsg(msg caseDetailMsg) (tea.Model, tea.Cmd) {
 		return m, nil // from before a reload/config switch
 	}
 	delete(m.caseDetailLoading, msg.id)
+	var cmd tea.Cmd
 	if msg.err == nil {
 		m.caseDetail[msg.id] = msg.c
+		// The full case carries the thread link; start the thread now that we
+		// have it (the initial trigger no-ops until the detail is cached).
+		if m.phase == phaseCase && msg.id == m.currentCaseID() {
+			cmd = m.maybeLoadThreadForCase(msg.id)
+		}
 	}
 	if m.detailShowsCase(msg.id) {
 		m.refreshDetail()
 	}
-	return m, nil
+	return m, cmd
 }
 
 func (m model) handleNoteDetailMsg(msg noteDetailMsg) (tea.Model, tea.Cmd) {
@@ -1006,8 +1237,10 @@ func (m model) handleNoteDetailMsg(msg noteDetailMsg) (tea.Model, tea.Cmd) {
 	if msg.err == nil {
 		m.noteDetail[msg.id] = msg.n
 	}
-	if m.detailSource == focusNotes && m.curNoteID() == msg.id {
-		m.refreshDetail()
+	if m.detailSource == focusAttachments {
+		if row, ok := m.currentAttachment(); ok && row.kind == attachmentNote && row.note.Id.String() == msg.id {
+			m.refreshDetail()
+		}
 	}
 	return m, nil
 }
@@ -1096,14 +1329,19 @@ func (m model) openFocusedFile() tea.Model {
 	return m
 }
 
-// focusedFile returns the selected file when the files pane (or the detail pane
-// sourced from it) is the active target on the case screen.
+// focusedFile returns the selected file when a file row in the combined pane
+// (or the detail pane sourced from it) is the active target on the case screen.
 func (m model) focusedFile() (api.File, bool) {
-	onFiles := m.focus == focusFiles || (m.focus == focusDetail && m.detailSource == focusFiles)
-	if m.phase != phaseCase || !onFiles {
+	onAttachments := m.focus == focusAttachments ||
+		(m.focus == focusDetail && m.detailSource == focusAttachments)
+	if m.phase != phaseCase || !onAttachments {
 		return api.File{}, false
 	}
-	return m.fl.current()
+	row, ok := m.currentAttachment()
+	if !ok || row.kind != attachmentFile {
+		return api.File{}, false
+	}
+	return row.file, true
 }
 
 // focusedImageFile returns the focused file when it is a previewable image on a
@@ -1145,8 +1383,8 @@ func (m model) enterPressed() (tea.Model, tea.Cmd) {
 		if c, ok := m.scs.current(); ok && m.previewingSubcase() {
 			return m.drillInto(c)
 		}
-		// File or note: drop into the bottom pane to read and scroll it.
-		if m.focus == focusFiles || m.focus == focusNotes {
+		// Attachment or thread message: drop into the bottom pane to read it.
+		if m.focus == focusAttachments || m.focus == focusThread {
 			m.setFocus(focusDetail)
 			return m, nil
 		}
@@ -1169,8 +1407,9 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	if m.phase != phaseCase {
 		return m, tea.Quit
 	}
-	// Reading a file or note in the bottom pane: step back to its list pane.
-	if m.focus == focusDetail && (m.detailSource == focusFiles || m.detailSource == focusNotes) {
+	// Reading an attachment or thread message in the bottom pane: step back to
+	// its list pane.
+	if m.focus == focusDetail && (m.detailSource == focusAttachments || m.detailSource == focusThread) {
 		m.setFocus(m.detailSource)
 		return m, nil
 	}
@@ -1178,6 +1417,7 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	m.scs.reset("")
 	m.fl.reset("")
 	m.nt.reset("")
+	m.th.reset("")
 	if len(m.caseStack) > 1 {
 		m.caseStack = m.caseStack[:len(m.caseStack)-1]
 		m.focus = focusSubcases
@@ -1279,13 +1519,13 @@ func (m *model) moveFocusedList(delta int) tea.Cmd {
 		if m.scs.move(delta) {
 			return tea.Batch(m.maybeMoreSubcases(), m.previewFocused())
 		}
-	case focusFiles:
-		if m.fl.move(delta) {
-			return tea.Batch(m.maybeMoreFiles(), m.previewFocused())
+	case focusAttachments:
+		if m.moveAttachments(delta) {
+			return tea.Batch(m.maybeMoreAttachments(), m.previewFocused())
 		}
-	case focusNotes:
-		if m.nt.move(delta) {
-			return tea.Batch(m.maybeMoreNotes(), m.previewFocused())
+	case focusThread:
+		if m.th.move(delta) {
+			return tea.Batch(m.maybeMoreThread(), m.previewFocused())
 		}
 	}
 	return nil
@@ -1312,12 +1552,12 @@ func (m model) jumpCursor(toStart bool) (tea.Model, tea.Cmd) {
 	case focusSubcases:
 		m.scs.jump(toStart)
 		cmd = tea.Batch(m.maybeMoreSubcases(), m.previewFocused())
-	case focusFiles:
-		m.fl.jump(toStart)
-		cmd = tea.Batch(m.maybeMoreFiles(), m.previewFocused())
-	case focusNotes:
-		m.nt.jump(toStart)
-		cmd = tea.Batch(m.maybeMoreNotes(), m.previewFocused())
+	case focusAttachments:
+		m.jumpAttachments(toStart)
+		cmd = tea.Batch(m.maybeMoreAttachments(), m.previewFocused())
+	case focusThread:
+		m.th.jump(toStart)
+		cmd = tea.Batch(m.maybeMoreThread(), m.previewFocused())
 	case focusDetail:
 		if toStart {
 			m.vp.GotoTop()
@@ -1352,20 +1592,6 @@ func (m *model) maybeMoreSubcases() tea.Cmd {
 	return nil
 }
 
-func (m *model) maybeMoreFiles() tea.Cmd {
-	if m.fl.needMore() {
-		return m.issueFiles(m.fl.cursor, true)
-	}
-	return nil
-}
-
-func (m *model) maybeMoreNotes() tea.Cmd {
-	if m.nt.needMore() {
-		return m.issueNotes(m.nt.cursor, true)
-	}
-	return nil
-}
-
 func (m model) reload() (tea.Model, tea.Cmd) {
 	m.detailGen++
 	m.caseDetail = map[string]*api.Case{}
@@ -1385,6 +1611,8 @@ func (m model) reload() (tea.Model, tea.Cmd) {
 	m.scs.reset("")
 	m.fl.reset("")
 	m.nt.reset("")
+	m.th.reset("")
+	m.attachmentsCur, m.attachmentsOff = 0, 0
 	m.caseStack = nil
 	m.phase = phaseBrowse
 	m.focus = focusSpaces

@@ -77,6 +77,9 @@ var (
 	accentSt = lipgloss.NewStyle().Foreground(cAccent)
 	brandSt  = lipgloss.NewStyle().Foreground(cBrand)
 
+	// mentionSt highlights resolved @user mentions inside thread messages.
+	mentionSt = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
+
 	helpKey  = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
 	helpDesc = lipgloss.NewStyle().Foreground(cDim)
 	helpSep  = dimStyle.Render(" · ")

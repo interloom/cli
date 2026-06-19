@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/interloom/cli/internal/api"
 	"github.com/interloom/cli/internal/client"
@@ -106,6 +107,41 @@ func fetchFilesPage(ctx context.Context, c *client.Client, caseID, cursor string
 func fetchNotesPage(ctx context.Context, c *client.Client, caseID, cursor string) ([]api.NoteListItem, string, bool, error) {
 	raw, err := c.List(ctx, "notes", pageQuery(cursor, newestFirst("case_id", caseID)))
 	return decodePage[api.NoteListItem](raw, err)
+}
+
+// threadMessage is a single message payload of a thread event, flattened for
+// display. The thread pane only renders message payloads (file payloads are
+// skipped for now), so one event can yield zero or more message rows.
+type threadMessage struct {
+	event        api.ThreadEvent
+	payloadIndex int
+	msg          api.MessagePayload
+}
+
+// fetchThreadMessagesPage loads one page of a thread's events (oldest first, the
+// API default) and flattens them into message rows, dropping file payloads. The
+// page's cursor/has_more are preserved so pagination still walks whole events.
+func fetchThreadMessagesPage(ctx context.Context, c *client.Client, threadID, cursor string) ([]threadMessage, string, bool, error) {
+	raw, err := c.List(ctx, "threads/"+url.PathEscape(threadID)+"/events", pageQuery(cursor, nil))
+	events, next, hasMore, err := decodePage[api.ThreadEvent](raw, err)
+	if err != nil {
+		return nil, "", false, err
+	}
+	var rows []threadMessage
+	for _, ev := range events {
+		for i, p := range ev.Payloads {
+			disc, derr := p.Discriminator()
+			if derr != nil || disc != "message" {
+				continue
+			}
+			msg, merr := p.AsMessagePayload()
+			if merr != nil || strings.TrimSpace(msg.Text) == "" {
+				continue // skip empty messages entirely
+			}
+			rows = append(rows, threadMessage{event: ev, payloadIndex: i, msg: msg})
+		}
+	}
+	return rows, next, hasMore, nil
 }
 
 // fetchCase loads a single case with its full detail (description, summary).

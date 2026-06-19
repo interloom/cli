@@ -22,6 +22,7 @@ const (
 	mDue      = "due"
 	mAssignee = "assignee"
 	mSize     = "size"
+	mAuthor   = "author"
 )
 
 // ---- layout ----
@@ -38,8 +39,8 @@ type layoutInfo struct {
 func (m model) columnWidths(w int) []int {
 	if m.phase == phaseCase {
 		a := clamp(w*34/100, 18, 46) // sub-cases
-		b := clamp(w*30/100, 16, 40) // files
-		c := w - a - b               // notes
+		b := clamp(w*33/100, 16, 46) // notes & files
+		c := w - a - b               // thread
 		for c < 16 && (a > 18 || b > 16) {
 			if a > 18 {
 				a--
@@ -125,8 +126,8 @@ func (m *model) syncOffsets(l layoutInfo) {
 	m.sp.off = windowOffset(m.sp.cur, m.sp.off, m.sp.len(), rows)
 	m.cs.off = windowOffset(m.cs.cur, m.cs.off, m.cs.len(), rows)
 	m.scs.off = windowOffset(m.scs.cur, m.scs.off, m.scs.len(), rows)
-	m.fl.off = windowOffset(m.fl.cur, m.fl.off, m.fl.len(), rows)
-	m.nt.off = windowOffset(m.nt.cur, m.nt.off, m.nt.len(), rows)
+	m.attachmentsOff = windowOffset(m.attachmentsCur, m.attachmentsOff, m.attachmentsLen(), rows)
+	m.th.off = windowOffset(m.th.cur, m.th.off, m.th.len(), rows)
 }
 
 func windowOffset(cur, off, count, rows int) int {
@@ -242,15 +243,15 @@ func (m model) selectRow(f focus, row, visRows int, l layoutInfo) (tea.Model, te
 		if m.scs.selectAt(windowOffset(m.scs.cur, m.scs.off, m.scs.len(), visRows) + row) {
 			cmd = tea.Batch(m.maybeMoreSubcases(), m.previewLoad(focusSubcases))
 		}
-	case focusFiles:
-		// Always (re)load the clicked file's preview: unlike the other panes,
-		// file previews aren't auto-loaded on focus, so a click on the already
-		// selected file must still trigger the load. previewLoad is idempotent.
-		m.fl.selectAt(windowOffset(m.fl.cur, m.fl.off, m.fl.len(), visRows) + row)
-		cmd = tea.Batch(m.maybeMoreFiles(), m.previewLoad(focusFiles))
-	case focusNotes:
-		if m.nt.selectAt(windowOffset(m.nt.cur, m.nt.off, m.nt.len(), visRows) + row) {
-			cmd = tea.Batch(m.maybeMoreNotes(), m.previewLoad(focusNotes))
+	case focusAttachments:
+		// Always (re)load the clicked row's preview: file previews aren't
+		// auto-loaded on focus, so a click on the already selected file must
+		// still trigger the load. previewLoad is idempotent.
+		m.selectAttachmentAt(windowOffset(m.attachmentsCur, m.attachmentsOff, m.attachmentsLen(), visRows) + row)
+		cmd = tea.Batch(m.maybeMoreAttachments(), m.previewLoad(focusAttachments))
+	case focusThread:
+		if m.th.selectAt(windowOffset(m.th.cur, m.th.off, m.th.len(), visRows) + row) {
+			cmd = tea.Batch(m.maybeMoreThread(), m.previewLoad(focusThread))
 		}
 	}
 	m.syncOffsets(l)
@@ -557,24 +558,138 @@ func (m model) renderPane(f focus, w, colsH int) string {
 			glyph, gc, tc := statusParts(cs.Status)
 			return m.renderCaseRow(cs, glyph, gc, tc, i == m.scs.cur, w)
 		})
-	case focusFiles:
-		off := windowOffset(m.fl.cur, m.fl.off, m.fl.len(), rows)
+	case focusAttachments:
+		off := windowOffset(m.attachmentsCur, m.attachmentsOff, m.attachmentsLen(), rows)
 		return m.renderColumn(colSpec{
-			title: "FILES", focused: m.focus == focusFiles, w: w, colsH: colsH,
-			count: m.fl.len(), off: off, list: m.fl.meta(), emptyMsg: "No files",
+			title: "NOTES & FILES", focused: m.focus == focusAttachments, w: w, colsH: colsH,
+			count: m.attachmentsLen(), off: off, list: m.attachmentsMeta(), emptyMsg: "No notes or files",
 		}, func(i, w int) string {
-			fi, _ := m.fl.at(i)
-			return renderRow("▤", cAccent, fi.Name, cFg, i == m.fl.cur, w)
+			row, _ := m.attachmentAt(i)
+			if row.kind == attachmentNote {
+				return renderRow("▪", cBrandHi, row.note.Title, cFg, i == m.attachmentsCur, w)
+			}
+			return renderRow("▤", cAccent, row.file.Name, cFg, i == m.attachmentsCur, w)
 		})
-	case focusNotes:
-		off := windowOffset(m.nt.cur, m.nt.off, m.nt.len(), rows)
+	case focusThread:
+		off := windowOffset(m.th.cur, m.th.off, m.th.len(), rows)
 		return m.renderColumn(colSpec{
-			title: "NOTES", focused: m.focus == focusNotes, w: w, colsH: colsH,
-			count: m.nt.len(), off: off, list: m.nt.meta(), emptyMsg: "No notes",
+			title: "THREAD", focused: m.focus == focusThread, w: w, colsH: colsH,
+			count: m.th.len(), off: off, list: m.th.meta(), emptyMsg: "No thread messages",
 		}, func(i, w int) string {
-			n, _ := m.nt.at(i)
-			return renderRow("▪", cBrandHi, n.Title, cFg, i == m.nt.cur, w)
+			tm, _ := m.th.at(i)
+			text := strings.TrimSpace(firstLine(m.resolveMentions(tm.msg.Text)))
+			if text == "" {
+				text = "(empty message)"
+			}
+			return renderRow("✉", cBrandHi, text, cFg, i == m.th.cur, w)
 		})
+	}
+	return ""
+}
+
+// attachmentsMeta synthesizes list metadata for the combined pane from its two
+// backing lists: loading while either first page is in flight with no rows yet,
+// and "more" available when either segment has more pages.
+func (m model) attachmentsMeta() listMeta {
+	count := m.attachmentsLen()
+	return listMeta{
+		loading:     count == 0 && (m.nt.loading || m.fl.loading),
+		loadingMore: m.nt.loadingMore || m.fl.loadingMore,
+		hasMore:     m.nt.hasMore || m.fl.hasMore,
+	}
+}
+
+// mentionRe matches the mention tokens embedded in thread messages, e.g.
+// <@U0192d8ea-2009-789a-9df2-8d903e4a4fdb>. The leading letter is the entity
+// type (U = user); the remainder is the referenced object's UUID.
+var mentionRe = regexp.MustCompile(`<@[A-Za-z]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>`)
+
+// resolveMentions rewrites user mention tokens as @Name using the loaded user
+// directory, leaving unknown or non-user mentions untouched.
+func (m model) resolveMentions(s string) string {
+	if !strings.Contains(s, "<@") {
+		return s
+	}
+	return mentionRe.ReplaceAllStringFunc(s, func(tok string) string {
+		sub := mentionRe.FindStringSubmatch(tok)
+		if sub == nil {
+			return tok
+		}
+		if u, ok := m.users[strings.ToLower(sub[1])]; ok {
+			if name := strings.TrimSpace(u.Name); name != "" {
+				return "@" + name
+			}
+		}
+		return tok
+	})
+}
+
+// Sentinels used to mark resolved mentions so they can be recolored after the
+// markdown renderer runs. They are private-use code points that survive glamour
+// untouched; the interior space is a non-breaking space so word-wrap keeps a
+// multi-word @Name on a single line (letting one regex recolor the whole span).
+const (
+	mentionOpen  = "\ue000"
+	mentionClose = "\ue001"
+	nbsp         = "\u00a0"
+)
+
+var mentionSpanRe = regexp.MustCompile(mentionOpen + "([^" + mentionClose + "]*)" + mentionClose)
+
+// resolveMentionsMarked resolves mentions like resolveMentions but wraps each
+// resolved @Name in sentinels (and joins its words with NBSP) so the rendered
+// detail body can highlight the mention via highlightMentions / stripMentionMarks.
+func (m model) resolveMentionsMarked(s string) string {
+	if !strings.Contains(s, "<@") {
+		return s
+	}
+	return mentionRe.ReplaceAllStringFunc(s, func(tok string) string {
+		sub := mentionRe.FindStringSubmatch(tok)
+		if sub == nil {
+			return tok
+		}
+		if u, ok := m.users[strings.ToLower(sub[1])]; ok {
+			if name := strings.TrimSpace(u.Name); name != "" {
+				return mentionOpen + "@" + strings.ReplaceAll(name, " ", nbsp) + mentionClose
+			}
+		}
+		return tok
+	})
+}
+
+// highlightMentions recolors sentinel-wrapped mention spans with mentionSt,
+// restoring the spaces inside multi-word names. It is a no-op when no marked
+// mentions are present, so it is safe to call on any rendered body.
+func highlightMentions(s string) string {
+	if !strings.Contains(s, mentionOpen) {
+		return s
+	}
+	return mentionSpanRe.ReplaceAllStringFunc(s, func(span string) string {
+		name := strings.TrimSuffix(strings.TrimPrefix(span, mentionOpen), mentionClose)
+		return mentionSt.Render(strings.ReplaceAll(name, nbsp, " "))
+	})
+}
+
+// stripMentionMarks removes mention sentinels, leaving plain @Name text. Used
+// for raw/unstyled bodies (and as a safety net) so sentinels never leak to the
+// screen as invisible glyphs.
+func stripMentionMarks(s string) string {
+	if !strings.Contains(s, mentionOpen) {
+		return s
+	}
+	return mentionSpanRe.ReplaceAllStringFunc(s, func(span string) string {
+		name := strings.TrimSuffix(strings.TrimPrefix(span, mentionOpen), mentionClose)
+		return strings.ReplaceAll(name, nbsp, " ")
+	})
+}
+
+// firstLine returns the first non-empty line of s, collapsing internal runs of
+// whitespace so a multi-line message renders as a single tidy row.
+func firstLine(s string) string {
+	for _, ln := range strings.Split(s, "\n") {
+		if t := strings.TrimSpace(ln); t != "" {
+			return strings.Join(strings.Fields(t), " ")
+		}
 	}
 	return ""
 }
@@ -767,7 +882,7 @@ func (m model) renderCaseRow(cs api.CaseListItem, glyph string, glyphColor, text
 	return renderRow(glyph, glyphColor, cs.Title, textColor, selected, baseW) + gapStyle.Render(" ") + renderedName
 }
 
-func (m model) assigneeName(link *api.GameObjectLink) string {
+func (m model) assigneeName(link *api.ResourceLink) string {
 	if link == nil {
 		return ""
 	}
@@ -804,10 +919,13 @@ func (m model) detailLabel() string {
 		return "CASE"
 	case focusSubcases:
 		return "SUB-CASE"
-	case focusFiles:
-		return "FILE"
-	case focusNotes:
+	case focusAttachments:
+		if row, ok := m.currentAttachment(); ok && row.kind == attachmentFile {
+			return "FILE"
+		}
 		return "NOTE"
+	case focusThread:
+		return "MESSAGE"
 	default:
 		return "CASE"
 	}
@@ -818,7 +936,7 @@ func (m model) renderFooter() string {
 	switch {
 	case m.phase != phaseCase:
 		hints = append(hints, [2]string{keyEnter, "open"})
-	case m.focus == focusFiles || m.focus == focusNotes:
+	case m.focus == focusAttachments || m.focus == focusThread:
 		hints = append(hints, [2]string{keyEnter, "read"})
 	case m.focus == focusSubcases:
 		hints = append(hints, [2]string{keyEnter, "drill"})
@@ -953,6 +1071,10 @@ func (m *model) refreshDetail() {
 		body = dimStyle.Render(md) // raw notes/descriptions
 	}
 
+	// Any mention sentinels still present (raw mode, or markdown unavailable)
+	// are stripped to plain @Name so they never surface as invisible glyphs.
+	body = stripMentionMarks(body)
+
 	content := header
 	if body != "" {
 		content += "\n" + body
@@ -976,7 +1098,7 @@ func (m *model) renderMarkdown(md string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	return linkifyURLs(strings.TrimRight(out, "\n")), true
+	return highlightMentions(linkifyURLs(strings.TrimRight(out, "\n"))), true
 }
 
 // renderPlainText prepares raw file text for the detail viewport: hard-wrapped
@@ -1034,16 +1156,16 @@ func (m model) effectiveDetailSource() focus {
 			return focusCurrentCase
 		}
 		return focusSubcases
-	case focusFiles:
-		if m.fl.len() == 0 {
+	case focusAttachments:
+		if m.attachmentsLen() == 0 {
 			return focusCurrentCase
 		}
-		return focusFiles
-	case focusNotes:
-		if m.nt.len() == 0 {
+		return focusAttachments
+	case focusThread:
+		if m.th.len() == 0 {
 			return focusCurrentCase
 		}
-		return focusNotes
+		return focusThread
 	default:
 		return focusCurrentCase
 	}
@@ -1055,15 +1177,53 @@ func (m *model) detailParts() (key, header, md string) {
 		return m.caseDetailParts()
 	case focusSubcases:
 		return m.subcaseDetailParts()
-	case focusFiles:
-		return m.fileDetailParts()
-	case focusNotes:
-		return m.noteDetailParts()
+	case focusAttachments:
+		return m.attachmentDetailParts()
+	case focusThread:
+		return m.threadDetailParts()
 	case focusCurrentCase:
 		return m.currentCaseDetailParts()
 	default:
 		return m.spaceDetailParts()
 	}
+}
+
+// attachmentDetailParts renders the combined pane's selected note or file.
+func (m *model) attachmentDetailParts() (string, string, string) {
+	row, ok := m.currentAttachment()
+	if !ok {
+		return "attachments|none", dimStyle.Render("No notes or files on this case."), ""
+	}
+	if row.kind == attachmentNote {
+		return m.noteDetailPartsFor(row.note)
+	}
+	return m.fileDetailPartsFor(row.file)
+}
+
+// threadDetailParts renders the selected thread message: author + timestamps in
+// the header and the message text (markdown) as the body.
+func (m *model) threadDetailParts() (string, string, string) {
+	row, ok := m.th.current()
+	if !ok {
+		return "thread|none", dimStyle.Render("No thread messages."), ""
+	}
+	author := row.event.Author.Id.String()
+	if u, ok := m.users[row.event.Author.Id.String()]; ok && strings.TrimSpace(u.Name) != "" {
+		author = u.Name
+	}
+	header := m.caseBreadcrumb() + "\n" +
+		metaLine(map[string]string{
+			mAuthor:  author,
+			mCreated: relTime(row.event.CreatedAt),
+		}, mAuthor, mCreated) + "\n" +
+		dimStyle.Render(row.event.Id.String())
+
+	md := m.resolveMentionsMarked(row.msg.Text)
+	if strings.TrimSpace(md) == "" {
+		md = "*Empty message.*"
+	}
+	key := fmt.Sprintf("thread|%s|payload=%d", row.event.Id.String(), row.payloadIndex)
+	return key, header, md
 }
 
 func (m *model) spaceDetailParts() (string, string, string) {
@@ -1163,11 +1323,9 @@ func (m *model) renderCaseDetail(li api.CaseListItem, kind, crumb string) (strin
 	return fmt.Sprintf("%s|%s|loaded=%v", kind, id, full != nil), header, md.String()
 }
 
-func (m *model) fileDetailParts() (string, string, string) {
-	f, ok := m.fl.current()
-	if !ok {
-		return "file|none", dimStyle.Render("No files on this case."), ""
-	}
+// fileDetailPartsFor builds the detail panel for a specific file (selected in
+// the combined notes+files pane).
+func (m *model) fileDetailPartsFor(f api.File) (string, string, string) {
 	chips := []string{chip(f.MimeType, cAccent)}
 	if f.Tags != nil {
 		for _, t := range *f.Tags {
@@ -1251,11 +1409,9 @@ func (m *model) fileTextDetail(id, header string) (string, string, string) {
 	return "file|" + id, header, ""
 }
 
-func (m *model) noteDetailParts() (string, string, string) {
-	li, ok := m.nt.current()
-	if !ok {
-		return "note|none", dimStyle.Render("No notes on this case."), ""
-	}
+// noteDetailPartsFor builds the detail panel for a specific note (selected in
+// the combined notes+files pane). The full body is fetched lazily and cached.
+func (m *model) noteDetailPartsFor(li api.NoteListItem) (string, string, string) {
 	id := li.Id.String()
 	full := m.noteDetail[id]
 

@@ -43,19 +43,20 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
-// Defines values for GameObjectType.
+// Defines values for ResourceType.
 const (
-	AGENT     GameObjectType = "AGENT"
-	CASE      GameObjectType = "CASE"
-	FILE      GameObjectType = "FILE"
-	NOTE      GameObjectType = "NOTE"
-	PROCEDURE GameObjectType = "PROCEDURE"
-	SPACE     GameObjectType = "SPACE"
-	USER      GameObjectType = "USER"
+	AGENT     ResourceType = "AGENT"
+	CASE      ResourceType = "CASE"
+	FILE      ResourceType = "FILE"
+	NOTE      ResourceType = "NOTE"
+	PROCEDURE ResourceType = "PROCEDURE"
+	SPACE     ResourceType = "SPACE"
+	THREAD    ResourceType = "THREAD"
+	USER      ResourceType = "USER"
 )
 
-// Valid indicates whether the value is a known member of the GameObjectType enum.
-func (e GameObjectType) Valid() bool {
+// Valid indicates whether the value is a known member of the ResourceType enum.
+func (e ResourceType) Valid() bool {
 	switch e {
 	case AGENT:
 		return true
@@ -68,6 +69,8 @@ func (e GameObjectType) Valid() bool {
 	case PROCEDURE:
 		return true
 	case SPACE:
+		return true
+	case THREAD:
 		return true
 	case USER:
 		return true
@@ -220,8 +223,8 @@ type Agent struct {
 	Model string `json:"model"`
 
 	// Name Human-readable agent name.
-	Name   string          `json:"name"`
-	Parent *GameObjectLink `json:"parent,omitempty"`
+	Name   string        `json:"name"`
+	Parent *ResourceLink `json:"parent,omitempty"`
 
 	// Type Public resource type for the agent.
 	Type *string `json:"type,omitempty"`
@@ -242,8 +245,8 @@ type AgentListItem struct {
 	Model string `json:"model"`
 
 	// Name Human-readable agent name.
-	Name   string          `json:"name"`
-	Parent *GameObjectLink `json:"parent,omitempty"`
+	Name   string        `json:"name"`
+	Parent *ResourceLink `json:"parent,omitempty"`
 
 	// Type Public resource type for the agent.
 	Type *string `json:"type,omitempty"`
@@ -254,7 +257,7 @@ type AgentListItem struct {
 
 // Case defines model for Case.
 type Case struct {
-	Assignee *GameObjectLink `json:"assignee,omitempty"`
+	Assignee *ResourceLink `json:"assignee,omitempty"`
 
 	// CompletedAt Timestamp when the case was completed, if completed.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
@@ -272,18 +275,19 @@ type Case struct {
 	ExternalId *string `json:"external_id,omitempty"`
 
 	// Files Files attached to the case, represented as public File links.
-	Files *[]GameObjectLink `json:"files,omitempty"`
+	Files *[]ResourceLink `json:"files,omitempty"`
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 	Status CaseStatus         `json:"status"`
 
 	// Summary Optional generated or user-provided case summary.
 	Summary *string `json:"summary,omitempty"`
 
 	// Tags Tags assigned to the case, represented as simple names.
-	Tags *[]string `json:"tags,omitempty"`
+	Tags   *[]string    `json:"tags,omitempty"`
+	Thread ResourceLink `json:"thread"`
 
 	// Title Human-readable case name.
 	Title string `json:"title"`
@@ -297,7 +301,7 @@ type Case struct {
 
 // CaseListItem defines model for CaseListItem.
 type CaseListItem struct {
-	Assignee *GameObjectLink `json:"assignee,omitempty"`
+	Assignee *ResourceLink `json:"assignee,omitempty"`
 
 	// CompletedAt Timestamp when the case was completed, if completed.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
@@ -313,7 +317,7 @@ type CaseListItem struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 	Status CaseStatus         `json:"status"`
 
 	// Tags Tags assigned to the case, represented as simple names.
@@ -437,8 +441,8 @@ type File struct {
 	MimeType string `json:"mime_type"`
 
 	// Name Original or generated display name for the file.
-	Name   string          `json:"name"`
-	Parent *GameObjectLink `json:"parent,omitempty"`
+	Name   string        `json:"name"`
+	Parent *ResourceLink `json:"parent,omitempty"`
 
 	// Size File size in bytes.
 	Size int `json:"size"`
@@ -455,8 +459,8 @@ type File struct {
 
 // FilePayload defines model for FilePayload.
 type FilePayload struct {
-	File        GameObjectLink `json:"file"`
-	PayloadType string         `json:"payload_type"`
+	File        ResourceLink `json:"file"`
+	PayloadType string       `json:"payload_type"`
 }
 
 // GameObject defines model for GameObject.
@@ -466,25 +470,12 @@ type GameObject struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
-	Type   GameObjectType     `json:"type"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
+	Type   ResourceType       `json:"type"`
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
-// GameObjectLink defines model for GameObjectLink.
-type GameObjectLink struct {
-	// Id Unique identifier for the linked object.
-	Id   openapi_types.UUID `json:"id"`
-	Type GameObjectType     `json:"type"`
-
-	// Url Canonical public REST URL for the linked object, when the linked object has an addressable public endpoint.
-	Url *string `json:"url,omitempty"`
-}
-
-// GameObjectType defines model for GameObjectType.
-type GameObjectType string
 
 // ListAgentsResponse defines model for ListAgentsResponse.
 type ListAgentsResponse struct {
@@ -598,7 +589,7 @@ type Note struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 
 	// Tags Tags assigned to the note, represented as simple names.
 	Tags *[]string `json:"tags,omitempty"`
@@ -620,7 +611,7 @@ type NoteListItem struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 
 	// Tags Tags assigned to the note, represented as simple names.
 	Tags *[]string `json:"tags,omitempty"`
@@ -654,7 +645,7 @@ type Procedure struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 
 	// Stages Procedure stages, in procedure order.
 	Stages *[]ProcedureStage `json:"stages,omitempty"`
@@ -671,7 +662,7 @@ type Procedure struct {
 
 // ProcedureStage defines model for ProcedureStage.
 type ProcedureStage struct {
-	Assignee *GameObjectLink `json:"assignee,omitempty"`
+	Assignee *ResourceLink `json:"assignee,omitempty"`
 
 	// CreatedAt Timestamp when the stage was created.
 	CreatedAt time.Time `json:"created_at"`
@@ -711,7 +702,7 @@ type ProcedureSummary struct {
 
 	// Id Unique identifier for the object.
 	Id     openapi_types.UUID `json:"id"`
-	Parent *GameObjectLink    `json:"parent,omitempty"`
+	Parent *ResourceLink      `json:"parent,omitempty"`
 
 	// Title Human-readable procedure name.
 	Title string `json:"title"`
@@ -722,6 +713,19 @@ type ProcedureSummary struct {
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// ResourceLink defines model for ResourceLink.
+type ResourceLink struct {
+	// Id Unique identifier for the linked object.
+	Id   openapi_types.UUID `json:"id"`
+	Type ResourceType       `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
+}
+
+// ResourceType defines model for ResourceType.
+type ResourceType string
 
 // Space defines model for Space.
 type Space struct {
@@ -741,8 +745,8 @@ type Space struct {
 	IsSystem bool `json:"is_system"`
 
 	// Name Human-readable space name.
-	Name   string          `json:"name"`
-	Parent *GameObjectLink `json:"parent,omitempty"`
+	Name   string        `json:"name"`
+	Parent *ResourceLink `json:"parent,omitempty"`
 
 	// Type Public resource type for the space.
 	Type *string `json:"type,omitempty"`
@@ -766,8 +770,8 @@ type SpaceListItem struct {
 	IsSystem bool `json:"is_system"`
 
 	// Name Human-readable space name.
-	Name   string          `json:"name"`
-	Parent *GameObjectLink `json:"parent,omitempty"`
+	Name   string        `json:"name"`
+	Parent *ResourceLink `json:"parent,omitempty"`
 
 	// Type Public resource type for the space.
 	Type *string `json:"type,omitempty"`
@@ -788,7 +792,7 @@ type Thread struct {
 
 // ThreadEvent defines model for ThreadEvent.
 type ThreadEvent struct {
-	Author    GameObjectLink              `json:"author"`
+	Author    ResourceLink                `json:"author"`
 	CreatedAt time.Time                   `json:"created_at"`
 	Id        openapi_types.UUID          `json:"id"`
 	Payloads  []ThreadEvent_Payloads_Item `json:"payloads"`
