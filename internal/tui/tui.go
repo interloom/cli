@@ -789,21 +789,7 @@ func (m model) handleDataMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case pageResult[api.NoteListItem]:
 		return m.handleNotesPage(msg)
 	case usersLoadedMsg:
-		more := msg.hasMore && msg.next != ""
-		m.logFinishNote(msg.reqID, msg.err, pageNote(msg.count, more))
-		if msg.gen != m.detailGen || msg.err != nil {
-			return m, nil
-		}
-		if more {
-			return m, m.issueUsers(msg.next, msg.page+1, msg.users)
-		}
-		m.users = make(map[string]api.User, len(msg.users))
-		for _, user := range msg.users {
-			m.users[user.Id.String()] = user
-		}
-		m.lastDetailKey = ""
-		m.refreshDetail()
-		return m, nil
+		return m.handleUsersLoadedMsg(msg)
 	case caseDetailMsg:
 		return m.handleCaseDetailMsg(msg)
 	case noteDetailMsg:
@@ -813,6 +799,26 @@ func (m model) handleDataMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fileTextMsg:
 		return m.handleFileTextMsg(msg)
 	}
+	return m, nil
+}
+
+// handleUsersLoadedMsg records a loaded page of users, paging through the rest
+// if more remain, and refreshes the detail pane once all pages are in.
+func (m model) handleUsersLoadedMsg(msg usersLoadedMsg) (tea.Model, tea.Cmd) {
+	more := msg.hasMore && msg.next != ""
+	m.logFinishNote(msg.reqID, msg.err, pageNote(msg.count, more))
+	if msg.gen != m.detailGen || msg.err != nil {
+		return m, nil
+	}
+	if more {
+		return m, m.issueUsers(msg.next, msg.page+1, msg.users)
+	}
+	m.users = make(map[string]api.User, len(msg.users))
+	for _, user := range msg.users {
+		m.users[user.Id.String()] = user
+	}
+	m.lastDetailKey = ""
+	m.refreshDetail()
 	return m, nil
 }
 
