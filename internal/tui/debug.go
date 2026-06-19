@@ -161,7 +161,7 @@ func (m model) renderDebugPanel(l layoutInfo) string {
 func (m model) renderReqEntry(e reqEntry, w int) string {
 	var (
 		glyph string
-		gc    lipgloss.Color
+		gc    lipgloss.TerminalColor
 		dur   string
 	)
 	switch e.status {

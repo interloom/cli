@@ -6,22 +6,35 @@ import (
 	"github.com/interloom/cli/internal/api"
 )
 
-// Palette — a sophisticated indigo/violet scheme with a teal accent.
+const (
+	cBrandDark   = "#A78BFA"
+	cBrandHiDark = "#C4B5FD"
+	cDimDark     = "#6B7280"
+	cBorderDark  = "#3B3B52"
+)
+
+func adaptiveColor(light, dark string) lipgloss.AdaptiveColor {
+	return lipgloss.AdaptiveColor{Light: light, Dark: dark}
+}
+
+// Palette with light/dark variants for terminal background contrast.
 var (
-	cBrand   = lipgloss.Color("#A78BFA") // violet
-	cBrandHi = lipgloss.Color("#C4B5FD") // light violet
-	cAccent  = lipgloss.Color("#5EEAD4") // teal
-	cFg      = lipgloss.Color("#E5E7EB") // near-white
-	cMuted   = lipgloss.Color("#9CA3AF") // gray
-	cDim     = lipgloss.Color("#6B7280") // dim gray
-	cBorder  = lipgloss.Color("#3B3B52") // blurred border
-	cBg      = lipgloss.Color("#312E81") // selection background (indigo)
+	cBrand    = adaptiveColor("#6D28D9", cBrandDark)   // violet
+	cBrandHi  = adaptiveColor("#4C1D95", cBrandHiDark) // light/deep violet
+	cAccent   = adaptiveColor("#0F766E", "#5EEAD4")    // teal
+	cFg       = adaptiveColor("#111827", "#E5E7EB")    // primary text
+	cMuted    = adaptiveColor("#4B5563", "#9CA3AF")    // gray
+	cDim      = adaptiveColor("#374151", cDimDark)     // dim gray
+	cBorder   = adaptiveColor("#6B7280", cBorderDark)  // soft border
+	cBg       = lipgloss.Color("#312E81")              // selection background (indigo)
+	cOnColor  = lipgloss.Color("#F9FAFB")              // text on selection
+	cOnStatus = adaptiveColor("#F9FAFB", "#1F2937")    // text on status badges
 
 	// Status colors.
-	cOpen      = lipgloss.Color("#93C5FD") // blue
-	cStarted   = lipgloss.Color("#FCD34D") // amber
-	cBlocked   = lipgloss.Color("#F87171") // red
-	cCompleted = lipgloss.Color("#34D399") // green
+	cOpen      = adaptiveColor("#1D4ED8", "#93C5FD") // blue
+	cStarted   = adaptiveColor("#A16207", "#FCD34D") // amber
+	cBlocked   = adaptiveColor("#B91C1C", "#F87171") // red
+	cCompleted = adaptiveColor("#047857", "#34D399") // green
 	cCancelled = cDim
 )
 
@@ -71,7 +84,7 @@ var (
 
 // statusBadge renders a small colored status label, e.g. for the detail header.
 func statusBadge(s api.CaseStatus) string {
-	var c lipgloss.Color
+	var c lipgloss.TerminalColor
 	switch s {
 	case api.Open:
 		c = cOpen
@@ -86,7 +99,7 @@ func statusBadge(s api.CaseStatus) string {
 	default:
 		c = cDim
 	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#1F2937")).
+	return lipgloss.NewStyle().Foreground(cOnStatus).
 		Background(c).Bold(true).Padding(0, 1).Render(string(s))
 }
 

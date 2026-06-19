@@ -391,7 +391,7 @@ func renderLogoSheen(t float64) string {
 				b.WriteByte(' ')
 				continue
 			}
-			base := gradientHex([]string{"#2E2E4A", string(cBrand)}, rev) // dark → brand fade-in
+			base := gradientHex([]string{"#2E2E4A", cBrandDark}, rev) // dark → brand fade-in
 			d := float64(x)/float64(w-1) - hx
 			hi := math.Exp(-(d * d) / (2 * 0.1 * 0.1)) // defined highlight band
 			hex := string(lerpHex(base, "#E6DEFF", 0.85*hi*rev))
@@ -403,7 +403,7 @@ func renderLogoSheen(t float64) string {
 }
 
 // wordRevealStops emerge each letter from dim, with a faint glow, then settle.
-var wordRevealStops = []string{string(cBorder), string(cBrandHi), string(cBrand)}
+var wordRevealStops = []string{cBorderDark, cBrandHiDark, cBrandDark}
 
 // renderWordmark resolves "interloom" letter by letter out of dim dots; once
 // settled a faint highlight drifts across it on a slow loop. Unrevealed letters
@@ -433,7 +433,7 @@ func renderWordmark(t float64) (string, int) {
 		if lp >= 1 {
 			d := float64(i) - sweepPos
 			sh := math.Exp(-(d * d) / (2 * 0.9 * 0.9))
-			hex = string(lerpHex(string(cBrand), "#E6DEFF", 0.9*sh))
+			hex = string(lerpHex(cBrandDark, "#E6DEFF", 0.9*sh))
 		}
 		b.WriteString(glyphStyle(hex).Render(string(r)))
 	}
@@ -449,7 +449,7 @@ func renderRule(t float64, wordW int) string {
 	if n <= 0 {
 		return ""
 	}
-	hex := gradientHex([]string{string(cBorder), string(cBrand)}, p)
+	hex := gradientHex([]string{cBorderDark, cBrandDark}, p)
 	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(strings.Repeat("─", n))
 }
 
@@ -460,7 +460,7 @@ func renderTagline(t float64) string {
 	if p <= 0 {
 		return ""
 	}
-	hex := gradientHex([]string{string(cBorder), string(cDim), string(cMuted)}, p)
+	hex := gradientHex([]string{cBorderDark, cDimDark, "#9CA3AF"}, p)
 	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("Supercharged Operations")
 }
 
@@ -729,15 +729,15 @@ func (m model) colCount(c colSpec) string {
 }
 
 // renderRow renders a single list line: pointer, colored glyph, text, padding.
-func renderRow(glyph string, glyphColor lipgloss.Color, text string, textColor lipgloss.Color, selected bool, w int) string {
+func renderRow(glyph string, glyphColor lipgloss.TerminalColor, text string, textColor lipgloss.TerminalColor, selected bool, w int) string {
 	avail := max(0, w-4) // pointer(2) + glyph(1) + space(1)
 	text = truncate(text, avail)
 	used := 4 + lipglossWidth(text)
 	pad := max(0, w-used)
 
 	if selected {
-		base := lipgloss.NewStyle().Foreground(cBrandHi).Background(cBg).Bold(true)
-		g := lipgloss.NewStyle().Foreground(glyphColor).Background(cBg)
+		base := lipgloss.NewStyle().Foreground(cOnColor).Background(cBg).Bold(true)
+		g := lipgloss.NewStyle().Foreground(cOnColor).Background(cBg)
 		return base.Render("▸ ") + g.Render(glyph) + base.Render(" "+text+strings.Repeat(" ", pad))
 	}
 	g := lipgloss.NewStyle().Foreground(glyphColor)
@@ -1307,7 +1307,7 @@ func breadcrumb(segs ...string) string {
 	return strings.Join(parts, sep)
 }
 
-func chip(text string, c lipgloss.Color) string {
+func chip(text string, c lipgloss.TerminalColor) string {
 	return lipgloss.NewStyle().Foreground(c).
 		Render("⟨" + text + "⟩")
 }
@@ -1324,7 +1324,7 @@ func metaLine(kv map[string]string, order ...string) string {
 	return strings.Join(parts, dimStyle.Render("  ·  "))
 }
 
-func statusParts(s api.CaseStatus) (glyph string, glyphColor, textColor lipgloss.Color) {
+func statusParts(s api.CaseStatus) (glyph string, glyphColor, textColor lipgloss.TerminalColor) {
 	switch s {
 	case api.Open:
 		return "○", cOpen, cFg
