@@ -6,6 +6,7 @@
 //   - anyOf/oneOf:[S,{type:null}] -> S + nullable:true (FastAPI optional fields)
 //   - type:[X,"null"]     -> type:X + nullable:true
 //   - contentMediaType    -> format:binary (3.1 binary upload encoding)
+//   - discriminator props -> required on each union member schema
 //
 // Usage: specconvert <in.json> <out.json>
 package main
@@ -14,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -34,6 +36,7 @@ func main() {
 		doc["openapi"] = "3.0.3"
 	}
 	walk(doc)
+	requireDiscriminatorProps(doc)
 
 	out, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -148,6 +151,107 @@ func rewriteContentMediaType(m map[string]any) {
 func isNullSchema(v any) bool {
 	m, ok := v.(map[string]any)
 	return ok && len(m) == 1 && m["type"] == "null"
+}
+
+// requireDiscriminatorProps marks every discriminator property as required on
+// its union member schemas. oapi-codegen's generated union helpers assign the
+// discriminator value as a plain string (e.g. `v.PayloadType = "message"`),
+// which only compiles when the field is a non-pointer — i.e. when the property
+// is required. FastAPI emits the discriminator with a const/default but omits
+// it from `required`, so it would otherwise be generated as a *string.
+func requireDiscriminatorProps(doc map[string]any) {
+	defs := schemaDefs(doc)
+	if defs == nil {
+		return
+	}
+	visitMaps(doc, func(m map[string]any) {
+		disc, ok := m["discriminator"].(map[string]any)
+		if !ok {
+			return
+		}
+		prop, ok := disc["propertyName"].(string)
+		if !ok || prop == "" {
+			return
+		}
+		for _, ref := range memberRefs(m, disc) {
+			name, ok := schemaRefName(ref)
+			if !ok {
+				continue
+			}
+			if target, ok := defs[name].(map[string]any); ok {
+				addRequired(target, prop)
+			}
+		}
+	})
+}
+
+// schemaDefs returns components.schemas, or nil if absent.
+func schemaDefs(doc map[string]any) map[string]any {
+	comp, _ := doc["components"].(map[string]any)
+	if comp == nil {
+		return nil
+	}
+	defs, _ := comp["schemas"].(map[string]any)
+	return defs
+}
+
+// memberRefs collects the $refs of a discriminated union's members, from the
+// sibling oneOf/anyOf list and from the discriminator mapping.
+func memberRefs(m, disc map[string]any) []string {
+	var refs []string
+	for _, key := range []string{"oneOf", "anyOf"} {
+		members, _ := m[key].([]any)
+		for _, member := range members {
+			if mm, ok := member.(map[string]any); ok {
+				if ref, ok := mm["$ref"].(string); ok {
+					refs = append(refs, ref)
+				}
+			}
+		}
+	}
+	if mapping, ok := disc["mapping"].(map[string]any); ok {
+		for _, v := range mapping {
+			if ref, ok := v.(string); ok {
+				refs = append(refs, ref)
+			}
+		}
+	}
+	return refs
+}
+
+// schemaRefName extracts Name from a "#/components/schemas/Name" reference.
+func schemaRefName(ref string) (string, bool) {
+	const prefix = "#/components/schemas/"
+	if name, ok := strings.CutPrefix(ref, prefix); ok && name != "" {
+		return name, true
+	}
+	return "", false
+}
+
+// addRequired appends prop to schema.required if not already present.
+func addRequired(schema map[string]any, prop string) {
+	req, _ := schema["required"].([]any)
+	for _, r := range req {
+		if s, ok := r.(string); ok && s == prop {
+			return
+		}
+	}
+	schema["required"] = append(req, prop)
+}
+
+// visitMaps invokes fn on every map within a decoded JSON value.
+func visitMaps(v any, fn func(map[string]any)) {
+	switch node := v.(type) {
+	case map[string]any:
+		fn(node)
+		for _, child := range node {
+			visitMaps(child, fn)
+		}
+	case []any:
+		for _, child := range node {
+			visitMaps(child, fn)
+		}
+	}
 }
 
 func fatal(err error) {

@@ -123,6 +123,18 @@ interloom users list
 interloom users get <id>
 ```
 
+## Threads
+
+Threads are read-only and have no collection list. `get` fetches a single
+thread; `events` lists its event stream with cursor pagination:
+
+```sh
+interloom threads get <id>
+interloom threads events <id> --limit 50 --direction desc
+interloom threads events <id> --cursor <next_cursor>
+interloom threads events <id> --all      # fetch every page into one list
+```
+
 ## Version
 
 ```sh

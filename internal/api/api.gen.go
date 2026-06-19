@@ -4,8 +4,11 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"time"
 
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -165,16 +168,34 @@ func (e ListNotesParamsSort) Valid() bool {
 
 // Defines values for ListNotesParamsDirection.
 const (
-	Asc  ListNotesParamsDirection = "asc"
-	Desc ListNotesParamsDirection = "desc"
+	ListNotesParamsDirectionAsc  ListNotesParamsDirection = "asc"
+	ListNotesParamsDirectionDesc ListNotesParamsDirection = "desc"
 )
 
 // Valid indicates whether the value is a known member of the ListNotesParamsDirection enum.
 func (e ListNotesParamsDirection) Valid() bool {
 	switch e {
-	case Asc:
+	case ListNotesParamsDirectionAsc:
 		return true
-	case Desc:
+	case ListNotesParamsDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListThreadEventsParamsDirection.
+const (
+	ListThreadEventsParamsDirectionAsc  ListThreadEventsParamsDirection = "asc"
+	ListThreadEventsParamsDirectionDesc ListThreadEventsParamsDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListThreadEventsParamsDirection enum.
+func (e ListThreadEventsParamsDirection) Valid() bool {
+	switch e {
+	case ListThreadEventsParamsDirectionAsc:
+		return true
+	case ListThreadEventsParamsDirectionDesc:
 		return true
 	default:
 		return false
@@ -432,6 +453,12 @@ type File struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// FilePayload defines model for FilePayload.
+type FilePayload struct {
+	File        GameObjectLink `json:"file"`
+	PayloadType string         `json:"payload_type"`
+}
+
 // GameObject defines model for GameObject.
 type GameObject struct {
 	// CreatedAt Timestamp when the object was created.
@@ -531,6 +558,18 @@ type ListSpacesResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// ListThreadEventsResponse defines model for ListThreadEventsResponse.
+type ListThreadEventsResponse struct {
+	// Data Items in the current page.
+	Data []ThreadEvent `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
 // ListUsersResponse defines model for ListUsersResponse.
 type ListUsersResponse struct {
 	// Data Items in the current page.
@@ -541,6 +580,12 @@ type ListUsersResponse struct {
 
 	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
 	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// MessagePayload defines model for MessagePayload.
+type MessagePayload struct {
+	PayloadType string `json:"payload_type"`
+	Text        string `json:"text"`
 }
 
 // Note defines model for Note.
@@ -729,6 +774,30 @@ type SpaceListItem struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Thread defines model for Thread.
+type Thread struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// EventsUrl Canonical public REST URL for this thread's paginated events.
+	EventsUrl         *string            `json:"events_url,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+	LastThreadEventAt *time.Time         `json:"last_thread_event_at"`
+}
+
+// ThreadEvent defines model for ThreadEvent.
+type ThreadEvent struct {
+	Author    GameObjectLink              `json:"author"`
+	CreatedAt time.Time                   `json:"created_at"`
+	Id        openapi_types.UUID          `json:"id"`
+	Payloads  []ThreadEvent_Payloads_Item `json:"payloads"`
+	UpdatedAt time.Time                   `json:"updated_at"`
+}
+
+// ThreadEvent_Payloads_Item defines model for ThreadEvent.payloads.Item.
+type ThreadEvent_Payloads_Item struct {
+	union json.RawMessage
 }
 
 // UpdateAgentRequest defines model for UpdateAgentRequest.
@@ -1088,6 +1157,27 @@ type UpdateSpaceParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// GetThreadParams defines parameters for GetThread.
+type GetThreadParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListThreadEventsParams defines parameters for ListThreadEvents.
+type ListThreadEventsParams struct {
+	// Limit Maximum number of thread events to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from next_cursor in a previous response.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Direction Sort direction by event creation time. Use asc or desc.
+	Direction     *ListThreadEventsParamsDirection `form:"direction,omitempty" json:"direction,omitempty"`
+	Authorization *string                          `json:"authorization,omitempty"`
+}
+
+// ListThreadEventsParamsDirection defines parameters for ListThreadEvents.
+type ListThreadEventsParamsDirection string
+
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
 	// Limit Maximum number of users to return.
@@ -1143,3 +1233,92 @@ type CreateSpaceJSONRequestBody = CreateSpaceRequest
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = UpdateSpaceRequest
+
+// AsMessagePayload returns the union data inside the ThreadEvent_Payloads_Item as a MessagePayload
+func (t ThreadEvent_Payloads_Item) AsMessagePayload() (MessagePayload, error) {
+	var body MessagePayload
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessagePayload overwrites any union data inside the ThreadEvent_Payloads_Item as the provided MessagePayload
+func (t *ThreadEvent_Payloads_Item) FromMessagePayload(v MessagePayload) error {
+	v.PayloadType = "message"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessagePayload performs a merge with any union data inside the ThreadEvent_Payloads_Item, using the provided MessagePayload
+func (t *ThreadEvent_Payloads_Item) MergeMessagePayload(v MessagePayload) error {
+	v.PayloadType = "message"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFilePayload returns the union data inside the ThreadEvent_Payloads_Item as a FilePayload
+func (t ThreadEvent_Payloads_Item) AsFilePayload() (FilePayload, error) {
+	var body FilePayload
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFilePayload overwrites any union data inside the ThreadEvent_Payloads_Item as the provided FilePayload
+func (t *ThreadEvent_Payloads_Item) FromFilePayload(v FilePayload) error {
+	v.PayloadType = "file"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFilePayload performs a merge with any union data inside the ThreadEvent_Payloads_Item, using the provided FilePayload
+func (t *ThreadEvent_Payloads_Item) MergeFilePayload(v FilePayload) error {
+	v.PayloadType = "file"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ThreadEvent_Payloads_Item) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"payload_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ThreadEvent_Payloads_Item) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "file":
+		return t.AsFilePayload()
+	case "message":
+		return t.AsMessagePayload()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ThreadEvent_Payloads_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ThreadEvent_Payloads_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
