@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/interloom/cli/internal/api"
 )
@@ -107,12 +107,16 @@ func (m model) layout() layoutInfo {
 // applyLayout resizes the viewport and (re)builds the markdown renderer.
 func (m *model) applyLayout() {
 	l := m.layout()
-	m.vp.Width = l.detailInnerW
-	m.vp.Height = l.detailInnerH
+	m.vp.SetWidth(l.detailInnerW)
+	m.vp.SetHeight(l.detailInnerH)
 	if m.md == nil || m.mdWidth != l.detailInnerW {
 		m.mdWidth = l.detailInnerW
+		style := "light"
+		if hasDarkBackground {
+			style = "dark"
+		}
 		r, err := glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
+			glamour.WithStylePath(style),
 			glamour.WithWordWrap(max(20, l.detailInnerW)),
 		)
 		if err == nil {
@@ -175,12 +179,13 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	l := m.layout()
-	switch {
-	case msg.Button == tea.MouseButtonWheelUp:
+	mouse := msg.Mouse()
+	switch mouse.Button {
+	case tea.MouseWheelUp:
 		return m.handleWheel(msg, l, -1)
-	case msg.Button == tea.MouseButtonWheelDown:
+	case tea.MouseWheelDown:
 		return m.handleWheel(msg, l, 1)
-	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
+	case tea.MouseLeft:
 		return m.handleClick(msg, l)
 	}
 	return m, nil
@@ -189,7 +194,8 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 // handleWheel scrolls the detail pane when hovering it, else moves the list
 // under the cursor.
 func (m model) handleWheel(msg tea.MouseMsg, l layoutInfo, dir int) (tea.Model, tea.Cmd) {
-	if msg.Y >= l.detailTop {
+	mouse := msg.Mouse()
+	if mouse.Y >= l.detailTop {
 		if dir > 0 {
 			m.vp.ScrollDown(2)
 		} else {
@@ -197,7 +203,7 @@ func (m model) handleWheel(msg tea.MouseMsg, l layoutInfo, dir int) (tea.Model, 
 		}
 		return m, nil
 	}
-	if f, ok := m.columnAt(msg.X, l); ok {
+	if f, ok := m.columnAt(mouse.X, l); ok {
 		m.setFocus(f)
 		return m.moveCursor(dir)
 	}
@@ -206,24 +212,23 @@ func (m model) handleWheel(msg tea.MouseMsg, l layoutInfo, dir int) (tea.Model, 
 
 // handleClick focuses the clicked pane and selects the clicked row.
 func (m model) handleClick(msg tea.MouseMsg, l layoutInfo) (tea.Model, tea.Cmd) {
-	if msg.Y >= l.detailTop {
+	mouse := msg.Mouse()
+	if mouse.Y >= l.detailTop {
 		m.setFocus(focusDetail)
-		m.refreshDetail()
-		return m, nil
+		return m, m.refreshDetail()
 	}
-	f, ok := m.columnAt(msg.X, l)
+	f, ok := m.columnAt(mouse.X, l)
 	if !ok {
 		return m, nil
 	}
 	m.setFocus(f)
 
 	visRows := l.colsH - 3
-	row := msg.Y - (l.colTop + 2) // y of the first item row
+	row := mouse.Y - (l.colTop + 2) // y of the first item row
 	if row < 0 || row >= visRows {
 		// Clicking the pane (not a row) still loads its detail.
 		cmd := m.focusLoadCmd()
-		m.refreshDetail()
-		return m, cmd
+		return m, tea.Batch(cmd, m.refreshDetail())
 	}
 	return m.selectRow(f, row, visRows, l)
 }
@@ -255,13 +260,19 @@ func (m model) selectRow(f focus, row, visRows int, l layoutInfo) (tea.Model, te
 		}
 	}
 	m.syncOffsets(l)
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 // ---- view ----
 
-func (m model) View() string {
+func (m model) View() tea.View {
+	v := tea.NewView(m.viewString())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
+}
+
+func (m model) viewString() string {
 	if m.width == 0 || m.height == 0 {
 		// Size is seeded at construction, so this is only a defensive net:
 		// never fall back to a bare line — show the splash at a default size.
@@ -330,15 +341,15 @@ func gradientHex(stops []string, t float64) string {
 	if i >= len(stops)-1 {
 		return stops[len(stops)-1]
 	}
-	return string(lerpHex(stops[i], stops[i+1], seg-float64(i)))
+	return lerpHex(stops[i], stops[i+1], seg-float64(i))
 }
 
 // lerpHex linearly interpolates between two "#RRGGBB" colors at t in [0,1].
-func lerpHex(a, b string, t float64) lipgloss.Color {
+func lerpHex(a, b string, t float64) string {
 	ar, ag, ab := hexRGB(a)
 	br, bg, bb := hexRGB(b)
 	lerp := func(x, y int) int { return int(math.Round(float64(x) + (float64(y)-float64(x))*t)) }
-	return lipgloss.Color(fmt.Sprintf("#%02X%02X%02X", lerp(ar, br), lerp(ag, bg), lerp(ab, bb)))
+	return fmt.Sprintf("#%02X%02X%02X", lerp(ar, br), lerp(ag, bg), lerp(ab, bb))
 }
 
 // hexRGB splits a "#RRGGBB" color into its 8-bit components.
@@ -395,7 +406,7 @@ func renderLogoSheen(t float64) string {
 			base := gradientHex([]string{"#2E2E4A", cBrandDark}, rev) // dark → brand fade-in
 			d := float64(x)/float64(w-1) - hx
 			hi := math.Exp(-(d * d) / (2 * 0.1 * 0.1)) // defined highlight band
-			hex := string(lerpHex(base, "#E6DEFF", 0.85*hi*rev))
+			hex := lerpHex(base, "#E6DEFF", 0.85*hi*rev)
 			b.WriteString(glyphStyle(hex).Render(string(runes[x])))
 		}
 		out[li] = b.String()
@@ -434,7 +445,7 @@ func renderWordmark(t float64) (string, int) {
 		if lp >= 1 {
 			d := float64(i) - sweepPos
 			sh := math.Exp(-(d * d) / (2 * 0.9 * 0.9))
-			hex = string(lerpHex(cBrandDark, "#E6DEFF", 0.9*sh))
+			hex = lerpHex(cBrandDark, "#E6DEFF", 0.9*sh)
 		}
 		b.WriteString(glyphStyle(hex).Render(string(r)))
 	}
@@ -487,14 +498,11 @@ func (m model) renderHeader() string {
 	if m.phase == phaseCase {
 		left += "  " + m.caseBreadcrumb()
 	}
-	if m.statusFilter != "" {
-		left += "   " + dimStyle.Render("filter ") + statusBadge(m.statusFilter)
-	}
 	content := lineLR(left, m.headerStatus(), m.width-4)
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(cBrand).
-		Width(m.width-2).
+		Width(m.width).
 		Padding(0, 1).
 		Render(content)
 }
@@ -541,7 +549,7 @@ func (m model) renderPane(f focus, w, colsH int) string {
 	case focusCases:
 		off := windowOffset(m.cs.cur, m.cs.off, m.cs.len(), rows)
 		return m.renderColumn(colSpec{
-			title: "CASES", focused: m.focus == focusCases, w: w, colsH: colsH,
+			title: "CASES", titleSuffix: m.caseFilterTitleSuffix(), focused: m.focus == focusCases, w: w, colsH: colsH,
 			count: m.cs.len(), off: off, list: m.cs.meta(), emptyMsg: m.casesEmptyMsg(),
 		}, func(i, w int) string {
 			cs, _ := m.cs.at(i)
@@ -551,7 +559,7 @@ func (m model) renderPane(f focus, w, colsH int) string {
 	case focusSubcases:
 		off := windowOffset(m.scs.cur, m.scs.off, m.scs.len(), rows)
 		return m.renderColumn(colSpec{
-			title: "SUB-CASES", focused: m.focus == focusSubcases, w: w, colsH: colsH,
+			title: "SUB-CASES", titleSuffix: m.caseFilterTitleSuffix(), focused: m.focus == focusSubcases, w: w, colsH: colsH,
 			count: m.scs.len(), off: off, list: m.scs.meta(), emptyMsg: m.subcasesEmptyMsg(),
 		}, func(i, w int) string {
 			cs, _ := m.scs.at(i)
@@ -711,15 +719,23 @@ func (m model) subcasesEmptyMsg() string {
 	return "No sub-cases"
 }
 
+func (m model) caseFilterTitleSuffix() string {
+	if m.statusFilter == "" {
+		return ""
+	}
+	return dimStyle.Render("filter ") + statusBadge(m.statusFilter)
+}
+
 // colSpec carries the pagination-aware metadata needed to render a list pane.
 type colSpec struct {
-	title    string
-	focused  bool
-	w, colsH int
-	count    int
-	off      int
-	list     listMeta
-	emptyMsg string
+	title       string
+	titleSuffix string
+	focused     bool
+	w, colsH    int
+	count       int
+	off         int
+	list        listMeta
+	emptyMsg    string
 }
 
 // listMeta is the slice of paged state the renderer needs (kept non-generic so
@@ -746,8 +762,12 @@ func (m model) renderColumn(c colSpec, rowFn func(i, innerW int) string) string 
 		ts = colTitleFocus
 		bs = boxFocusStyle
 	}
+	title := ts.Render(c.title)
+	if c.titleSuffix != "" {
+		title += " " + c.titleSuffix
+	}
 	titleLine := lipgloss.NewStyle().Width(innerW).MaxWidth(innerW).
-		Render(ts.Render(c.title) + " " + dimStyle.Render(m.colCount(c)))
+		Render(title + " " + dimStyle.Render(m.colCount(c)))
 
 	lines := m.columnLines(c, rowFn, innerW, visRows)
 	for len(lines) < visRows {
@@ -755,7 +775,7 @@ func (m model) renderColumn(c colSpec, rowFn func(i, innerW int) string) string 
 	}
 
 	content := titleLine + "\n" + strings.Join(lines, "\n")
-	return bs.Width(innerW).Height(innerH).MaxWidth(c.w).MaxHeight(c.colsH).Render(content)
+	return bs.Width(c.w).Height(c.colsH).Render(content)
 }
 
 // columnLines builds the body rows of a list pane: a loading/empty placeholder,
@@ -844,7 +864,7 @@ func (m model) colCount(c colSpec) string {
 }
 
 // renderRow renders a single list line: pointer, colored glyph, text, padding.
-func renderRow(glyph string, glyphColor lipgloss.TerminalColor, text string, textColor lipgloss.TerminalColor, selected bool, w int) string {
+func renderRow(glyph string, glyphColor terminalColor, text string, textColor terminalColor, selected bool, w int) string {
 	avail := max(0, w-4) // pointer(2) + glyph(1) + space(1)
 	text = truncate(text, avail)
 	used := 4 + lipglossWidth(text)
@@ -862,7 +882,7 @@ func renderRow(glyph string, glyphColor lipgloss.TerminalColor, text string, tex
 
 // renderCaseRow adds the assignee's name at the right edge while preserving the
 // fixed-width row contract used by the pane renderer.
-func (m model) renderCaseRow(cs api.CaseListItem, glyph string, glyphColor, textColor lipgloss.TerminalColor, selected bool, w int) string {
+func (m model) renderCaseRow(cs api.CaseListItem, glyph string, glyphColor, textColor terminalColor, selected bool, w int) string {
 	name := m.assigneeName(cs.Assignee)
 	if name == "" {
 		return renderRow(glyph, glyphColor, cs.Title, textColor, selected, w)
@@ -908,7 +928,7 @@ func (m model) renderDetail(l layoutInfo) string {
 	titleLine := lineLR(ts.Render(m.detailLabel()), right, l.detailInnerW)
 
 	content := titleLine + "\n" + m.vp.View()
-	return bs.Width(m.width-2).Height(l.detailH-2).MaxHeight(l.detailH).Padding(0, 1).Render(content)
+	return bs.Width(m.width).Height(l.detailH).Padding(0, 1).Render(content)
 }
 
 func (m model) detailLabel() string {
@@ -957,7 +977,7 @@ func (m model) renderFooter() string {
 		[2]string{"c", "config"},
 		[2]string{"d", "debug"},
 		[2]string{"r", "reload"},
-		[2]string{"q", "quit"},
+		[2]string{keyCtrlC, "quit"},
 	)
 	parts := make([]string, 0, len(hints))
 	for _, h := range hints {
@@ -1032,11 +1052,12 @@ func pickerHints() string {
 
 // ---- detail content ----
 
-func (m *model) refreshDetail() {
+func (m *model) refreshDetail() tea.Cmd {
+	m.inlineImageRaw = ""
 	key, header, md := m.detailParts()
 	combined := fmt.Sprintf("%s|raw=%v|w=%d", key, m.rawMode, m.mdWidth)
 	if combined == m.lastDetailKey {
-		return
+		return nil
 	}
 	m.lastDetailKey = combined
 
@@ -1081,6 +1102,10 @@ func (m *model) refreshDetail() {
 	}
 	m.vp.SetContent(content)
 	m.vp.GotoTop()
+	if m.inlineImageRaw != "" {
+		return tea.Raw(m.inlineImageRaw)
+	}
+	return nil
 }
 
 // urlRe matches visible http(s) URLs in already-rendered output. It stops at
@@ -1371,19 +1396,22 @@ func (m *model) fileImageDetail(id, header string) (string, string, string) {
 
 	header += "\n" + accentSt.Render("↵ / v") + mutedSt.Render("  full screen")
 	headerRows := strings.Count(header, "\n") + 1
-	maxRows := m.vp.Height - headerRows - 1 // leave a blank line above the image
-	maxCols := m.vp.Width
+	maxRows := m.vp.Height() - headerRows - 1 // leave a blank line above the image
+	maxCols := m.vp.Width()
 	if maxRows < 2 || maxCols < 4 {
 		return "file|" + id + "|img=ready", header, "" // pane too short to inline
 	}
 
 	cols, rows := fitCells(img.w, img.h, maxCols, maxRows)
 	imageID := kittyImageID(id)
+	var raw strings.Builder
+	kittyAppendVirtualImage(&raw, img.png, imageID, cols, rows)
+	m.inlineImageRaw = raw.String()
+
 	var b strings.Builder
 	b.WriteByte('\n') // blank line between header and image
-	kittyAppendVirtualImage(&b, img.png, imageID, cols, rows)
 	b.WriteString(kittyPlaceholderGrid(imageID, cols, rows))
-	key := fmt.Sprintf("fileimage|%s|%dx%d|pane=%dx%d", id, cols, rows, m.vp.Width, m.vp.Height)
+	key := fmt.Sprintf("fileimage|%s|%dx%d|pane=%dx%d", id, cols, rows, m.vp.Width(), m.vp.Height())
 	return key, header, b.String()
 }
 
@@ -1498,7 +1526,7 @@ func breadcrumb(segs ...string) string {
 	return strings.Join(parts, sep)
 }
 
-func chip(text string, c lipgloss.TerminalColor) string {
+func chip(text string, c terminalColor) string {
 	return lipgloss.NewStyle().Foreground(c).
 		Render("⟨" + text + "⟩")
 }
@@ -1515,7 +1543,7 @@ func metaLine(kv map[string]string, order ...string) string {
 	return strings.Join(parts, dimStyle.Render("  ·  "))
 }
 
-func statusParts(s api.CaseStatus) (glyph string, glyphColor, textColor lipgloss.TerminalColor) {
+func statusParts(s api.CaseStatus) (glyph string, glyphColor, textColor terminalColor) {
 	switch s {
 	case api.Open:
 		return "○", cOpen, cFg

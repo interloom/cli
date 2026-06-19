@@ -1,7 +1,10 @@
 package tui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"image/color"
+	"os"
+
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/interloom/cli/internal/api"
 )
@@ -13,8 +16,12 @@ const (
 	cBorderDark  = "#3B3B52"
 )
 
-func adaptiveColor(light, dark string) lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{Light: light, Dark: dark}
+type terminalColor = color.Color
+
+var hasDarkBackground = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+
+func adaptiveColor(light, dark string) terminalColor {
+	return lipgloss.LightDark(hasDarkBackground)(lipgloss.Color(light), lipgloss.Color(dark))
 }
 
 // Palette with light/dark variants for terminal background contrast.
@@ -87,7 +94,7 @@ var (
 
 // statusBadge renders a small colored status label, e.g. for the detail header.
 func statusBadge(s api.CaseStatus) string {
-	var c lipgloss.TerminalColor
+	var c terminalColor
 	switch s {
 	case api.Open:
 		c = cOpen

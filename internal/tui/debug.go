@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // maxReqLog bounds the debug request log so a long session can't grow without
@@ -153,7 +153,7 @@ func (m model) renderDebugPanel(l layoutInfo) string {
 	}
 
 	content := titleLine + "\n" + strings.Join(lines, "\n")
-	return boxFocusStyle.Width(m.width-2).Height(l.detailH-2).MaxHeight(l.detailH).Padding(0, 1).Render(content)
+	return boxFocusStyle.Width(m.width).Height(l.detailH).Padding(0, 1).Render(content)
 }
 
 // renderReqEntry renders one request-log row: timestamp, status glyph, label,
@@ -161,7 +161,7 @@ func (m model) renderDebugPanel(l layoutInfo) string {
 func (m model) renderReqEntry(e reqEntry, w int) string {
 	var (
 		glyph string
-		gc    lipgloss.TerminalColor
+		gc    terminalColor
 		dur   string
 	)
 	switch e.status {

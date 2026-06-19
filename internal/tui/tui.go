@@ -22,10 +22,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
 	"github.com/interloom/cli/internal/api"
 	"github.com/interloom/cli/internal/client"
 	"github.com/interloom/cli/internal/config"
@@ -37,8 +37,6 @@ import (
 func Run(ctx context.Context, c *client.Client, cfgName string) error {
 	p := tea.NewProgram(
 		newModel(ctx, c, cfgName),
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 		tea.WithContext(ctx),
 	)
 	_, err := p.Run()
@@ -162,6 +160,8 @@ type model struct {
 
 	md      *glamour.TermRenderer
 	mdWidth int
+
+	inlineImageRaw string // raw Kitty transmit sequence emitted when an inline image detail activates
 
 	lastDetailKey string // memoizes the rendered detail panel
 	detailMdOn    bool   // whether the detail body is currently markdown-rendered
@@ -777,8 +777,7 @@ func (m *model) onCurrentCaseChange() tea.Cmd {
 	m.detailSource = focusCurrentCase
 	m.lastDetailKey = ""
 	if id == "" {
-		m.refreshDetail()
-		return nil
+		return m.refreshDetail()
 	}
 	cmd := tea.Batch(
 		m.issueSubcases("", false),
@@ -787,23 +786,38 @@ func (m *model) onCurrentCaseChange() tea.Cmd {
 		m.loadCaseDetail(id),
 		m.maybeLoadThreadForCase(id), // fires when the full case is already cached
 	)
-	m.refreshDetail()
-	return cmd
+	return tea.Batch(cmd, m.refreshDetail())
+}
+
+// clearStatusFilter drops the case/sub-case status filter at task navigation
+// boundaries and reloads the hidden browse case list so it stays consistent
+// with the now-unfiltered pane title when the user returns to it.
+func (m *model) clearStatusFilter() tea.Cmd {
+	if m.statusFilter == "" {
+		return nil
+	}
+	m.statusFilter = ""
+	if m.cs.parentID == "" {
+		return nil
+	}
+	return m.issueCases("", false)
 }
 
 // openCase drills from the browse screen into a case's detail view.
 func (m model) openCase(c api.CaseListItem) (tea.Model, tea.Cmd) {
+	filterCmd := m.clearStatusFilter()
 	m.phase = phaseCase
 	m.caseStack = []api.CaseListItem{c}
 	m.focus = focusSubcases
-	return m, m.onCurrentCaseChange()
+	return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
 }
 
 // drillInto pushes a sub-case onto the stack, making it the current case.
 func (m model) drillInto(c api.CaseListItem) (tea.Model, tea.Cmd) {
+	filterCmd := m.clearStatusFilter()
 	m.caseStack = append(m.caseStack, c)
 	m.focus = focusSubcases
-	return m, m.onCurrentCaseChange()
+	return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
 }
 
 // previewLoad fetches the detail for a pane's current selection, if any.
@@ -851,15 +865,15 @@ func (m model) advanceIntro() (tea.Model, tea.Cmd) {
 func (m model) endIntro() tea.Model {
 	m.phase = phaseBrowse
 	m.lastDetailKey = ""
-	m.refreshDetail()
+	_ = m.refreshDetail()
 	return m
 }
 
 // handleIntroKey keeps the splash animating until the user presses Enter, which
-// dissolves it into the browser. Quit keys still quit; other keys are ignored.
+// dissolves it into the browser. Ctrl+C still quits; other keys are ignored.
 func (m model) handleIntroKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "q", keyCtrlC, keyEsc:
+	case keyCtrlC:
 		return m, tea.Quit
 	case keyEnter:
 		return m.endIntro(), nil
@@ -885,7 +899,7 @@ func (m model) handlePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyCtrlC:
 		return m, tea.Quit
-	case keyEsc, "c", "q":
+	case keyEsc, "c":
 		m.cfgPickerOpen = false
 		m.cfgErr = nil
 		return m, nil
@@ -948,8 +962,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.applyLayout()
 		m.lastDetailKey = ""
-		m.refreshDetail()
-		return m, nil
+		return m, m.refreshDetail()
 
 	case introTickMsg:
 		return m.advanceIntro()
@@ -1015,8 +1028,7 @@ func (m model) handleUsersLoadedMsg(msg usersLoadedMsg) (tea.Model, tea.Cmd) {
 		m.users[user.Id.String()] = user
 	}
 	m.lastDetailKey = ""
-	m.refreshDetail()
-	return m, nil
+	return m, m.refreshDetail()
 }
 
 // handleFileTextMsg records a loaded text/eml file body (or its error) and
@@ -1033,8 +1045,7 @@ func (m model) handleFileTextMsg(msg fileTextMsg) (tea.Model, tea.Cmd) {
 		m.fileText[msg.id] = msg.tc
 	}
 	m.lastDetailKey = ""
-	m.refreshDetail()
-	return m, nil
+	return m, m.refreshDetail()
 }
 
 // handleImageLoadedMsg records a downloaded image and, if the user is still
@@ -1051,18 +1062,17 @@ func (m model) handleImageLoadedMsg(msg imageLoadedMsg) (tea.Model, tea.Cmd) {
 			m.viewFile = nil
 		}
 		m.lastDetailKey = ""
-		m.refreshDetail()
-		return m, nil
+		return m, m.refreshDetail()
 	}
 	m.imgCache[msg.id] = msg.img
 	m.lastDetailKey = ""
-	m.refreshDetail()
+	cmd := m.refreshDetail()
 	if m.viewFile != nil && m.viewFile.Id.String() == msg.id {
 		f := *m.viewFile
 		m.viewFile = nil
-		return m, m.execImage(f, msg.img)
+		return m, tea.Batch(cmd, m.execImage(f, msg.img))
 	}
-	return m, nil
+	return m, cmd
 }
 
 // handleCaseListPage routes a case-shaped page to the browse or case screen,
@@ -1089,8 +1099,7 @@ func (m model) handleSpacesPage(msg pageResult[api.SpaceListItem]) (tea.Model, t
 	if !msg.appendPage {
 		cmd = m.onSpaceChange()
 	}
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 func (m model) handleCasesPage(msg pageResult[api.CaseListItem]) (tea.Model, tea.Cmd) {
@@ -1110,7 +1119,7 @@ func (m model) handleCasesPage(msg pageResult[api.CaseListItem]) (tea.Model, tea
 	if m.phase == phaseBrowse && (!msg.appendPage || (wasEmpty && m.cs.len() > 0)) {
 		cmds = append(cmds, m.onBrowseCaseChange())
 	}
-	m.refreshDetail()
+	cmds = append(cmds, m.refreshDetail())
 	return m, tea.Batch(cmds...)
 }
 
@@ -1129,7 +1138,7 @@ func (m model) handleSubcasesPage(msg pageResult[api.CaseListItem]) (tea.Model, 
 	if !msg.appendPage && m.detailSource == focusSubcases {
 		cmds = append(cmds, m.previewLoad(focusSubcases))
 	}
-	m.refreshDetail()
+	cmds = append(cmds, m.refreshDetail())
 	return m, tea.Batch(cmds...)
 }
 
@@ -1152,8 +1161,7 @@ func (m model) handleFilesPage(msg pageResult[api.File]) (tea.Model, tea.Cmd) {
 	if !msg.appendPage && m.detailSource == focusAttachments {
 		cmd = m.previewLoad(focusAttachments)
 	}
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 func (m model) handleNotesPage(msg pageResult[api.NoteListItem]) (tea.Model, tea.Cmd) {
@@ -1175,8 +1183,7 @@ func (m model) handleNotesPage(msg pageResult[api.NoteListItem]) (tea.Model, tea
 	if !msg.appendPage && m.detailSource == focusAttachments {
 		cmd = m.previewLoad(focusAttachments)
 	}
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 func (m model) handleThreadPage(msg pageResult[threadMessage]) (tea.Model, tea.Cmd) {
@@ -1195,8 +1202,7 @@ func (m model) handleThreadPage(msg pageResult[threadMessage]) (tea.Model, tea.C
 	if m.th.len() == 0 && m.th.hasMore {
 		return m, m.issueThread(m.th.cursor, true)
 	}
-	m.refreshDetail()
-	return m, nil
+	return m, m.refreshDetail()
 }
 
 // recordErr stores a non-cancellation error for display.
@@ -1223,7 +1229,7 @@ func (m model) handleCaseDetailMsg(msg caseDetailMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if m.detailShowsCase(msg.id) {
-		m.refreshDetail()
+		cmd = tea.Batch(cmd, m.refreshDetail())
 	}
 	return m, cmd
 }
@@ -1239,7 +1245,7 @@ func (m model) handleNoteDetailMsg(msg noteDetailMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.detailSource == focusAttachments {
 		if row, ok := m.currentAttachment(); ok && row.kind == attachmentNote && row.note.Id.String() == msg.id {
-			m.refreshDetail()
+			return m, m.refreshDetail()
 		}
 	}
 	return m, nil
@@ -1267,7 +1273,7 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handlePickerKey(msg)
 	}
 	switch msg.String() {
-	case "q", keyCtrlC:
+	case keyCtrlC:
 		return m, tea.Quit
 	case keyEsc:
 		return m.escapePressed()
@@ -1292,8 +1298,7 @@ func (m model) handleActionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	case "m":
 		m.rawMode = !m.rawMode
 		m.lastDetailKey = ""
-		m.refreshDetail()
-		return m, nil, true
+		return m, m.refreshDetail(), true
 	case "d":
 		m.debug = !m.debug
 		return m, nil, true
@@ -1303,7 +1308,7 @@ func (m model) handleActionKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	case "o":
 		return m.openFocusedFile(), nil, true
 	case "r":
-		mdl, cmd := m.reload()
+		mdl, cmd := m.reloadForContext()
 		return mdl, cmd, true
 	}
 	return m, nil, false
@@ -1402,10 +1407,10 @@ func (m model) previewingSubcase() bool {
 		(m.focus == focusDetail && m.detailSource == focusSubcases)
 }
 
-// escapePressed walks back up the case tree, or quits from the browse screen.
+// escapePressed walks back up the case tree. On the browse screen it is a no-op.
 func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	if m.phase != phaseCase {
-		return m, tea.Quit
+		return m, nil
 	}
 	// Reading an attachment or thread message in the bottom pane: step back to
 	// its list pane.
@@ -1413,6 +1418,7 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 		m.setFocus(m.detailSource)
 		return m, nil
 	}
+	filterCmd := m.clearStatusFilter()
 	// Cancel child loads for the current case before changing context.
 	m.scs.reset("")
 	m.fl.reset("")
@@ -1421,7 +1427,7 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	if len(m.caseStack) > 1 {
 		m.caseStack = m.caseStack[:len(m.caseStack)-1]
 		m.focus = focusSubcases
-		return m, m.onCurrentCaseChange()
+		return m, tea.Batch(filterCmd, m.onCurrentCaseChange())
 	}
 	m.caseStack = nil
 	m.phase = phaseBrowse
@@ -1429,8 +1435,7 @@ func (m model) escapePressed() (tea.Model, tea.Cmd) {
 	m.detailSource = focusCases
 	m.lastDetailKey = ""
 	cmd := m.onBrowseCaseChange()
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(filterCmd, cmd, m.refreshDetail())
 }
 
 // handleNavKey handles pane focus and cursor movement keys.
@@ -1439,13 +1444,11 @@ func (m model) handleNavKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab", "right", "l":
 		m.cycleFocus(1)
 		cmd := m.focusLoadCmd()
-		m.refreshDetail()
-		return m, cmd
+		return m, tea.Batch(cmd, m.refreshDetail())
 	case "shift+tab", "left", "h":
 		m.cycleFocus(-1)
 		cmd := m.focusLoadCmd()
-		m.refreshDetail()
-		return m, cmd
+		return m, tea.Batch(cmd, m.refreshDetail())
 	case "up", "k":
 		return m.moveCursor(-1)
 	case "down", "j":
@@ -1486,7 +1489,7 @@ func (m model) cycleStatus() (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.issueSubcases("", false))
 	}
 	m.lastDetailKey = ""
-	m.refreshDetail()
+	cmds = append(cmds, m.refreshDetail())
 	return m, tea.Batch(cmds...)
 }
 
@@ -1499,8 +1502,7 @@ func (m model) moveCursor(delta int) (tea.Model, tea.Cmd) {
 	}
 	cmd := m.moveFocusedList(delta)
 	m.syncOffsets(m.layout())
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 // moveFocusedList moves the cursor in the focused list pane and returns the
@@ -1567,8 +1569,7 @@ func (m model) jumpCursor(toStart bool) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.syncOffsets(m.layout())
-	m.refreshDetail()
-	return m, cmd
+	return m, tea.Batch(cmd, m.refreshDetail())
 }
 
 func (m *model) maybeMoreSpaces() tea.Cmd {
@@ -1620,6 +1621,55 @@ func (m model) reload() (tea.Model, tea.Cmd) {
 	m.err = nil
 	m.lastDetailKey = ""
 	return m, tea.Batch(m.spin.Tick, m.issueSpaces("", false), m.issueUsers("", 1, nil))
+}
+
+func (m model) reloadForContext() (tea.Model, tea.Cmd) {
+	if m.phase == phaseCase {
+		return m.reloadCurrentCase()
+	}
+	return m.reload()
+}
+
+func (m model) reloadCurrentCase() (tea.Model, tea.Cmd) {
+	id := m.currentCaseID()
+	if id == "" {
+		return m, nil
+	}
+
+	// Invalidate only current-case detail/preview data. Keep browse lists,
+	// caseStack, config, focus, users, and other application state intact.
+	m.detailGen++
+	delete(m.caseDetail, id)
+	delete(m.caseDetailLoading, id)
+	m.noteDetail = map[string]*api.Note{}
+	m.noteDetailLoading = map[string]bool{}
+	m.imgCache = map[string]imagePrepared{}
+	m.imgLoading = map[string]bool{}
+	m.imgErr = map[string]error{}
+	m.viewFile = nil
+	m.fileText = map[string]textContent{}
+	m.fileTextLoading = map[string]bool{}
+	m.fileTextErr = map[string]error{}
+
+	m.scs.reset(id)
+	m.fl.reset(id)
+	m.nt.reset(id)
+	m.th.reset("")
+	m.attachmentsCur, m.attachmentsOff = 0, 0
+	m.err = nil
+	m.lastDetailKey = ""
+
+	cmds := []tea.Cmd{
+		m.issueSubcases("", false),
+		m.issueFiles("", false),
+		m.issueNotes("", false),
+		m.loadCaseDetail(id),
+		m.refreshDetail(),
+	}
+	if len(m.users) == 0 {
+		cmds = append(cmds, m.issueUsers("", 1, nil))
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func clamp(v, lo, hi int) int {
