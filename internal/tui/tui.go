@@ -35,6 +35,7 @@ import (
 // Run starts the TUI and blocks until the user quits. cfgName is the active
 // config shown in the header and preselected in the config switcher.
 func Run(ctx context.Context, c *client.Client, cfgName string) error {
+	applyPalette(activePalette())
 	p := tea.NewProgram(
 		newModel(ctx, c, cfgName),
 		tea.WithAltScreen(),

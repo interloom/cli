@@ -6,23 +6,88 @@ import (
 	"github.com/interloom/cli/internal/api"
 )
 
-// Palette — a sophisticated indigo/violet scheme with a teal accent.
+type tuiPalette struct {
+	brand, brandHi, accent, fg, muted, dim, border, bg lipgloss.Color
+	open, started, blocked, completed, cancelled       lipgloss.Color
+	badgeFg, introBase, introSheen, introPressA        lipgloss.Color
+	introPressB                                        lipgloss.Color
+}
+
+var darkPalette = tuiPalette{
+	brand:       lipgloss.Color("#A78BFA"), // violet
+	brandHi:     lipgloss.Color("#C4B5FD"), // light violet
+	accent:      lipgloss.Color("#5EEAD4"), // teal
+	fg:          lipgloss.Color("#E5E7EB"), // near-white
+	muted:       lipgloss.Color("#9CA3AF"), // gray
+	dim:         lipgloss.Color("#6B7280"), // dim gray
+	border:      lipgloss.Color("#3B3B52"), // blurred border
+	bg:          lipgloss.Color("#312E81"), // selection background (indigo)
+	open:        lipgloss.Color("#93C5FD"), // blue
+	started:     lipgloss.Color("#FCD34D"), // amber
+	blocked:     lipgloss.Color("#F87171"), // red
+	completed:   lipgloss.Color("#34D399"), // green
+	cancelled:   lipgloss.Color("#6B7280"),
+	badgeFg:     lipgloss.Color("#1F2937"),
+	introBase:   lipgloss.Color("#2E2E4A"),
+	introSheen:  lipgloss.Color("#E6DEFF"),
+	introPressA: lipgloss.Color("#4B5563"),
+	introPressB: lipgloss.Color("#9CA3AF"),
+}
+
+var lightPalette = tuiPalette{
+	brand:       lipgloss.Color("#6D28D9"),
+	brandHi:     lipgloss.Color("#4C1D95"),
+	accent:      lipgloss.Color("#0F766E"),
+	fg:          lipgloss.Color("#07040D"),
+	muted:       lipgloss.Color("#584875"),
+	dim:         lipgloss.Color("#8A7AA8"),
+	border:      lipgloss.Color("#B2A2D1"),
+	bg:          lipgloss.Color("#E5DFF1"),
+	open:        lipgloss.Color("#1D4ED8"),
+	started:     lipgloss.Color("#A16207"),
+	blocked:     lipgloss.Color("#B91C1C"),
+	completed:   lipgloss.Color("#047857"),
+	cancelled:   lipgloss.Color("#8A7AA8"),
+	badgeFg:     lipgloss.Color("#FFFFFF"),
+	introBase:   lipgloss.Color("#E5DFF1"),
+	introSheen:  lipgloss.Color("#4C1D95"),
+	introPressA: lipgloss.Color("#8A7AA8"),
+	introPressB: lipgloss.Color("#584875"),
+}
+
+var palette = darkPalette
+
+func activePalette() tuiPalette {
+	if lipgloss.HasDarkBackground() {
+		return darkPalette
+	}
+	return lightPalette
+}
+
+// Palette — an indigo/violet scheme with a teal accent, adapted for terminal
+// background brightness.
 var (
-	cBrand   = lipgloss.Color("#A78BFA") // violet
-	cBrandHi = lipgloss.Color("#C4B5FD") // light violet
-	cAccent  = lipgloss.Color("#5EEAD4") // teal
-	cFg      = lipgloss.Color("#E5E7EB") // near-white
-	cMuted   = lipgloss.Color("#9CA3AF") // gray
-	cDim     = lipgloss.Color("#6B7280") // dim gray
-	cBorder  = lipgloss.Color("#3B3B52") // blurred border
-	cBg      = lipgloss.Color("#312E81") // selection background (indigo)
+	cBrand   = palette.brand
+	cBrandHi = palette.brandHi
+	cAccent  = palette.accent
+	cFg      = palette.fg
+	cMuted   = palette.muted
+	cDim     = palette.dim
+	cBorder  = palette.border
+	cBg      = palette.bg
 
 	// Status colors.
-	cOpen      = lipgloss.Color("#93C5FD") // blue
-	cStarted   = lipgloss.Color("#FCD34D") // amber
-	cBlocked   = lipgloss.Color("#F87171") // red
-	cCompleted = lipgloss.Color("#34D399") // green
-	cCancelled = cDim
+	cOpen      = palette.open
+	cStarted   = palette.started
+	cBlocked   = palette.blocked
+	cCompleted = palette.completed
+	cCancelled = palette.cancelled
+
+	cBadgeFg     = palette.badgeFg
+	cIntroBase   = palette.introBase
+	cIntroSheen  = palette.introSheen
+	cIntroPressA = palette.introPressA
+	cIntroPressB = palette.introPressB
 )
 
 // logoArt is the interloom brand mark rendered as a half-block silhouette of
@@ -69,6 +134,48 @@ var (
 	helpSep  = dimStyle.Render(" · ")
 )
 
+func applyPalette(p tuiPalette) {
+	palette = p
+
+	cBrand = palette.brand
+	cBrandHi = palette.brandHi
+	cAccent = palette.accent
+	cFg = palette.fg
+	cMuted = palette.muted
+	cDim = palette.dim
+	cBorder = palette.border
+	cBg = palette.bg
+
+	cOpen = palette.open
+	cStarted = palette.started
+	cBlocked = palette.blocked
+	cCompleted = palette.completed
+	cCancelled = palette.cancelled
+
+	cBadgeFg = palette.badgeFg
+	cIntroBase = palette.introBase
+	cIntroSheen = palette.introSheen
+	cIntroPressA = palette.introPressA
+	cIntroPressB = palette.introPressB
+
+	titleStyle = lipgloss.NewStyle().Foreground(cBrandHi).Bold(true)
+	colTitleStyle = lipgloss.NewStyle().Foreground(cMuted).Bold(true)
+	colTitleFocus = lipgloss.NewStyle().Foreground(cBrand).Bold(true)
+	boxStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(cBorder)
+	boxFocusStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(cBrand)
+	dimStyle = lipgloss.NewStyle().Foreground(cDim)
+	mutedSt = lipgloss.NewStyle().Foreground(cMuted)
+	accentSt = lipgloss.NewStyle().Foreground(cAccent)
+	brandSt = lipgloss.NewStyle().Foreground(cBrand)
+	helpKey = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
+	helpDesc = lipgloss.NewStyle().Foreground(cDim)
+	helpSep = dimStyle.Render(" · ")
+}
+
 // statusBadge renders a small colored status label, e.g. for the detail header.
 func statusBadge(s api.CaseStatus) string {
 	var c lipgloss.Color
@@ -86,7 +193,7 @@ func statusBadge(s api.CaseStatus) string {
 	default:
 		c = cDim
 	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#1F2937")).
+	return lipgloss.NewStyle().Foreground(cBadgeFg).
 		Background(c).Bold(true).Padding(0, 1).Render(string(s))
 }
 

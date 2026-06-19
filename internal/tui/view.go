@@ -111,13 +111,20 @@ func (m *model) applyLayout() {
 	if m.md == nil || m.mdWidth != l.detailInnerW {
 		m.mdWidth = l.detailInnerW
 		r, err := glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
+			glamour.WithStylePath(markdownStylePath()),
 			glamour.WithWordWrap(max(20, l.detailInnerW)),
 		)
 		if err == nil {
 			m.md = r
 		}
 	}
+}
+
+func markdownStylePath() string {
+	if lipgloss.HasDarkBackground() {
+		return "dark"
+	}
+	return "light"
 }
 
 func (m *model) syncOffsets(l layoutInfo) {
@@ -391,19 +398,16 @@ func renderLogoSheen(t float64) string {
 				b.WriteByte(' ')
 				continue
 			}
-			base := gradientHex([]string{"#2E2E4A", string(cBrand)}, rev) // dark → brand fade-in
+			base := gradientHex([]string{string(cIntroBase), string(cBrand)}, rev)
 			d := float64(x)/float64(w-1) - hx
 			hi := math.Exp(-(d * d) / (2 * 0.1 * 0.1)) // defined highlight band
-			hex := string(lerpHex(base, "#E6DEFF", 0.85*hi*rev))
+			hex := string(lerpHex(base, string(cIntroSheen), 0.85*hi*rev))
 			b.WriteString(glyphStyle(hex).Render(string(runes[x])))
 		}
 		out[li] = b.String()
 	}
 	return strings.Join(out, "\n")
 }
-
-// wordRevealStops emerge each letter from dim, with a faint glow, then settle.
-var wordRevealStops = []string{string(cBorder), string(cBrandHi), string(cBrand)}
 
 // renderWordmark resolves "interloom" letter by letter out of dim dots; once
 // settled a faint highlight drifts across it on a slow loop. Unrevealed letters
@@ -429,11 +433,11 @@ func renderWordmark(t float64) (string, int) {
 			b.WriteString(dimStyle.Render("·"))
 			continue
 		}
-		hex := gradientHex(wordRevealStops, lp)
+		hex := gradientHex([]string{string(cBorder), string(cBrandHi), string(cBrand)}, lp)
 		if lp >= 1 {
 			d := float64(i) - sweepPos
 			sh := math.Exp(-(d * d) / (2 * 0.9 * 0.9))
-			hex = string(lerpHex(string(cBrand), "#E6DEFF", 0.9*sh))
+			hex = string(lerpHex(string(cBrand), string(cIntroSheen), 0.9*sh))
 		}
 		b.WriteString(glyphStyle(hex).Render(string(r)))
 	}
@@ -474,7 +478,7 @@ func (m model) introLoading(t float64) string {
 		return m.spin.View() + mutedSt.Render(" loading workspace…")
 	}
 	v := 0.5 - 0.5*math.Cos(t*2.2) // continuous grey breathing
-	hex := gradientHex([]string{"#4B5563", "#9CA3AF"}, v)
+	hex := gradientHex([]string{string(cIntroPressA), string(cIntroPressB)}, v)
 	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("press enter to continue")
 }
 
