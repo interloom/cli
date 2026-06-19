@@ -295,8 +295,8 @@ func (m model) View() string {
 // ---- intro animation helpers ----
 //
 // The splash is fully time-based: every element is a continuous function of the
-// elapsed time t (seconds), so motion stays smooth at any frame rate and loops
-// seamlessly until the user presses Enter.
+// elapsed time t (seconds), so motion stays smooth at any frame rate until the
+// intro completes or the user skips it with Enter.
 
 // clamp01 constrains x to the unit interval [0, 1].
 func clamp01(x float64) float64 {
@@ -465,17 +465,17 @@ func renderTagline(t float64) string {
 }
 
 // introLoading renders the splash's bottom status line: a spinner while the
-// workspace loads, then a softly breathing "press enter" hint once it is ready.
+// workspace loads, then a softly breathing skip hint once it is ready.
 func (m model) introLoading(t float64) string {
 	if t < 0.5 {
 		return ""
 	}
-	if m.sp.loading || m.sp.len() == 0 {
+	if m.sp.loading {
 		return m.spin.View() + mutedSt.Render(" loading workspace…")
 	}
 	v := 0.5 - 0.5*math.Cos(t*2.2) // continuous grey breathing
 	hex := gradientHex([]string{"#4B5563", "#9CA3AF"}, v)
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("press enter to continue")
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("press enter to skip")
 }
 
 func (m model) renderHeader() string {

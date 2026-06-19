@@ -74,8 +74,11 @@ const (
 
 // Intro animation timing: a high frame rate so the time-based splash animation
 // (eased fade-ins, a sheen sweeping the logo, a per-letter reveal and looping
-// shimmer) stays fluid. The animation runs indefinitely until Enter is pressed.
-const introInterval = 33 * time.Millisecond // ~30fps
+// shimmer) stays fluid. Enter can still skip it before it completes.
+const (
+	introInterval = 33 * time.Millisecond // ~30fps
+	introDuration = 2200 * time.Millisecond
+)
 
 // Common key names reused across handlers.
 const (
@@ -604,26 +607,33 @@ func (m *model) previewFocused() tea.Cmd {
 	return m.previewLoad(m.focus)
 }
 
-// advanceIntro steps the splash animation. It loops forever while the intro is
-// on screen; the user dismisses it by pressing Enter (see handleIntroKey).
+// advanceIntro steps the splash animation until it has completed and the first
+// workspace load has resolved. Enter can still skip it (see handleIntroKey).
 func (m model) advanceIntro() (tea.Model, tea.Cmd) {
 	if m.phase != phaseIntro {
 		return m, nil
 	}
 	m.introFrame++
+	if m.introReadyToEnd() {
+		return m.endIntro(), nil
+	}
 	return m, introTick()
 }
 
 // endIntro switches to the browser and primes the detail panel.
-func (m model) endIntro() tea.Model {
+func (m model) endIntro() model {
 	m.phase = phaseBrowse
 	m.lastDetailKey = ""
 	m.refreshDetail()
 	return m
 }
 
-// handleIntroKey keeps the splash animating until the user presses Enter, which
-// dissolves it into the browser. Quit keys still quit; other keys are ignored.
+func (m model) introReadyToEnd() bool {
+	return m.phase == phaseIntro && time.Duration(m.introFrame)*introInterval >= introDuration && !m.sp.loading
+}
+
+// handleIntroKey lets Enter skip the splash and move straight into the browser.
+// Quit keys still quit; other keys are ignored.
 func (m model) handleIntroKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", keyCtrlC, keyEsc:
@@ -833,6 +843,9 @@ func (m model) handleSpacesPage(msg pageResult[api.SpaceListItem]) (tea.Model, t
 		cmd = m.onSpaceChange()
 	}
 	m.refreshDetail()
+	if m.introReadyToEnd() {
+		m = m.endIntro()
+	}
 	return m, cmd
 }
 
