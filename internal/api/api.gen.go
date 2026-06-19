@@ -82,6 +82,7 @@ func (e ResourceType) Valid() bool {
 // Defines values for ListCasesParamsSort.
 const (
 	ListCasesParamsSortCreatedAt ListCasesParamsSort = "created_at"
+	ListCasesParamsSortPosition  ListCasesParamsSort = "position"
 	ListCasesParamsSortUpdatedAt ListCasesParamsSort = "updated_at"
 )
 
@@ -89,6 +90,8 @@ const (
 func (e ListCasesParamsSort) Valid() bool {
 	switch e {
 	case ListCasesParamsSortCreatedAt:
+		return true
+	case ListCasesParamsSortPosition:
 		return true
 	case ListCasesParamsSortUpdatedAt:
 		return true
@@ -372,6 +375,11 @@ type CreateFileRequest struct {
 
 	// SpaceId Target Space ID for a space-owned file. Provide at most one of space_id or case_id.
 	SpaceId *openapi_types.UUID `json:"space_id,omitempty"`
+}
+
+// CreateMessageRequest defines model for CreateMessageRequest.
+type CreateMessageRequest struct {
+	Text string `json:"text"`
 }
 
 // CreateNoteRequest defines model for CreateNoteRequest.
@@ -965,7 +973,7 @@ type ListCasesParams struct {
 	// Status Return cases with any of these statuses. Repeat status for multiple values. Supported values are open, started, completed, cancelled, and blocked; unsupported values match no cases.
 	Status *[]string `form:"status,omitempty" json:"status,omitempty"`
 
-	// Sort Field to sort by. Use created_at or updated_at.
+	// Sort Field to sort by. Use position, created_at, or updated_at.
 	Sort *ListCasesParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Direction Sort direction. Use asc or desc.
@@ -1182,6 +1190,11 @@ type ListThreadEventsParams struct {
 // ListThreadEventsParamsDirection defines parameters for ListThreadEvents.
 type ListThreadEventsParamsDirection string
 
+// CreateThreadMessageParams defines parameters for CreateThreadMessage.
+type CreateThreadMessageParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
 	// Limit Maximum number of users to return.
@@ -1237,6 +1250,9 @@ type CreateSpaceJSONRequestBody = CreateSpaceRequest
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = UpdateSpaceRequest
+
+// CreateThreadMessageJSONRequestBody defines body for CreateThreadMessage for application/json ContentType.
+type CreateThreadMessageJSONRequestBody = CreateMessageRequest
 
 // AsMessagePayload returns the union data inside the ThreadEvent_Payloads_Item as a MessagePayload
 func (t ThreadEvent_Payloads_Item) AsMessagePayload() (MessagePayload, error) {

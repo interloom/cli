@@ -89,7 +89,8 @@ Request bodies for `create`/`update` come from `--data/-d` (inline JSON),
 ### Listing and pagination
 
 ```sh
-interloom cases list --space_id <id> --sort created_at --direction desc
+interloom cases list --space-id <id> --sort created_at --direction desc
+interloom cases list --parent-case-id <id> --sort position --direction asc
 interloom cases list --status open --status started   # repeat for multiple statuses
 interloom cases list --limit 50 --cursor <next_cursor>
 interloom notes list --all          # fetch every page into one list
@@ -100,10 +101,10 @@ Available list filters per resource:
 | Resource     | Filters                                                       |
 | ------------ | ------------------------------------------------------------- |
 | `spaces`     | —                                                             |
-| `cases`      | `space_id`, `parent_case_id`, `assignee_id`, `status` (repeatable), `sort`, `direction` |
-| `notes`      | `space_id`, `case_id`, `thread_id`, `sort`, `direction`       |
-| `procedures` | `space_id`                                                    |
-| `files`      | `space_id`, `case_id`, `sort`, `direction`                    |
+| `cases`      | `space-id`, `parent-case-id`, `assignee-id`, `status` (repeatable), `sort`, `direction` |
+| `notes`      | `space-id`, `case-id`, `thread-id`, `sort`, `direction`       |
+| `procedures` | `space-id`                                                    |
+| `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
 
 ## Files
 
@@ -125,14 +126,16 @@ interloom users get <id>
 
 ## Threads
 
-Threads are read-only and have no collection list. `get` fetches a single
-thread; `events` lists its event stream with cursor pagination:
+Threads have no collection list. `get` fetches a single thread, `events` lists
+its event stream with cursor pagination, and `message` posts a message:
 
 ```sh
 interloom threads get <id>
 interloom threads events <id> --limit 50 --direction desc
 interloom threads events <id> --cursor <next_cursor>
 interloom threads events <id> --all      # fetch every page into one list
+interloom threads message <id> --text "Hello from the CLI"
+interloom threads message <id> -d '{"text":"Hello from JSON"}'
 ```
 
 ## Version

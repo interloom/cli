@@ -48,7 +48,7 @@ func newRootCmd() *cobra.Command {
 			{name: "parent_case_id", usage: "filter by parent Case ID"},
 			{name: "assignee_id", usage: "filter by assignee User ID"},
 			{name: "status", usage: "filter by status (repeatable): open, started, completed, cancelled, blocked", multi: true},
-			filterSort,
+			{name: "sort", usage: "sort field: position, created_at, or updated_at"},
 			filterDirection,
 		}}),
 		newResourceCmd(resource{name: "notes", singular: "note", filters: []filter{

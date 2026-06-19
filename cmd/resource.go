@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -15,6 +16,10 @@ type filter struct {
 	name  string
 	usage string
 	multi bool
+}
+
+func (f filter) flagName() string {
+	return strings.ReplaceAll(f.name, "_", "-")
 }
 
 // Common list filters reused across resources.
@@ -69,8 +74,9 @@ func (r resource) listQuery(cmd *cobra.Command) url.Values {
 		q.Set("cursor", cur)
 	}
 	for _, f := range r.filters {
+		flagName := f.flagName()
 		if f.multi {
-			vals, _ := cmd.Flags().GetStringSlice(f.name)
+			vals, _ := cmd.Flags().GetStringSlice(flagName)
 			for _, v := range vals {
 				if v != "" {
 					q.Add(f.name, v)
@@ -78,7 +84,7 @@ func (r resource) listQuery(cmd *cobra.Command) url.Values {
 			}
 			continue
 		}
-		if v, _ := cmd.Flags().GetString(f.name); v != "" {
+		if v, _ := cmd.Flags().GetString(flagName); v != "" {
 			q.Set(f.name, v)
 		}
 	}
@@ -113,10 +119,11 @@ func (r resource) listCmd() *cobra.Command {
 	cmd.Flags().String("cursor", "", "pagination cursor from a previous next_cursor")
 	cmd.Flags().Bool("all", false, "fetch all pages and aggregate into a single list")
 	for _, f := range r.filters {
+		flagName := f.flagName()
 		if f.multi {
-			cmd.Flags().StringSlice(f.name, nil, f.usage)
+			cmd.Flags().StringSlice(flagName, nil, f.usage)
 		} else {
-			cmd.Flags().String(f.name, "", f.usage)
+			cmd.Flags().String(flagName, "", f.usage)
 		}
 	}
 	return cmd

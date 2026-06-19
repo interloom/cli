@@ -1,22 +1,23 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/spf13/cobra"
 )
 
-// newThreadsCmd builds the read-only threads command. Threads have no
-// collection list endpoint, so there is no `list` verb: `get` fetches a single
-// thread and `events` lists its paginated event stream.
+// newThreadsCmd builds the threads command. Threads have no collection list
+// endpoint, so there is no `list` verb: `get` fetches a single thread, `events`
+// lists its paginated event stream, and `message` posts to the thread.
 func newThreadsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "threads",
 		Short: "Inspect threads",
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(newThreadsGetCmd(), newThreadsEventsCmd())
+	cmd.AddCommand(newThreadsGetCmd(), newThreadsEventsCmd(), newThreadsMessageCmd())
 	return cmd
 }
 
@@ -81,4 +82,44 @@ func newThreadsEventsCmd() *cobra.Command {
 	cmd.Flags().String("direction", "", "sort direction: asc or desc")
 	cmd.Flags().Bool("all", false, "fetch all pages and aggregate into a single list")
 	return cmd
+}
+
+func newThreadsMessageCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "message <id>",
+		Short: "Create a message in a thread",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			body, err := threadMessageBody(cmd)
+			if err != nil {
+				return err
+			}
+			resource := "threads/" + url.PathEscape(args[0]) + "/messages"
+			raw, err := c.Create(cmd.Context(), resource, body)
+			if err != nil {
+				return err
+			}
+			return printResult(raw)
+		},
+	}
+	cmd.Flags().String("text", "", "message text (equivalent to --data '{\"text\":...}')")
+	addBodyFlags(cmd)
+	return cmd
+}
+
+func threadMessageBody(cmd *cobra.Command) ([]byte, error) {
+	text, _ := cmd.Flags().GetString("text")
+	if text == "" {
+		return readBody(cmd)
+	}
+	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
+		return nil, fmt.Errorf("pass either --text or a JSON body, not both")
+	}
+	return json.Marshal(struct {
+		Text string `json:"text"`
+	}{Text: text})
 }

@@ -18,6 +18,16 @@ type listPage[T any] struct {
 	NextCursor *string `json:"next_cursor"`
 }
 
+const (
+	querySort      = "sort"
+	queryDirection = "direction"
+	queryStatus    = "status"
+	sortUpdatedAt  = "updated_at"
+	sortPosition   = "position"
+	directionDesc  = "desc"
+	directionAsc   = "asc"
+)
+
 func decodePage[T any](raw json.RawMessage, err error) ([]T, string, bool, error) {
 	if err != nil {
 		return nil, "", false, err
@@ -56,32 +66,42 @@ func fetchSpacesPage(ctx context.Context, c *client.Client, cursor string) ([]ap
 // newestFirst returns list params filtering by key=val, sorted by newest update.
 func newestFirst(key, val string) url.Values {
 	return url.Values{
-		key:         {val},
-		"sort":      {"updated_at"},
-		"direction": {"desc"},
+		key:            {val},
+		querySort:      {sortUpdatedAt},
+		queryDirection: {directionDesc},
+	}
+}
+
+// positionOrder returns list params filtering by key=val, sorted by the
+// case-tree position so the TUI follows the user-defined task order.
+func positionOrder(key, val string) url.Values {
+	return url.Values{
+		key:            {val},
+		querySort:      {sortPosition},
+		queryDirection: {directionAsc},
 	}
 }
 
 // withStatus adds a server-side status filter to q when status is non-empty.
 func withStatus(q url.Values, status string) url.Values {
 	if status != "" {
-		q.Set("status", status)
+		q.Set(queryStatus, status)
 	}
 	return q
 }
 
-// fetchCasesPage loads one page of cases in a space, newest update first,
+// fetchCasesPage loads one page of cases in a space, position order,
 // filtered server-side by status when set.
 func fetchCasesPage(ctx context.Context, c *client.Client, spaceID, status, cursor string) ([]api.CaseListItem, string, bool, error) {
-	q := withStatus(newestFirst("space_id", spaceID), status)
+	q := withStatus(positionOrder("space_id", spaceID), status)
 	raw, err := c.List(ctx, "cases", pageQuery(cursor, q))
 	return decodePage[api.CaseListItem](raw, err)
 }
 
-// fetchSubCasesPage loads one page of a case's child cases, newest first,
+// fetchSubCasesPage loads one page of a case's child cases, position order,
 // filtered server-side by status when set.
 func fetchSubCasesPage(ctx context.Context, c *client.Client, parentCaseID, status, cursor string) ([]api.CaseListItem, string, bool, error) {
-	q := withStatus(newestFirst("parent_case_id", parentCaseID), status)
+	q := withStatus(positionOrder("parent_case_id", parentCaseID), status)
 	raw, err := c.List(ctx, "cases", pageQuery(cursor, q))
 	return decodePage[api.CaseListItem](raw, err)
 }
