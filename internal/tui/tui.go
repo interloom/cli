@@ -137,6 +137,7 @@ type model struct {
 	caseDetailLoading map[string]bool
 	noteDetailLoading map[string]bool
 	detailGen         int
+	users             map[string]api.User // assignee id → display data
 
 	// Inline image previews (Kitty graphics protocol). Prepared images are
 	// cached by file id; viewFile holds the file whose download we're awaiting
@@ -176,6 +177,7 @@ func newModel(ctx context.Context, c *client.Client, cfgName string) model {
 		noteDetail:        map[string]*api.Note{},
 		caseDetailLoading: map[string]bool{},
 		noteDetailLoading: map[string]bool{},
+		users:             map[string]api.User{},
 		imgCache:          map[string]imagePrepared{},
 		imgLoading:        map[string]bool{},
 		imgErr:            map[string]error{},
@@ -184,12 +186,16 @@ func newModel(ctx context.Context, c *client.Client, cfgName string) model {
 		fileTextErr:       map[string]error{},
 		spin:              sp,
 	}
-	// Prime the first spaces request so its generation matches the response,
-	// and log it (req id 1) so it shows up in the debug panel.
+	// Prime the initial requests so their generations match the responses and
+	// both requests show up in the debug panel from the first frame.
 	m.sp.gen = 1
 	m.sp.loading = true
-	m.reqSeq = 1
-	m.reqLog = []reqEntry{{id: 1, label: "spaces", started: time.Now(), status: reqPending}}
+	m.reqSeq = 2
+	now := time.Now()
+	m.reqLog = []reqEntry{
+		{id: 1, label: "spaces", started: now, status: reqPending},
+		{id: 2, label: "users", started: now, status: reqPending},
+	}
 
 	// Seed the terminal size now so the very first frame is the animated
 	// splash, not a bare "starting…" line. Bubbletea still sends a
@@ -215,7 +221,39 @@ func (m model) Init() tea.Cmd {
 		m.spin.Tick,
 		introTick(),
 		loadPage(m.ctx, kindSpaces, m.sp.gen, 1, "", "", false, m.spacesFetcher()),
+		loadUsersPage(m.ctx, m.client, m.detailGen, 2, "", 1, nil),
 	)
+}
+
+type usersLoadedMsg struct {
+	gen     int
+	reqID   int
+	page    int
+	count   int
+	users   []api.User
+	next    string
+	hasMore bool
+	err     error
+}
+
+func loadUsersPage(ctx context.Context, c *client.Client, gen, reqID int, cursor string, page int, users []api.User) tea.Cmd {
+	return func() tea.Msg {
+		items, next, hasMore, err := fetchUsersPage(ctx, c, cursor)
+		users = append(users, items...)
+		return usersLoadedMsg{
+			gen: gen, reqID: reqID, page: page, count: len(items), users: users,
+			next: next, hasMore: hasMore, err: err,
+		}
+	}
+}
+
+func (m *model) issueUsers(cursor string, page int, users []api.User) tea.Cmd {
+	label := "users"
+	if page > 1 {
+		label += fmt.Sprintf(" · page %d", page)
+	}
+	reqID := m.logStart(label)
+	return loadUsersPage(m.ctx, m.client, m.detailGen, reqID, cursor, page, users)
 }
 
 type introTickMsg struct{}
@@ -750,6 +788,22 @@ func (m model) handleDataMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleFilesPage(msg)
 	case pageResult[api.NoteListItem]:
 		return m.handleNotesPage(msg)
+	case usersLoadedMsg:
+		more := msg.hasMore && msg.next != ""
+		m.logFinishNote(msg.reqID, msg.err, pageNote(msg.count, more))
+		if msg.gen != m.detailGen || msg.err != nil {
+			return m, nil
+		}
+		if more {
+			return m, m.issueUsers(msg.next, msg.page+1, msg.users)
+		}
+		m.users = make(map[string]api.User, len(msg.users))
+		for _, user := range msg.users {
+			m.users[user.Id.String()] = user
+		}
+		m.lastDetailKey = ""
+		m.refreshDetail()
+		return m, nil
 	case caseDetailMsg:
 		return m.handleCaseDetailMsg(msg)
 	case noteDetailMsg:
@@ -1312,6 +1366,7 @@ func (m model) reload() (tea.Model, tea.Cmd) {
 	m.noteDetail = map[string]*api.Note{}
 	m.caseDetailLoading = map[string]bool{}
 	m.noteDetailLoading = map[string]bool{}
+	m.users = map[string]api.User{}
 	m.imgCache = map[string]imagePrepared{}
 	m.imgLoading = map[string]bool{}
 	m.imgErr = map[string]error{}
@@ -1330,7 +1385,7 @@ func (m model) reload() (tea.Model, tea.Cmd) {
 	m.detailSource = focusSpaces
 	m.err = nil
 	m.lastDetailKey = ""
-	return m, tea.Batch(m.spin.Tick, m.issueSpaces("", false))
+	return m, tea.Batch(m.spin.Tick, m.issueSpaces("", false), m.issueUsers("", 1, nil))
 }
 
 func clamp(v, lo, hi int) int {

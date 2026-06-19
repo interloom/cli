@@ -9,6 +9,10 @@ import (
 // pageSize is how many items a single list request fetches.
 const pageSize = 30
 
+// userPageSize uses the API maximum because the assignee lookup consumes the
+// complete directory rather than incrementally rendering one visible pane.
+const userPageSize = 100
+
 // loadThreshold prefetches the next page once the cursor is within this many
 // rows of the end of the loaded items.
 const loadThreshold = 6

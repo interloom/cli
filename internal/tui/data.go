@@ -85,6 +85,16 @@ func fetchSubCasesPage(ctx context.Context, c *client.Client, parentCaseID, stat
 	return decodePage[api.CaseListItem](raw, err)
 }
 
+// fetchUsersPage loads one page of the organization user directory. Case list
+// items only carry an assignee ID, so the TUI builds a lookup table from all
+// pages to render names without issuing a request for every visible row.
+func fetchUsersPage(ctx context.Context, c *client.Client, cursor string) ([]api.User, string, bool, error) {
+	q := pageQuery(cursor, nil)
+	q.Set("limit", strconv.Itoa(userPageSize))
+	raw, err := c.List(ctx, "users", q)
+	return decodePage[api.User](raw, err)
+}
+
 // fetchFilesPage loads one page of a case's files, newest update first. The
 // files list returns full File objects, so no separate detail fetch is needed.
 func fetchFilesPage(ctx context.Context, c *client.Client, caseID, cursor string) ([]api.File, string, bool, error) {

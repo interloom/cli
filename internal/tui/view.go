@@ -545,7 +545,7 @@ func (m model) renderPane(f focus, w, colsH int) string {
 		}, func(i, w int) string {
 			cs, _ := m.cs.at(i)
 			glyph, gc, tc := statusParts(cs.Status)
-			return renderRow(glyph, gc, cs.Title, tc, i == m.cs.cur, w)
+			return m.renderCaseRow(cs, glyph, gc, tc, i == m.cs.cur, w)
 		})
 	case focusSubcases:
 		off := windowOffset(m.scs.cur, m.scs.off, m.scs.len(), rows)
@@ -555,7 +555,7 @@ func (m model) renderPane(f focus, w, colsH int) string {
 		}, func(i, w int) string {
 			cs, _ := m.scs.at(i)
 			glyph, gc, tc := statusParts(cs.Status)
-			return renderRow(glyph, gc, cs.Title, tc, i == m.scs.cur, w)
+			return m.renderCaseRow(cs, glyph, gc, tc, i == m.scs.cur, w)
 		})
 	case focusFiles:
 		off := windowOffset(m.fl.cur, m.fl.off, m.fl.len(), rows)
@@ -743,6 +743,38 @@ func renderRow(glyph string, glyphColor lipgloss.TerminalColor, text string, tex
 	g := lipgloss.NewStyle().Foreground(glyphColor)
 	t := lipgloss.NewStyle().Foreground(textColor)
 	return "  " + g.Render(glyph) + " " + t.Render(text) + strings.Repeat(" ", pad)
+}
+
+// renderCaseRow adds the assignee's name at the right edge while preserving the
+// fixed-width row contract used by the pane renderer.
+func (m model) renderCaseRow(cs api.CaseListItem, glyph string, glyphColor, textColor lipgloss.TerminalColor, selected bool, w int) string {
+	name := m.assigneeName(cs.Assignee)
+	if name == "" {
+		return renderRow(glyph, glyphColor, cs.Title, textColor, selected, w)
+	}
+
+	// Keep enough room for the case title in narrow panes. Assignee names are
+	// secondary information, so they use at most one third of the row.
+	name = truncate(name, max(1, w/3))
+	nameStyle := lipgloss.NewStyle().Foreground(cMuted)
+	gapStyle := lipgloss.NewStyle()
+	if selected {
+		nameStyle = nameStyle.Background(cBg)
+		gapStyle = gapStyle.Background(cBg)
+	}
+	renderedName := nameStyle.Render(name)
+	baseW := max(0, w-lipglossWidth(renderedName)-1)
+	return renderRow(glyph, glyphColor, cs.Title, textColor, selected, baseW) + gapStyle.Render(" ") + renderedName
+}
+
+func (m model) assigneeName(link *api.GameObjectLink) string {
+	if link == nil {
+		return ""
+	}
+	if user, ok := m.users[link.Id.String()]; ok {
+		return strings.TrimSpace(user.Name)
+	}
+	return ""
 }
 
 func (m model) renderDetail(l layoutInfo) string {
@@ -1107,6 +1139,9 @@ func (m *model) renderCaseDetail(li api.CaseListItem, kind, crumb string) (strin
 	}
 	if li.Assignee != nil {
 		meta[mAssignee] = li.Assignee.Id.String()
+		if user, ok := m.users[li.Assignee.Id.String()]; ok {
+			meta[mAssignee] = user.Name
+		}
 		order = append(order, mAssignee)
 	}
 	header := crumb + "\n" + strings.Join(chips, " ") + "\n" + metaLine(meta, order...)
