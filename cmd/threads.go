@@ -10,14 +10,14 @@ import (
 
 // newThreadsCmd builds the threads command. Threads have no collection list
 // endpoint, so there is no `list` verb: `get` fetches a single thread, `events`
-// lists its paginated event stream, and `message` posts to the thread.
+// lists its paginated event stream, and `messages create` posts to the thread.
 func newThreadsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "threads",
 		Short: "Inspect threads",
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(newThreadsGetCmd(), newThreadsEventsCmd(), newThreadsMessageCmd())
+	cmd.AddCommand(newThreadsGetCmd(), newThreadsEventsCmd(), newThreadsMessagesCmd())
 	return cmd
 }
 
@@ -84,9 +84,18 @@ func newThreadsEventsCmd() *cobra.Command {
 	return cmd
 }
 
-func newThreadsMessageCmd() *cobra.Command {
+func newThreadsMessagesCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "message <id>",
+		Use:   "messages",
+		Short: "Manage thread messages",
+	}
+	cmd.AddCommand(newThreadsMessagesCreateCmd())
+	return cmd
+}
+
+func newThreadsMessagesCreateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create <thread-id>",
 		Short: "Create a message in a thread",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

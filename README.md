@@ -127,15 +127,15 @@ interloom users get <id>
 ## Threads
 
 Threads have no collection list. `get` fetches a single thread, `events` lists
-its event stream with cursor pagination, and `message` posts a message:
+its event stream with cursor pagination, and `messages create` posts a message:
 
 ```sh
 interloom threads get <id>
 interloom threads events <id> --limit 50 --direction desc
 interloom threads events <id> --cursor <next_cursor>
 interloom threads events <id> --all      # fetch every page into one list
-interloom threads message <id> --text "Hello from the CLI"
-interloom threads message <id> -d '{"text":"Hello from JSON"}'
+interloom threads messages create <id> --text "Hello from the CLI"
+interloom threads messages create <id> -d '{"text":"Hello from JSON"}'
 ```
 
 ## Version

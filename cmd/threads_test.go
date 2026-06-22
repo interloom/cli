@@ -2,8 +2,20 @@ package cmd
 
 import "testing"
 
+func TestThreadsMessagesCreateCommandShape(t *testing.T) {
+	threads := newThreadsCmd()
+	if child, _, err := threads.Find([]string{"messages", "create", "thread-1"}); err != nil || child == nil || child.Use != "create <thread-id>" {
+		t.Fatalf("messages create command not registered: child=%v err=%v", child, err)
+	}
+	for _, child := range threads.Commands() {
+		if child.Name() == "message" {
+			t.Fatalf("old singular message command is still registered")
+		}
+	}
+}
+
 func TestThreadMessageBodyFromText(t *testing.T) {
-	cmd := newThreadsMessageCmd()
+	cmd := newThreadsMessagesCreateCmd()
 	if err := cmd.Flags().Set("text", "hello"); err != nil {
 		t.Fatalf("set text: %v", err)
 	}
@@ -17,7 +29,7 @@ func TestThreadMessageBodyFromText(t *testing.T) {
 }
 
 func TestThreadMessageBodyFromJSON(t *testing.T) {
-	cmd := newThreadsMessageCmd()
+	cmd := newThreadsMessagesCreateCmd()
 	if err := cmd.Flags().Set("data", `{"text":"hello"}`); err != nil {
 		t.Fatalf("set data: %v", err)
 	}
@@ -31,7 +43,7 @@ func TestThreadMessageBodyFromJSON(t *testing.T) {
 }
 
 func TestThreadMessageBodyRejectsTextAndJSON(t *testing.T) {
-	cmd := newThreadsMessageCmd()
+	cmd := newThreadsMessagesCreateCmd()
 	if err := cmd.Flags().Set("text", "hello"); err != nil {
 		t.Fatalf("set text: %v", err)
 	}
