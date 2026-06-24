@@ -69,12 +69,24 @@ Set the `resource` flags from the spec:
 | Collection has no `POST`                       | `noCreate: true`    |
 | Item has no `DELETE`                           | `noDelete: true`    |
 | Collection `GET` query params (excl. paging)   | `filters: []filter` |
+| Create/update request-body properties          | `fields: []field`   |
 
 List filters come from the collection `GET` query parameters, **excluding**
 `limit` and `cursor` — those are built in by `listCmd`. Reuse the shared filter
 vars in `cmd/resource.go` when the names match (`filterSpaceID`, `filterCaseID`,
 `filterSort`, `filterDirection`); declare inline `filter{"name", "usage"}` for
 anything new, e.g. `{"parent_case_id", "filter by parent Case ID"}`.
+
+Body fields come from the `Create*Request`/`Update*Request` schemas. Each scalar
+or string-array property becomes a `field{name, usage, onCreate, onUpdate,
+required, multi}` — `name` is the snake_case JSON key, the flag is kebab-case.
+Set `required: true` for properties the create schema lists as required
+(enforced only when the body is built from flags), `multi: true` for arrays
+(emitted as a JSON array), and `onCreate`/`onUpdate` to match where the property
+exists. Reuse the shared `fieldSpaceID`, `fieldCaseID`, `fieldTags` vars and the
+`key*` name constants when they match. Skip nested-object properties (e.g. a
+procedure's `stages`) — those stay raw-JSON-only via `--data`/`--file`. Values
+pass through as raw JSON, so UUID/timestamp validation is left to the API.
 
 Current examples to copy from `newRootCmd()`:
 
@@ -93,9 +105,10 @@ Register it from `newRootCmd()`.
 
 ### 5. Update the README
 
-Reflect new resources, new list filters, removed verbs (`readOnly`/`noCreate`/
-`noDelete`), and any special commands in the relevant `README.md` sections
-(Resources, the filters table, and per-feature sections like Files/Users).
+Reflect new resources, new list filters, new create/update field flags, removed
+verbs (`readOnly`/`noCreate`/`noDelete`), and any special commands in the
+relevant `README.md` sections (Resources, the filters table, and per-feature
+sections like Files/Users).
 
 ### 6. Verify
 

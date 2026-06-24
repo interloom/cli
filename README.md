@@ -76,13 +76,29 @@ You can also override per-invocation with `--config-name/-c` and `--base-url`.
 ```sh
 interloom cases list
 interloom cases get <id>
-interloom cases create -d '{"title":"New case"}'
-interloom cases update <id> -f patch.json
+interloom cases create --title "New case" --description "Details"
+interloom cases update <id> --status completed
 interloom cases delete <id>
 ```
 
-Request bodies for `create`/`update` come from `--data/-d` (inline JSON),
-`--file/-f` (a path, or `-` for stdin), or piped stdin.
+`create`/`update` accept the body either as **typed field flags** or as raw
+JSON. The common fields are exposed as flags (run `<resource> create --help` to
+see them); repeatable fields like `--tags` take a comma-separated list or repeat
+the flag. Required-on-create fields are marked `(required)` in help.
+
+```sh
+interloom notes create --title "Note" --body "..." --space-id <id> --tags a,b
+interloom agents update <id> --model gpt-5
+```
+
+Raw JSON still works via `--data/-d` (inline), `--file/-f` (a path, or `-` for
+stdin), or piped stdin — use it for fields without a flag (e.g. a procedure's
+`stages`). Field flags and a raw body are mutually exclusive.
+
+```sh
+interloom cases create -d '{"title":"New case"}'
+interloom cases update <id> -f patch.json
+```
 
 `agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
 

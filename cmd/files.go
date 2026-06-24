@@ -16,6 +16,7 @@ func newFilesCmd() *cobra.Command {
 		singular: "file",
 		noCreate: true, // creation happens via `upload`
 		filters:  []filter{filterSpaceID, filterCaseID, filterSort, filterDirection},
+		fields:   []field{fieldSpaceID, fieldCaseID, fieldTags},
 	})
 	cmd.AddCommand(newFilesUploadCmd(), newFilesDownloadCmd())
 	return cmd
@@ -34,8 +35,8 @@ func newFilesUploadCmd() *cobra.Command {
 			spaceID, _ := cmd.Flags().GetString("space-id")
 			caseID, _ := cmd.Flags().GetString("case-id")
 			raw, err := c.Upload(cmd.Context(), "files", args[0], map[string]string{
-				"space_id": spaceID,
-				"case_id":  caseID,
+				keySpaceID: spaceID,
+				keyCaseID:  caseID,
 			})
 			if err != nil {
 				return err

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -8,6 +9,17 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+)
+
+// snake_case JSON/query key names shared across resources.
+const (
+	keyTitle        = "title"
+	keyDescription  = "description"
+	keySpaceID      = "space_id"
+	keyCaseID       = "case_id"
+	keyParentCaseID = "parent_case_id"
+	keyAssigneeID   = "assignee_id"
+	keyStatus       = "status"
 )
 
 // filter is a query parameter exposed as a list flag. When multi is set it is a
@@ -24,10 +36,34 @@ func (f filter) flagName() string {
 
 // Common list filters reused across resources.
 var (
-	filterSpaceID   = filter{name: "space_id", usage: "filter by Space ID"}
-	filterCaseID    = filter{name: "case_id", usage: "filter by Case ID"}
+	filterSpaceID   = filter{name: keySpaceID, usage: "filter by Space ID"}
+	filterCaseID    = filter{name: keyCaseID, usage: "filter by Case ID"}
 	filterSort      = filter{name: "sort", usage: "sort field: created_at or updated_at"}
 	filterDirection = filter{name: "direction", usage: "sort direction: asc or desc"}
+)
+
+// field is a request-body property exposed as a create/update flag. The flag is
+// kebab-case; the JSON key is the snake_case name. When multi is set it is a
+// repeatable string-slice flag emitted as a JSON array. required is enforced
+// only on create, and only when the body is built from flags.
+type field struct {
+	name     string
+	usage    string
+	multi    bool
+	onCreate bool
+	onUpdate bool
+	required bool
+}
+
+func (f field) flagName() string {
+	return strings.ReplaceAll(f.name, "_", "-")
+}
+
+// Common body fields reused across resources.
+var (
+	fieldSpaceID = field{name: keySpaceID, usage: "owning Space ID", onCreate: true, onUpdate: true}
+	fieldCaseID  = field{name: keyCaseID, usage: "owning Case ID", onCreate: true, onUpdate: true}
+	fieldTags    = field{name: "tags", usage: "tags (repeatable)", multi: true, onCreate: true, onUpdate: true}
 )
 
 // resource describes a uniform REST resource. The same five verbs
@@ -40,6 +76,7 @@ type resource struct {
 	noCreate bool     // no generic create (e.g. files, which uses upload)
 	noDelete bool     // no DELETE endpoint (e.g. agents)
 	filters  []filter // list query filters
+	fields   []field  // create/update body fields
 }
 
 func newResourceCmd(r resource) *cobra.Command {
@@ -158,7 +195,7 @@ func (r resource) createCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body, err := readBody(cmd)
+			body, err := r.body(cmd, true)
 			if err != nil {
 				return err
 			}
@@ -169,6 +206,7 @@ func (r resource) createCmd() *cobra.Command {
 			return printResult(raw)
 		},
 	}
+	r.addFieldFlags(cmd, true)
 	addBodyFlags(cmd)
 	return cmd
 }
@@ -183,7 +221,7 @@ func (r resource) updateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body, err := readBody(cmd)
+			body, err := r.body(cmd, false)
 			if err != nil {
 				return err
 			}
@@ -194,6 +232,7 @@ func (r resource) updateCmd() *cobra.Command {
 			return printResult(raw)
 		},
 	}
+	r.addFieldFlags(cmd, false)
 	addBodyFlags(cmd)
 	return cmd
 }
@@ -218,6 +257,69 @@ func (r resource) deleteCmd() *cobra.Command {
 			return printResult(raw)
 		},
 	}
+}
+
+// fieldsFor returns the body fields applicable to create (or update).
+func (r resource) fieldsFor(create bool) []field {
+	var out []field
+	for _, f := range r.fields {
+		if (create && f.onCreate) || (!create && f.onUpdate) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// addFieldFlags registers the per-field create/update flags for the verb.
+func (r resource) addFieldFlags(cmd *cobra.Command, create bool) {
+	for _, f := range r.fieldsFor(create) {
+		usage := f.usage
+		if create && f.required {
+			usage += " (required)"
+		}
+		if f.multi {
+			cmd.Flags().StringSlice(f.flagName(), nil, usage)
+		} else {
+			cmd.Flags().String(f.flagName(), "", usage)
+		}
+	}
+}
+
+// body resolves the request body for create/update. When any field flags are
+// set it builds JSON from them (enforcing required fields on create); otherwise
+// it falls back to the raw --data/--file/stdin body. Field flags and a raw body
+// are mutually exclusive.
+func (r resource) body(cmd *cobra.Command, create bool) ([]byte, error) {
+	fields := r.fieldsFor(create)
+	out := map[string]any{}
+	var missing []string
+	for _, f := range fields {
+		flagName := f.flagName()
+		if cmd.Flags().Changed(flagName) {
+			if f.multi {
+				vals, _ := cmd.Flags().GetStringSlice(flagName)
+				out[f.name] = vals
+			} else {
+				v, _ := cmd.Flags().GetString(flagName)
+				out[f.name] = v
+			}
+			continue
+		}
+		if create && f.required {
+			missing = append(missing, "--"+flagName)
+		}
+	}
+
+	if len(out) == 0 {
+		return readBody(cmd)
+	}
+	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
+		return nil, fmt.Errorf("pass either field flags or a JSON body, not both")
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing required flag(s): %s", strings.Join(missing, ", "))
+	}
+	return json.Marshal(out)
 }
 
 // addBodyFlags registers the JSON-body input flags shared by create/update.
