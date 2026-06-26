@@ -13,6 +13,8 @@ import (
 
 // snake_case JSON/query key names shared across resources.
 const (
+	resourceCases = "cases"
+
 	keyTitle        = "title"
 	keyDescription  = "description"
 	keySpaceID      = "space_id"
@@ -20,8 +22,12 @@ const (
 	keyParentCaseID = "parent_case_id"
 	keyAssigneeID   = "assignee_id"
 	keyStatus       = "status"
+	keySort         = "sort"
 	keyCursor       = "cursor"
 	keyDirection    = "direction"
+
+	defaultUnscopedCasesSort      = "created_at"
+	defaultUnscopedCasesDirection = "desc"
 )
 
 // filter is a query parameter exposed as a list flag. When multi is set it is a
@@ -40,7 +46,7 @@ func (f filter) flagName() string {
 var (
 	filterSpaceID   = filter{name: keySpaceID, usage: "filter by Space ID"}
 	filterCaseID    = filter{name: keyCaseID, usage: "filter by Case ID"}
-	filterSort      = filter{name: "sort", usage: "sort field: created_at or updated_at"}
+	filterSort      = filter{name: keySort, usage: "sort field: created_at or updated_at"}
 	filterDirection = filter{name: keyDirection, usage: "sort direction: asc or desc"}
 )
 
@@ -127,7 +133,24 @@ func (r resource) listQuery(cmd *cobra.Command) url.Values {
 			q.Set(f.name, v)
 		}
 	}
+	r.applyListDefaults(q, cmd.Flags().Changed)
 	return q
+}
+
+// applyListDefaults keeps unscoped case listings responsive. The API's default
+// case order is position ascending, which is meaningful for one space/case tree
+// but very slow and not especially useful for an organization-wide list.
+func (r resource) applyListDefaults(q url.Values, argChanged func(string) bool) {
+	if r.name != resourceCases || q.Get(keySpaceID) != "" || q.Get(keyParentCaseID) != "" {
+		return
+	}
+	if argChanged(keySort) || q.Get(keySort) != "" {
+		return
+	}
+	q.Set(keySort, defaultUnscopedCasesSort)
+	if !argChanged(keyDirection) && q.Get(keyDirection) == "" {
+		q.Set(keyDirection, defaultUnscopedCasesDirection)
+	}
 }
 
 func (r resource) listCmd() *cobra.Command {

@@ -8,12 +8,12 @@ func apiResources() []resource {
 			{name: "name", usage: "Space name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Space description", onCreate: true, onUpdate: true},
 		}},
-		{name: "cases", singular: "case", filters: []filter{
+		{name: resourceCases, singular: "case", filters: []filter{
 			filterSpaceID,
 			{name: keyParentCaseID, usage: "filter by parent Case ID"},
 			{name: keyAssigneeID, usage: "filter by assignee User ID"},
 			{name: keyStatus, usage: "filter by status (repeatable): open, started, completed, cancelled, blocked", multi: true},
-			{name: "sort", usage: "sort field: position, created_at, or updated_at"},
+			{name: keySort, usage: "sort field: position, created_at, or updated_at"},
 			filterDirection,
 		}, fields: []field{
 			{name: keyTitle, usage: "Case title", onCreate: true, onUpdate: true, required: true},

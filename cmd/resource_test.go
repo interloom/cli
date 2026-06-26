@@ -90,7 +90,7 @@ func TestBodyFlagsAndJSONAreMutuallyExclusive(t *testing.T) {
 }
 
 func TestResourceFilterFlagsUseKebabCaseAndQuerySnakeCase(t *testing.T) {
-	r := resource{name: "cases", singular: "case", filters: []filter{
+	r := resource{name: resourceCases, singular: "case", filters: []filter{
 		filterSpaceID,
 		{name: "parent_case_id", usage: "filter by parent Case ID"},
 		{name: "assignee_id", usage: "filter by assignee User ID"},
@@ -118,5 +118,46 @@ func TestResourceFilterFlagsUseKebabCaseAndQuerySnakeCase(t *testing.T) {
 	}
 	if got := q.Get("assignee_id"); got != "user-1" {
 		t.Fatalf("assignee_id query = %q", got)
+	}
+}
+
+func TestCasesListDefaultsUseChronologicalSortWhenUnscoped(t *testing.T) {
+	r := apiResource(resourceCases)
+	cmd := r.listCmd()
+
+	q := r.listQuery(cmd)
+	if got := q.Get(keySort); got != defaultUnscopedCasesSort {
+		t.Fatalf("sort query = %q, want %q", got, defaultUnscopedCasesSort)
+	}
+	if got := q.Get(keyDirection); got != defaultUnscopedCasesDirection {
+		t.Fatalf("direction query = %q, want %q", got, defaultUnscopedCasesDirection)
+	}
+}
+
+func TestCasesListDefaultsPreserveTreeOrderWhenScoped(t *testing.T) {
+	r := apiResource(resourceCases)
+	cmd := r.listCmd()
+	mustSet(t, cmd, "space-id", "space-1")
+
+	q := r.listQuery(cmd)
+	if got := q.Get(keySort); got != "" {
+		t.Fatalf("sort query = %q, want empty API default", got)
+	}
+	if got := q.Get(keyDirection); got != "" {
+		t.Fatalf("direction query = %q, want empty API default", got)
+	}
+}
+
+func TestCasesListDefaultsRespectExplicitSort(t *testing.T) {
+	r := apiResource(resourceCases)
+	cmd := r.listCmd()
+	mustSet(t, cmd, "sort", "position")
+
+	q := r.listQuery(cmd)
+	if got := q.Get(keySort); got != "position" {
+		t.Fatalf("sort query = %q, want position", got)
+	}
+	if got := q.Get(keyDirection); got != "" {
+		t.Fatalf("direction query = %q, want empty API default", got)
 	}
 }

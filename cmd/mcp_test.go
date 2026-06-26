@@ -143,6 +143,30 @@ func TestMCPToolUsesResolvedConfigToken(t *testing.T) {
 	}
 }
 
+func TestMCPCasesListUsesUnscopedDefaults(t *testing.T) {
+	q, err := listQueryFromArgs(toolArgs{}, apiResource(resourceCases))
+	if err != nil {
+		t.Fatalf("listQueryFromArgs: %v", err)
+	}
+	if got := q.Get(keySort); got != defaultUnscopedCasesSort {
+		t.Fatalf("sort query = %q, want %q", got, defaultUnscopedCasesSort)
+	}
+	if got := q.Get(keyDirection); got != defaultUnscopedCasesDirection {
+		t.Fatalf("direction query = %q, want %q", got, defaultUnscopedCasesDirection)
+	}
+
+	q, err = listQueryFromArgs(toolArgs{keySpaceID: json.RawMessage(`"space-1"`)}, apiResource(resourceCases))
+	if err != nil {
+		t.Fatalf("listQueryFromArgs scoped: %v", err)
+	}
+	if got := q.Get(keySort); got != "" {
+		t.Fatalf("scoped sort query = %q, want empty API default", got)
+	}
+	if got := q.Get(keyDirection); got != "" {
+		t.Fatalf("scoped direction query = %q, want empty API default", got)
+	}
+}
+
 func assertCaseListRequest(t *testing.T, r *http.Request) {
 	t.Helper()
 	if got, want := r.Header.Get("Authorization"), "Bearer stored-token"; got != want {
@@ -169,7 +193,7 @@ func TestMCPCreateBodyFromTypedFields(t *testing.T) {
 		keyDescription:      json.RawMessage(`"Details"`),
 		"attached_file_ids": json.RawMessage(`["file-1","file-2"]`),
 	}
-	body, err := bodyFromArgs(args, apiResource("cases"), true)
+	body, err := bodyFromArgs(args, apiResource(resourceCases), true)
 	if err != nil {
 		t.Fatalf("bodyFromArgs: %v", err)
 	}

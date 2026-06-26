@@ -112,6 +112,9 @@ interloom cases list --limit 50 --cursor <next_cursor>
 interloom notes list --all          # fetch every page into one list
 ```
 
+Unscoped `cases list` defaults to newest-created first. Lists scoped to a Space
+or parent Case keep the API's position order for case-tree browsing.
+
 Available list filters per resource:
 
 | Resource     | Filters                                                       |
