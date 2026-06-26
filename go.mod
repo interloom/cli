@@ -9,7 +9,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/oapi-codegen/runtime v1.4.1
+	github.com/oapi-codegen/runtime v1.4.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.44.0
 )
