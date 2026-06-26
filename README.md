@@ -154,6 +154,31 @@ interloom threads messages create <id> --text "Hello from the CLI"
 interloom threads messages create <id> -d '{"text":"Hello from JSON"}'
 ```
 
+## MCP server
+
+`mcp` runs a Model Context Protocol server that exposes the CLI's API operations
+as MCP tools. It uses stdio by default, so MCP clients can launch it directly as
+`interloom mcp`. API calls use your saved CLI config token and the normal
+environment overrides.
+
+```sh
+interloom auth login              # if you have not saved credentials yet
+interloom mcp
+```
+
+Pass `--http` to serve Streamable HTTP instead of stdio. The HTTP endpoint has
+no MCP auth because it only binds to loopback addresses.
+
+```sh
+interloom mcp --http
+# MCP endpoint: http://127.0.0.1:8765/mcp
+
+interloom mcp --http --addr 127.0.0.1:9000 --config-name dev-acme
+```
+
+For safety, HTTP `--addr` must be `localhost` or a loopback IP. Use `--endpoint`
+with `--http` to change the HTTP path if your MCP client expects a different one.
+
 ## Version
 
 ```sh

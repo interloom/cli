@@ -11,13 +11,7 @@ import (
 // newFilesCmd builds the files command: the generic list/get/update/delete
 // verbs plus file-specific upload (multipart) and download (signed URL).
 func newFilesCmd() *cobra.Command {
-	cmd := newResourceCmd(resource{
-		name:     "files",
-		singular: "file",
-		noCreate: true, // creation happens via `upload`
-		filters:  []filter{filterSpaceID, filterCaseID, filterSort, filterDirection},
-		fields:   []field{fieldSpaceID, fieldCaseID, fieldTags},
-	})
+	cmd := newResourceCmd(apiResource("files"))
 	cmd.AddCommand(newFilesUploadCmd(), newFilesDownloadCmd())
 	return cmd
 }

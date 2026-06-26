@@ -5,7 +5,7 @@ import "github.com/spf13/cobra"
 // newUsersCmd builds the read-only users command (list + get) plus the
 // `me` convenience for the authenticated user.
 func newUsersCmd() *cobra.Command {
-	cmd := newResourceCmd(resource{name: "users", singular: "user", readOnly: true})
+	cmd := newResourceCmd(apiResource("users"))
 	cmd.AddCommand(&cobra.Command{
 		Use:   "me",
 		Short: "Show the authenticated user",

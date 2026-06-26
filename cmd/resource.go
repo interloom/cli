@@ -20,6 +20,8 @@ const (
 	keyParentCaseID = "parent_case_id"
 	keyAssigneeID   = "assignee_id"
 	keyStatus       = "status"
+	keyCursor       = "cursor"
+	keyDirection    = "direction"
 )
 
 // filter is a query parameter exposed as a list flag. When multi is set it is a
@@ -39,7 +41,7 @@ var (
 	filterSpaceID   = filter{name: keySpaceID, usage: "filter by Space ID"}
 	filterCaseID    = filter{name: keyCaseID, usage: "filter by Case ID"}
 	filterSort      = filter{name: "sort", usage: "sort field: created_at or updated_at"}
-	filterDirection = filter{name: "direction", usage: "sort direction: asc or desc"}
+	filterDirection = filter{name: keyDirection, usage: "sort direction: asc or desc"}
 )
 
 // field is a request-body property exposed as a create/update flag. The flag is
