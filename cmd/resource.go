@@ -28,6 +28,8 @@ const (
 
 	defaultUnscopedCasesSort      = "created_at"
 	defaultUnscopedCasesDirection = "desc"
+	defaultScopedCasesSort        = "position"
+	defaultScopedCasesDirection   = "asc"
 )
 
 // filter is a query parameter exposed as a list flag. When multi is set it is a
@@ -133,24 +135,35 @@ func (r resource) listQuery(cmd *cobra.Command) url.Values {
 			q.Set(f.name, v)
 		}
 	}
-	r.applyListDefaults(q, cmd.Flags().Changed)
+	r.applyListDefaults(q)
 	return q
 }
 
-// applyListDefaults keeps unscoped case listings responsive. The API's default
-// case order is position ascending, which is meaningful for one space/case tree
-// but very slow and not especially useful for an organization-wide list.
-func (r resource) applyListDefaults(q url.Values, argChanged func(string) bool) {
-	if r.name != resourceCases || q.Get(keySpaceID) != "" || q.Get(keyParentCaseID) != "" {
+// applyListDefaults makes case ordering explicit so CLI behavior does not drift
+// with API defaults. Unscoped lists default to newest-created first; Space/parent
+// scoped lists default to tree position order.
+func (r resource) applyListDefaults(q url.Values) {
+	if r.name != resourceCases {
 		return
 	}
-	if argChanged(keySort) || q.Get(keySort) != "" {
-		return
+	scoped := q.Get(keySpaceID) != "" || q.Get(keyParentCaseID) != ""
+	if q.Get(keySort) == "" {
+		if scoped {
+			q.Set(keySort, defaultScopedCasesSort)
+		} else {
+			q.Set(keySort, defaultUnscopedCasesSort)
+		}
 	}
-	q.Set(keySort, defaultUnscopedCasesSort)
-	if !argChanged(keyDirection) && q.Get(keyDirection) == "" {
-		q.Set(keyDirection, defaultUnscopedCasesDirection)
+	if q.Get(keyDirection) == "" {
+		q.Set(keyDirection, defaultDirectionForCasesSort(q.Get(keySort), scoped))
 	}
+}
+
+func defaultDirectionForCasesSort(sort string, scoped bool) string {
+	if scoped || sort == defaultScopedCasesSort {
+		return defaultScopedCasesDirection
+	}
+	return defaultUnscopedCasesDirection
 }
 
 func (r resource) listCmd() *cobra.Command {

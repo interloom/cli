@@ -140,11 +140,11 @@ func TestCasesListDefaultsPreserveTreeOrderWhenScoped(t *testing.T) {
 	mustSet(t, cmd, "space-id", "space-1")
 
 	q := r.listQuery(cmd)
-	if got := q.Get(keySort); got != "" {
-		t.Fatalf("sort query = %q, want empty API default", got)
+	if got := q.Get(keySort); got != defaultScopedCasesSort {
+		t.Fatalf("sort query = %q, want %q", got, defaultScopedCasesSort)
 	}
-	if got := q.Get(keyDirection); got != "" {
-		t.Fatalf("direction query = %q, want empty API default", got)
+	if got := q.Get(keyDirection); got != defaultScopedCasesDirection {
+		t.Fatalf("direction query = %q, want %q", got, defaultScopedCasesDirection)
 	}
 }
 
@@ -157,7 +157,21 @@ func TestCasesListDefaultsRespectExplicitSort(t *testing.T) {
 	if got := q.Get(keySort); got != "position" {
 		t.Fatalf("sort query = %q, want position", got)
 	}
-	if got := q.Get(keyDirection); got != "" {
-		t.Fatalf("direction query = %q, want empty API default", got)
+	if got := q.Get(keyDirection); got != defaultScopedCasesDirection {
+		t.Fatalf("direction query = %q, want %q", got, defaultScopedCasesDirection)
+	}
+}
+
+func TestCasesListDefaultsRespectExplicitDirection(t *testing.T) {
+	r := apiResource(resourceCases)
+	cmd := r.listCmd()
+	mustSet(t, cmd, "direction", "asc")
+
+	q := r.listQuery(cmd)
+	if got := q.Get(keySort); got != defaultUnscopedCasesSort {
+		t.Fatalf("sort query = %q, want %q", got, defaultUnscopedCasesSort)
+	}
+	if got := q.Get(keyDirection); got != "asc" {
+		t.Fatalf("direction query = %q, want asc", got)
 	}
 }

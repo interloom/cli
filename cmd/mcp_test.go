@@ -159,11 +159,11 @@ func TestMCPCasesListUsesUnscopedDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listQueryFromArgs scoped: %v", err)
 	}
-	if got := q.Get(keySort); got != "" {
-		t.Fatalf("scoped sort query = %q, want empty API default", got)
+	if got := q.Get(keySort); got != defaultScopedCasesSort {
+		t.Fatalf("scoped sort query = %q, want %q", got, defaultScopedCasesSort)
 	}
-	if got := q.Get(keyDirection); got != "" {
-		t.Fatalf("scoped direction query = %q, want empty API default", got)
+	if got := q.Get(keyDirection); got != defaultScopedCasesDirection {
+		t.Fatalf("scoped direction query = %q, want %q", got, defaultScopedCasesDirection)
 	}
 }
 
@@ -181,6 +181,12 @@ func assertCaseListRequest(t *testing.T, r *http.Request) {
 	}
 	if got, want := q.Get(keySpaceID), testSpaceID; got != want {
 		t.Errorf("space_id query = %q, want %q", got, want)
+	}
+	if got, want := q.Get(keySort), defaultScopedCasesSort; got != want {
+		t.Errorf("sort query = %q, want %q", got, want)
+	}
+	if got, want := q.Get(keyDirection), defaultScopedCasesDirection; got != want {
+		t.Errorf("direction query = %q, want %q", got, want)
 	}
 	if got := q[keyStatus]; len(got) != 2 || got[0] != testStatusOpen || got[1] != testStatusStarted {
 		t.Errorf("status query = %v, want [open started]", got)

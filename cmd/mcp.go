@@ -599,7 +599,7 @@ func listQueryFromArgs(args toolArgs, r resource) (url.Values, error) {
 			return nil, err
 		}
 	}
-	r.applyListDefaults(q, args.has)
+	r.applyListDefaults(q)
 	return q, nil
 }
 
