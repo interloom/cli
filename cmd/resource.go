@@ -13,12 +13,14 @@ import (
 
 // snake_case JSON/query key names shared across resources.
 const (
-	resourceCases  = "cases"
-	resourceModels = "models"
+	resourceCaseIngestions = "case-ingestions"
+	resourceCases          = "cases"
+	resourceModels         = "models"
 
-	commandUseList = "list"
-	commandUseGet  = "get <id>"
-	argAll         = "all"
+	commandUseList   = "list"
+	commandUseGet    = "get <id>"
+	commandUseCreate = "create"
+	argAll           = "all"
 
 	keyTitle        = "title"
 	keyDescription  = "description"
@@ -30,6 +32,7 @@ const (
 	keySort         = "sort"
 	keyCursor       = "cursor"
 	keyDirection    = "direction"
+	keyManifest     = "manifest"
 
 	defaultUnscopedCasesSort      = "created_at"
 	defaultUnscopedCasesDirection = "desc"
@@ -243,7 +246,7 @@ func (r resource) getCmd() *cobra.Command {
 
 func (r resource) createCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   commandUseCreate,
 		Short: fmt.Sprintf("Create a %s from a JSON body", r.singular),
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

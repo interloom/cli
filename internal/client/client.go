@@ -160,6 +160,12 @@ func (c *Client) Delete(ctx context.Context, resource, id string) (json.RawMessa
 // Upload posts a multipart/form-data request with the file under the "file"
 // field plus any non-empty string fields (e.g. space_id, case_id).
 func (c *Client) Upload(ctx context.Context, resource, filePath string, fields map[string]string) (json.RawMessage, error) {
+	return c.UploadFile(ctx, resource, "file", filePath, fields)
+}
+
+// UploadFile posts a multipart/form-data request with the file under fileField
+// plus any non-empty string fields.
+func (c *Client) UploadFile(ctx context.Context, resource, fileField, filePath string, fields map[string]string) (json.RawMessage, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -168,7 +174,7 @@ func (c *Client) Upload(ctx context.Context, resource, filePath string, fields m
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	fw, err := mw.CreateFormFile("file", filepath.Base(filePath))
+	fw, err := mw.CreateFormFile(fileField, filepath.Base(filePath))
 	if err != nil {
 		return nil, err
 	}

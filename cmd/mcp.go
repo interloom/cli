@@ -22,13 +22,16 @@ import (
 )
 
 const (
-	mcpCommandName     = "mcp"
-	defaultMCPAddr     = "127.0.0.1:8765"
-	defaultMCPEndpoint = "/mcp"
-	argLimit           = "limit"
-	toolFilesDownload  = "files_download"
-	schemaKeyType      = "type"
-	schemaKeyDesc      = "description"
+	mcpCommandName           = "mcp"
+	defaultMCPAddr           = "127.0.0.1:8765"
+	defaultMCPEndpoint       = "/mcp"
+	argLimit                 = "limit"
+	toolCaseIngestionsCreate = "case_ingestions_create"
+	toolCaseIngestionsGet    = "case_ingestions_get"
+	toolCaseIngestionsErrors = "case_ingestions_errors"
+	toolFilesDownload        = "files_download"
+	schemaKeyType            = "type"
+	schemaKeyDesc            = "description"
 )
 
 var (
@@ -204,6 +207,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerUserTools(server)
 	svc.registerThreadTools(server)
 	svc.registerFileTools(server)
+	svc.registerCaseIngestionTools(server)
 	return server
 }
 
@@ -328,6 +332,34 @@ func (s *mcpService) registerFileTools(server *mcpsdk.Server) {
 			"out": stringSchema("local path to write the downloaded bytes"),
 		}, "id", "out"),
 	}, s.fileDownloadHandler())
+}
+
+func (s *mcpService) registerCaseIngestionTools(server *mcpsdk.Server) {
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolCaseIngestionsCreate,
+		Description: "Create a case ingestion from a local JSONL manifest path",
+		InputSchema: objectSchema(map[string]any{
+			keySpaceID:  stringSchema("target Space ID for imported root cases"),
+			keyManifest: stringSchema("path to the local JSONL manifest file"),
+		}, keySpaceID, keyManifest),
+	}, s.caseIngestionCreateHandler())
+
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolCaseIngestionsGet,
+		Description: "Get a case ingestion by ID",
+		InputSchema: objectSchema(map[string]any{"id": stringSchema("case ingestion ID")}, "id"),
+	}, s.caseIngestionGetHandler())
+
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolCaseIngestionsErrors,
+		Description: "List failed entries for a case ingestion",
+		InputSchema: objectSchema(map[string]any{
+			"id":      stringSchema("case ingestion ID"),
+			argLimit:  integerSchema("maximum number of failed entries to return"),
+			keyCursor: stringSchema("pagination cursor from a previous next_cursor"),
+			argAll:    boolSchema("fetch all pages and aggregate into a single list"),
+		}, "id"),
+	}, s.caseIngestionErrorsHandler())
 }
 
 func (s *mcpService) listResourceHandler(r resource) mcpsdk.ToolHandler {
@@ -591,6 +623,80 @@ func (s *mcpService) fileDownloadHandler() mcpsdk.ToolHandler {
 	}
 }
 
+func (s *mcpService) caseIngestionCreateHandler() mcpsdk.ToolHandler {
+	return func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		spaceID, err := args.requiredString(keySpaceID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		manifest, err := args.requiredString(keyManifest)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		raw, err := s.client.UploadFile(ctx, resourceCaseIngestions, keyManifest, manifest, map[string]string{
+			keySpaceID: spaceID,
+		})
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	}
+}
+
+func (s *mcpService) caseIngestionGetHandler() mcpsdk.ToolHandler {
+	return func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		id, err := args.requiredString("id")
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		raw, err := s.client.Get(ctx, resourceCaseIngestions, id)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	}
+}
+
+func (s *mcpService) caseIngestionErrorsHandler() mcpsdk.ToolHandler {
+	return func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		id, err := args.requiredString("id")
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		q, err := caseIngestionErrorsQueryFromArgs(args)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		all, err := args.bool(argAll)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		resource := resourceCaseIngestions + "/" + url.PathEscape(id) + "/errors"
+		var raw json.RawMessage
+		if all {
+			raw, err = s.client.ListAll(ctx, resource, q)
+		} else {
+			raw, err = s.client.List(ctx, resource, q)
+		}
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	}
+}
+
 func listQueryFromArgs(args toolArgs, r resource) (url.Values, error) {
 	q := url.Values{}
 	if !r.noPaging {
@@ -622,6 +728,17 @@ func threadEventsQueryFromArgs(args toolArgs) (url.Values, error) {
 		if err := addStringQueryArg(q, args, name); err != nil {
 			return nil, err
 		}
+	}
+	return q, nil
+}
+
+func caseIngestionErrorsQueryFromArgs(args toolArgs) (url.Values, error) {
+	q := url.Values{}
+	if err := addIntQueryArg(q, args, argLimit); err != nil {
+		return nil, err
+	}
+	if err := addStringQueryArg(q, args, keyCursor); err != nil {
+		return nil, err
 	}
 	return q, nil
 }

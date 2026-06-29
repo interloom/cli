@@ -102,6 +102,8 @@ interloom cases update <id> -f patch.json
 
 `agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
 `models` is list-only for discovering model IDs accepted by agent commands.
+`case-ingestions` imports cases from JSONL manifest files and exposes ingestion
+status plus failed-entry pagination.
 
 ### Listing and pagination
 
@@ -136,6 +138,15 @@ Files use the shared `list`/`get`/`update`/`delete` plus `upload` and `download`
 interloom files upload ./report.pdf --space-id <id>
 interloom files download <id> --out ./report.pdf
 interloom files download <id> > report.pdf      # stream to stdout
+```
+
+## Case ingestions
+
+```sh
+interloom case-ingestions create ./manifest.jsonl --space-id <id>
+interloom case-ingestions get <id>
+interloom case-ingestions errors <id> --limit 50
+interloom case-ingestions errors <id> --all
 ```
 
 ## Users

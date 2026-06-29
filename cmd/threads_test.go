@@ -4,7 +4,7 @@ import "testing"
 
 func TestThreadsMessagesCreateCommandShape(t *testing.T) {
 	threads := newThreadsCmd()
-	if child, _, err := threads.Find([]string{"messages", "create", "thread-1"}); err != nil || child == nil || child.Use != "create <thread-id>" {
+	if child, _, err := threads.Find([]string{"messages", commandUseCreate, "thread-1"}); err != nil || child == nil || child.Use != "create <thread-id>" {
 		t.Fatalf("messages create command not registered: child=%v err=%v", child, err)
 	}
 	for _, child := range threads.Commands() {

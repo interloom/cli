@@ -40,6 +40,51 @@ func (e AgentReasoningEffort) Valid() bool {
 	}
 }
 
+// Defines values for CaseIngestionStatus.
+const (
+	CaseIngestionStatusCompleted  CaseIngestionStatus = "completed"
+	CaseIngestionStatusFailed     CaseIngestionStatus = "failed"
+	CaseIngestionStatusPending    CaseIngestionStatus = "pending"
+	CaseIngestionStatusProcessing CaseIngestionStatus = "processing"
+)
+
+// Valid indicates whether the value is a known member of the CaseIngestionStatus enum.
+func (e CaseIngestionStatus) Valid() bool {
+	switch e {
+	case CaseIngestionStatusCompleted:
+		return true
+	case CaseIngestionStatusFailed:
+		return true
+	case CaseIngestionStatusPending:
+		return true
+	case CaseIngestionStatusProcessing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaseIngestionFailedEntryStatus.
+const (
+	CaseIngestionFailedEntryStatusFailed  CaseIngestionFailedEntryStatus = "failed"
+	CaseIngestionFailedEntryStatusSkipped CaseIngestionFailedEntryStatus = "skipped"
+	CaseIngestionFailedEntryStatusSuccess CaseIngestionFailedEntryStatus = "success"
+)
+
+// Valid indicates whether the value is a known member of the CaseIngestionFailedEntryStatus enum.
+func (e CaseIngestionFailedEntryStatus) Valid() bool {
+	switch e {
+	case CaseIngestionFailedEntryStatusFailed:
+		return true
+	case CaseIngestionFailedEntryStatusSkipped:
+		return true
+	case CaseIngestionFailedEntryStatusSuccess:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaseStatus.
 const (
 	Blocked   CaseStatus = "blocked"
@@ -353,6 +398,76 @@ type Case struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// CaseIngestion defines model for CaseIngestion.
+type CaseIngestion struct {
+	// CreatedAt Timestamp when the batch was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// EndedAt Timestamp when processing ended, or null while unfinished.
+	EndedAt *time.Time `json:"ended_at,omitempty"`
+
+	// ErrorCount Manifest entries that failed processing.
+	ErrorCount int `json:"error_count"`
+
+	// Id Unique identifier for the case ingestion.
+	Id openapi_types.UUID `json:"id"`
+
+	// ProcessedCount Manifest entries processed so far.
+	ProcessedCount int          `json:"processed_count"`
+	Space          ResourceLink `json:"space"`
+
+	// StartedAt Timestamp when processing started, or null before processing.
+	StartedAt *time.Time `json:"started_at,omitempty"`
+
+	// Status Case ingestion processing status.
+	Status CaseIngestionStatus `json:"status"`
+
+	// SuccessCount Manifest entries that created cases.
+	SuccessCount int `json:"success_count"`
+
+	// TotalCount Total manifest entries accepted for import.
+	TotalCount int `json:"total_count"`
+}
+
+// CaseIngestionStatus Case ingestion processing status.
+type CaseIngestionStatus string
+
+// CaseIngestionEntryError defines model for CaseIngestionEntryError.
+type CaseIngestionEntryError struct {
+	// CreatedAt Timestamp when the error was recorded.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Error Human-readable failure message.
+	Error string `json:"error"`
+
+	// Id Unique identifier for this entry error.
+	Id openapi_types.UUID `json:"id"`
+}
+
+// CaseIngestionFailedEntry defines model for CaseIngestionFailedEntry.
+type CaseIngestionFailedEntry struct {
+	// CreatedAt Timestamp when the entry was recorded.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Errors Errors recorded for this manifest entry.
+	Errors []CaseIngestionEntryError `json:"errors"`
+
+	// ExternalId Manifest external_id for the failed case.
+	ExternalId string `json:"external_id"`
+
+	// Id Unique identifier for this manifest entry result.
+	Id openapi_types.UUID `json:"id"`
+
+	// LineNumber 1-indexed line number in the manifest.
+	LineNumber int `json:"line_number"`
+
+	// Status Entry processing status.
+	Status CaseIngestionFailedEntryStatus `json:"status"`
+}
+
+// CaseIngestionFailedEntryStatus Entry processing status.
+type CaseIngestionFailedEntryStatus string
+
 // CaseListItem defines model for CaseListItem.
 type CaseListItem struct {
 	Assignee *ResourceLink `json:"assignee,omitempty"`
@@ -397,6 +512,15 @@ type CreateAgentRequest struct {
 	// Model Optional model used by the agent. Set to null or omit to use the configured default model.
 	Model *string `json:"model,omitempty"`
 	Name  string  `json:"name"`
+}
+
+// CreateCaseIngestionRequest defines model for CreateCaseIngestionRequest.
+type CreateCaseIngestionRequest struct {
+	// Manifest JSONL manifest file. Each non-blank line describes one case.
+	Manifest openapi_types.File `json:"manifest"`
+
+	// SpaceId Target Space ID for imported root cases.
+	SpaceId openapi_types.UUID `json:"space_id"`
 }
 
 // CreateCaseRequest defines model for CreateCaseRequest.
@@ -540,6 +664,18 @@ type GameObject struct {
 type ListAgentsResponse struct {
 	// Data Items in the current page.
 	Data []AgentListItem `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListCaseIngestionErrorsResponse defines model for ListCaseIngestionErrorsResponse.
+type ListCaseIngestionErrorsResponse struct {
+	// Data Items in the current page.
+	Data []CaseIngestionFailedEntry `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -1053,6 +1189,26 @@ type UpdateAgentParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// CreateCaseIngestionParams defines parameters for CreateCaseIngestion.
+type CreateCaseIngestionParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetCaseIngestionParams defines parameters for GetCaseIngestion.
+type GetCaseIngestionParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListCaseIngestionErrorsParams defines parameters for ListCaseIngestionErrors.
+type ListCaseIngestionErrorsParams struct {
+	// Limit Maximum number of failed entries to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from next_cursor in a previous response.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListCasesParams defines parameters for ListCases.
 type ListCasesParams struct {
 	// Limit Maximum number of cases to return.
@@ -1325,6 +1481,9 @@ type CreateAgentJSONRequestBody = CreateAgentRequest
 
 // UpdateAgentJSONRequestBody defines body for UpdateAgent for application/json ContentType.
 type UpdateAgentJSONRequestBody = UpdateAgentRequest
+
+// CreateCaseIngestionMultipartRequestBody defines body for CreateCaseIngestion for multipart/form-data ContentType.
+type CreateCaseIngestionMultipartRequestBody = CreateCaseIngestionRequest
 
 // CreateCaseJSONRequestBody defines body for CreateCase for application/json ContentType.
 type CreateCaseJSONRequestBody = CreateCaseRequest

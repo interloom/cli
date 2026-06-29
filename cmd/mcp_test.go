@@ -20,6 +20,7 @@ const (
 	testSpaceID       = "space-1"
 	testStatusOpen    = "open"
 	testStatusStarted = "started"
+	testManifestBody  = "{\"title\":\"Case\"}\n"
 )
 
 func TestMCPCommandShape(t *testing.T) {
@@ -87,6 +88,7 @@ func TestMCPToolRegistration(t *testing.T) {
 	for _, name := range []string{
 		"spaces_list", "spaces_get", "spaces_create", "spaces_update", "spaces_delete",
 		"cases_list", "cases_create", "agents_update", "files_upload", toolFilesDownload,
+		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", "threads_messages_create",
 	} {
@@ -190,6 +192,101 @@ func TestMCPModelsListHasNoPagingArgs(t *testing.T) {
 		if _, ok := props[name]; ok {
 			t.Fatalf("models schema should not expose %q: %v", name, props)
 		}
+	}
+}
+
+func TestMCPCaseIngestionCreateUploadsManifest(t *testing.T) {
+	manifestPath := writeMCPTestManifest(t)
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assertMCPCaseIngestionCreateRequest(t, r)
+		_, _ = w.Write([]byte("{\"id\":\"ingestion-1\"}"))
+	}))
+	defer apiServer.Close()
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: toolCaseIngestionsCreate,
+		Arguments: map[string]any{
+			keySpaceID:  testSpaceID,
+			keyManifest: manifestPath,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
+	}
+	if got := toolResultText(t, result); !strings.Contains(got, "ingestion-1") {
+		t.Fatalf("tool result = %s, want ingestion id", got)
+	}
+}
+
+func writeMCPTestManifest(t *testing.T) string {
+	t.Helper()
+	manifest, err := os.CreateTemp(t.TempDir(), "manifest-*.jsonl")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	if _, writeErr := manifest.WriteString(testManifestBody); writeErr != nil {
+		t.Fatalf("WriteString: %v", writeErr)
+	}
+	if closeErr := manifest.Close(); closeErr != nil {
+		t.Fatalf("Close: %v", closeErr)
+	}
+	return manifest.Name()
+}
+
+func assertMCPCaseIngestionCreateRequest(t *testing.T, r *http.Request) {
+	t.Helper()
+	if got, want := r.Method, http.MethodPost; got != want {
+		t.Errorf("method = %q, want %q", got, want)
+	}
+	if got, want := r.URL.Path, "/api/v1/public/case-ingestions"; got != want {
+		t.Errorf("path = %q, want %q", got, want)
+	}
+	if parseErr := r.ParseMultipartForm(1 << 20); parseErr != nil {
+		t.Fatalf("ParseMultipartForm: %v", parseErr)
+	}
+	if got, want := r.FormValue(keySpaceID), testSpaceID; got != want {
+		t.Errorf("space_id = %q, want %q", got, want)
+	}
+	assertMCPManifestField(t, r)
+}
+
+func assertMCPManifestField(t *testing.T, r *http.Request) {
+	t.Helper()
+	f, _, err := r.FormFile(keyManifest)
+	if err != nil {
+		t.Fatalf("manifest file missing: %v", err)
+	}
+	defer func() { _ = f.Close() }()
+	body, err := io.ReadAll(f)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if string(body) != testManifestBody {
+		t.Fatalf("manifest body = %q", body)
+	}
+}
+
+func TestMCPCaseIngestionErrorsQuery(t *testing.T) {
+	q, err := caseIngestionErrorsQueryFromArgs(toolArgs{
+		argLimit:  json.RawMessage(`5`),
+		keyCursor: json.RawMessage(`"cursor-1"`),
+		argAll:    json.RawMessage(`true`),
+	})
+	if err != nil {
+		t.Fatalf("caseIngestionErrorsQueryFromArgs: %v", err)
+	}
+	if got, want := q.Get(argLimit), "5"; got != want {
+		t.Fatalf("limit query = %q, want %q", got, want)
+	}
+	if got, want := q.Get(keyCursor), "cursor-1"; got != want {
+		t.Fatalf("cursor query = %q, want %q", got, want)
+	}
+	if q.Has(argAll) {
+		t.Fatalf("all should not be forwarded as query: %v", q)
 	}
 }
 

@@ -42,6 +42,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(
 		newAuthCmd(),
 		newConfigCmd(),
+		newCaseIngestionsCmd(),
 		newResourceCmd(apiResource("spaces")),
 		newResourceCmd(apiResource(resourceCases)),
 		newResourceCmd(apiResource("notes")),
