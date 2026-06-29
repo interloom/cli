@@ -101,6 +101,7 @@ interloom cases update <id> -f patch.json
 ```
 
 `agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
+`models` is list-only for discovering model IDs accepted by agent commands.
 
 ### Listing and pagination
 
@@ -124,6 +125,7 @@ Available list filters per resource:
 | `cases`      | `space-id`, `parent-case-id`, `assignee-id`, `status` (repeatable), `sort`, `direction` |
 | `notes`      | `space-id`, `case-id`, `thread-id`, `sort`, `direction`       |
 | `procedures` | `space-id`                                                    |
+| `models`     | —                                                             |
 | `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
 
 ## Files
@@ -142,6 +144,12 @@ interloom files download <id> > report.pdf      # stream to stdout
 interloom users me        # the authenticated user
 interloom users list
 interloom users get <id>
+```
+
+## Models
+
+```sh
+interloom models list
 ```
 
 ## Threads

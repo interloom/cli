@@ -51,6 +51,7 @@ func apiResources() []resource {
 			{name: "job_description", usage: "Agent job description", onCreate: true, onUpdate: true},
 			{name: "model", usage: "model the agent uses", onCreate: true, onUpdate: true},
 		}},
+		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
 		{name: "files", singular: "file", noCreate: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,

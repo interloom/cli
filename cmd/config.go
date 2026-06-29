@@ -21,7 +21,7 @@ func newConfigCmd() *cobra.Command {
 
 func newConfigListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
+		Use:   commandUseList,
 		Short: "List saved configs",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {

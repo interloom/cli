@@ -23,7 +23,7 @@ func newThreadsCmd() *cobra.Command {
 
 func newThreadsGetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <id>",
+		Use:   commandUseGet,
 		Short: "Get a single thread by ID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -64,7 +64,7 @@ func newThreadsEventsCmd() *cobra.Command {
 			// The events sub-resource shares the cursor pagination shape, so the
 			// generic List/ListAll drive it via a composed resource path.
 			resource := "threads/" + url.PathEscape(args[0]) + "/events"
-			all, _ := cmd.Flags().GetBool("all")
+			all, _ := cmd.Flags().GetBool(argAll)
 			var raw []byte
 			if all {
 				raw, err = c.ListAll(cmd.Context(), resource, q)
@@ -80,7 +80,7 @@ func newThreadsEventsCmd() *cobra.Command {
 	cmd.Flags().Int("limit", 0, "maximum number of events to return")
 	cmd.Flags().String("cursor", "", "pagination cursor from a previous next_cursor")
 	cmd.Flags().String("direction", "", "sort direction: asc or desc")
-	cmd.Flags().Bool("all", false, "fetch all pages and aggregate into a single list")
+	cmd.Flags().Bool(argAll, false, "fetch all pages and aggregate into a single list")
 	return cmd
 }
 

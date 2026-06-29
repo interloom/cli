@@ -13,7 +13,12 @@ import (
 
 // snake_case JSON/query key names shared across resources.
 const (
-	resourceCases = "cases"
+	resourceCases  = "cases"
+	resourceModels = "models"
+
+	commandUseList = "list"
+	commandUseGet  = "get <id>"
+	argAll         = "all"
 
 	keyTitle        = "title"
 	keyDescription  = "description"
@@ -76,15 +81,17 @@ var (
 	fieldTags    = field{name: "tags", usage: "tags (repeatable)", multi: true, onCreate: true, onUpdate: true}
 )
 
-// resource describes a uniform REST resource. The same five verbs
-// (list/get/create/update/delete) are generated for every resource; this is
-// the single place to extend when wiring spaces, notes, procedures, etc.
+// resource describes a REST resource. Most resources share the same five verbs
+// (list/get/create/update/delete); flags below handle API resources that omit a
+// standard verb or cursor pagination.
 type resource struct {
 	name     string   // URL segment and command name, e.g. "cases"
 	singular string   // e.g. "case", used in help text
 	readOnly bool     // only list + get (e.g. users)
+	noGet    bool     // no item GET endpoint (e.g. models)
 	noCreate bool     // no generic create (e.g. files, which uses upload)
 	noDelete bool     // no DELETE endpoint (e.g. agents)
+	noPaging bool     // collection list is not cursor-paginated
 	filters  []filter // list query filters
 	fields   []field  // create/update body fields
 }
@@ -95,7 +102,10 @@ func newResourceCmd(r resource) *cobra.Command {
 		Short: fmt.Sprintf("Manage %s", r.name),
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(r.listCmd(), r.getCmd())
+	cmd.AddCommand(r.listCmd())
+	if !r.noGet {
+		cmd.AddCommand(r.getCmd())
+	}
 	if r.readOnly {
 		return cmd
 	}
@@ -113,12 +123,15 @@ func newResourceCmd(r resource) *cobra.Command {
 // the resource's filters (single-value or repeatable).
 func (r resource) listQuery(cmd *cobra.Command) url.Values {
 	q := url.Values{}
-	if cmd.Flags().Changed("limit") {
+	if !r.noPaging && cmd.Flags().Changed("limit") {
 		limit, _ := cmd.Flags().GetInt("limit")
 		q.Set("limit", fmt.Sprint(limit))
 	}
-	if cur, _ := cmd.Flags().GetString("cursor"); cur != "" {
-		q.Set("cursor", cur)
+	if !r.noPaging {
+		cur, _ := cmd.Flags().GetString("cursor")
+		if cur != "" {
+			q.Set("cursor", cur)
+		}
 	}
 	for _, f := range r.filters {
 		flagName := f.flagName()
@@ -168,7 +181,7 @@ func defaultDirectionForCasesSort(sort string, scoped bool) string {
 
 func (r resource) listCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   commandUseList,
 		Short: fmt.Sprintf("List %s", r.name),
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -177,7 +190,10 @@ func (r resource) listCmd() *cobra.Command {
 				return err
 			}
 			q := r.listQuery(cmd)
-			all, _ := cmd.Flags().GetBool("all")
+			all := false
+			if !r.noPaging {
+				all, _ = cmd.Flags().GetBool(argAll)
+			}
 			var raw []byte
 			if all {
 				raw, err = c.ListAll(cmd.Context(), r.name, q)
@@ -190,9 +206,11 @@ func (r resource) listCmd() *cobra.Command {
 			return printResult(raw)
 		},
 	}
-	cmd.Flags().Int("limit", 0, "maximum number of items to return")
-	cmd.Flags().String("cursor", "", "pagination cursor from a previous next_cursor")
-	cmd.Flags().Bool("all", false, "fetch all pages and aggregate into a single list")
+	if !r.noPaging {
+		cmd.Flags().Int("limit", 0, "maximum number of items to return")
+		cmd.Flags().String("cursor", "", "pagination cursor from a previous next_cursor")
+		cmd.Flags().Bool(argAll, false, "fetch all pages and aggregate into a single list")
+	}
 	for _, f := range r.filters {
 		flagName := f.flagName()
 		if f.multi {
@@ -206,7 +224,7 @@ func (r resource) listCmd() *cobra.Command {
 
 func (r resource) getCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <id>",
+		Use:   commandUseGet,
 		Short: fmt.Sprintf("Get a single %s by ID", r.singular),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

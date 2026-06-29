@@ -175,3 +175,19 @@ func TestCasesListDefaultsRespectExplicitDirection(t *testing.T) {
 		t.Fatalf("direction query = %q, want asc", got)
 	}
 }
+
+func TestModelsCommandIsListOnlyWithoutPaginationFlags(t *testing.T) {
+	models := newResourceCmd(apiResource(resourceModels))
+	list, _, err := models.Find([]string{commandUseList})
+	if err != nil || list == nil || list.Use != commandUseList {
+		t.Fatalf("models list command not registered: child=%v err=%v", list, err)
+	}
+	for _, flag := range []string{argLimit, keyCursor, argAll} {
+		if list.Flags().Lookup(flag) != nil {
+			t.Fatalf("models list should not expose --%s", flag)
+		}
+	}
+	if child, _, err := models.Find([]string{"get", "model-1"}); err == nil && child != nil && child.Use == commandUseGet {
+		t.Fatalf("models get command should not be registered")
+	}
+}

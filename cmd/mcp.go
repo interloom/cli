@@ -215,11 +215,13 @@ func (s *mcpService) registerResourceTools(server *mcpsdk.Server) {
 			Description: fmt.Sprintf("List %s", r.name),
 			InputSchema: listInputSchema(r),
 		}, s.listResourceHandler(r))
-		server.AddTool(&mcpsdk.Tool{
-			Name:        r.name + "_get",
-			Description: fmt.Sprintf("Get a single %s by ID", r.singular),
-			InputSchema: objectSchema(map[string]any{"id": stringSchema("resource ID")}, "id"),
-		}, s.getResourceHandler(r))
+		if !r.noGet {
+			server.AddTool(&mcpsdk.Tool{
+				Name:        r.name + "_get",
+				Description: fmt.Sprintf("Get a single %s by ID", r.singular),
+				InputSchema: objectSchema(map[string]any{"id": stringSchema("resource ID")}, "id"),
+			}, s.getResourceHandler(r))
+		}
 
 		if r.readOnly {
 			continue
@@ -292,7 +294,7 @@ func (s *mcpService) registerThreadTools(server *mcpsdk.Server) {
 			argLimit:     integerSchema("maximum number of events to return"),
 			keyCursor:    stringSchema("pagination cursor from a previous next_cursor"),
 			keyDirection: stringSchema("sort direction: asc or desc"),
-			"all":        boolSchema("fetch all pages and aggregate into a single list"),
+			argAll:       boolSchema("fetch all pages and aggregate into a single list"),
 		}, "id"),
 	}, s.threadEventsHandler())
 
@@ -338,9 +340,12 @@ func (s *mcpService) listResourceHandler(r resource) mcpsdk.ToolHandler {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		all, err := args.bool("all")
-		if err != nil {
-			return toolErrorResult(err), nil
+		all := false
+		if !r.noPaging {
+			all, err = args.bool(argAll)
+			if err != nil {
+				return toolErrorResult(err), nil
+			}
 		}
 		var raw json.RawMessage
 		if all {
@@ -449,7 +454,7 @@ func (s *mcpService) threadEventsHandler() mcpsdk.ToolHandler {
 			return toolErrorResult(err), nil
 		}
 		resource := "threads/" + url.PathEscape(id) + "/events"
-		all, err := args.bool("all")
+		all, err := args.bool(argAll)
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -588,11 +593,13 @@ func (s *mcpService) fileDownloadHandler() mcpsdk.ToolHandler {
 
 func listQueryFromArgs(args toolArgs, r resource) (url.Values, error) {
 	q := url.Values{}
-	if err := addIntQueryArg(q, args, argLimit); err != nil {
-		return nil, err
-	}
-	if err := addStringQueryArg(q, args, keyCursor); err != nil {
-		return nil, err
+	if !r.noPaging {
+		if err := addIntQueryArg(q, args, argLimit); err != nil {
+			return nil, err
+		}
+		if err := addStringQueryArg(q, args, keyCursor); err != nil {
+			return nil, err
+		}
 	}
 	for _, f := range r.filters {
 		if err := addFilterQueryArg(q, args, f); err != nil {
@@ -907,10 +914,11 @@ func structuredContent(raw json.RawMessage) any {
 }
 
 func listInputSchema(r resource) map[string]any {
-	props := map[string]any{
-		argLimit:  integerSchema("maximum number of items to return"),
-		keyCursor: stringSchema("pagination cursor from a previous next_cursor"),
-		"all":     boolSchema("fetch all pages and aggregate into a single list"),
+	props := map[string]any{}
+	if !r.noPaging {
+		props[argLimit] = integerSchema("maximum number of items to return")
+		props[keyCursor] = stringSchema("pagination cursor from a previous next_cursor")
+		props[argAll] = boolSchema("fetch all pages and aggregate into a single list")
 	}
 	for _, f := range r.filters {
 		if f.multi {

@@ -87,13 +87,14 @@ func TestMCPToolRegistration(t *testing.T) {
 	for _, name := range []string{
 		"spaces_list", "spaces_get", "spaces_create", "spaces_update", "spaces_delete",
 		"cases_list", "cases_create", "agents_update", "files_upload", toolFilesDownload,
+		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", "threads_messages_create",
 	} {
 		if !names[name] {
 			t.Fatalf("tool %q not registered", name)
 		}
 	}
-	for _, name := range []string{"agents_delete", "files_create", "users_create", "users_delete"} {
+	for _, name := range []string{"agents_delete", "files_create", "models_get", "users_create", "users_delete"} {
 		if names[name] {
 			t.Fatalf("unsupported tool %q should not be registered", name)
 		}
@@ -164,6 +165,31 @@ func TestMCPCasesListUsesUnscopedDefaults(t *testing.T) {
 	}
 	if got := q.Get(keyDirection); got != defaultScopedCasesDirection {
 		t.Fatalf("scoped direction query = %q, want %q", got, defaultScopedCasesDirection)
+	}
+}
+
+func TestMCPModelsListHasNoPagingArgs(t *testing.T) {
+	r := apiResource(resourceModels)
+	q, err := listQueryFromArgs(toolArgs{
+		argLimit:  json.RawMessage(`10`),
+		keyCursor: json.RawMessage(`"cursor"`),
+		argAll:    json.RawMessage(`true`),
+	}, r)
+	if err != nil {
+		t.Fatalf("listQueryFromArgs: %v", err)
+	}
+	if len(q) != 0 {
+		t.Fatalf("models query = %v, want empty", q)
+	}
+	schema := listInputSchema(r)
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("schema properties missing: %v", schema)
+	}
+	for _, name := range []string{argLimit, keyCursor, argAll} {
+		if _, ok := props[name]; ok {
+			t.Fatalf("models schema should not expose %q: %v", name, props)
+		}
 	}
 }
 

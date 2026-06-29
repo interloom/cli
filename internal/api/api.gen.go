@@ -16,6 +16,30 @@ const (
 	ApiKeyAuthScopes apiKeyAuthContextKey = "ApiKeyAuth.Scopes"
 )
 
+// Defines values for AgentReasoningEffort.
+const (
+	HIGH   AgentReasoningEffort = "HIGH"
+	LOW    AgentReasoningEffort = "LOW"
+	MEDIUM AgentReasoningEffort = "MEDIUM"
+	XHIGH  AgentReasoningEffort = "XHIGH"
+)
+
+// Valid indicates whether the value is a known member of the AgentReasoningEffort enum.
+func (e AgentReasoningEffort) Valid() bool {
+	switch e {
+	case HIGH:
+		return true
+	case LOW:
+		return true
+	case MEDIUM:
+		return true
+	case XHIGH:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaseStatus.
 const (
 	Blocked   CaseStatus = "blocked"
@@ -37,6 +61,30 @@ func (e CaseStatus) Valid() bool {
 	case Open:
 		return true
 	case Started:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModelDeploymentLocation.
+const (
+	EUROPE       ModelDeploymentLocation = "EUROPE"
+	GLOBAL       ModelDeploymentLocation = "GLOBAL"
+	UNITEDSTATES ModelDeploymentLocation = "UNITED_STATES"
+	UNKNOWN      ModelDeploymentLocation = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the ModelDeploymentLocation enum.
+func (e ModelDeploymentLocation) Valid() bool {
+	switch e {
+	case EUROPE:
+		return true
+	case GLOBAL:
+		return true
+	case UNITEDSTATES:
+		return true
+	case UNKNOWN:
 		return true
 	default:
 		return false
@@ -257,6 +305,9 @@ type AgentListItem struct {
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// AgentReasoningEffort defines model for AgentReasoningEffort.
+type AgentReasoningEffort string
 
 // Case defines model for Case.
 type Case struct {
@@ -521,6 +572,12 @@ type ListFilesResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// ListModelsResponse defines model for ListModelsResponse.
+type ListModelsResponse struct {
+	// Data Supported models in display order.
+	Data []Model `json:"data"`
+}
+
 // ListNotesResponse defines model for ListNotesResponse.
 type ListNotesResponse struct {
 	// Data Items in the current page.
@@ -585,6 +642,49 @@ type ListUsersResponse struct {
 type MessagePayload struct {
 	PayloadType string `json:"payload_type"`
 	Text        string `json:"text"`
+}
+
+// Model defines model for Model.
+type Model struct {
+	Capabilities ModelCapabilities `json:"capabilities"`
+
+	// ContextWindow Maximum input context window in tokens from the model metadata snapshot.
+	ContextWindow      *int                    `json:"context_window,omitempty"`
+	DeploymentLocation ModelDeploymentLocation `json:"deployment_location"`
+
+	// DisplayName Human-readable model name.
+	DisplayName string `json:"display_name"`
+
+	// Id Stable model id sent back when selecting a model.
+	Id string `json:"id"`
+
+	// MaxOutputTokens Maximum output tokens from the model metadata snapshot.
+	MaxOutputTokens *int `json:"max_output_tokens,omitempty"`
+
+	// Name Provider-local model name.
+	Name string `json:"name"`
+
+	// Provider Provider or proxy namespace for the model.
+	Provider string `json:"provider"`
+}
+
+// ModelCapabilities defines model for ModelCapabilities.
+type ModelCapabilities struct {
+	Reasoning *ModelReasoningCapability `json:"reasoning,omitempty"`
+}
+
+// ModelDeploymentLocation defines model for ModelDeploymentLocation.
+type ModelDeploymentLocation string
+
+// ModelReasoningCapability defines model for ModelReasoningCapability.
+type ModelReasoningCapability struct {
+	DefaultEffort AgentReasoningEffort `json:"default_effort"`
+
+	// Efforts Supported reasoning effort values for this model.
+	Efforts []AgentReasoningEffort `json:"efforts"`
+
+	// Supported Whether reasoning is supported by this model.
+	Supported *bool `json:"supported,omitempty"`
 }
 
 // Note defines model for Note.
@@ -1052,6 +1152,11 @@ type GetFileParams struct {
 
 // UpdateFileParams defines parameters for UpdateFile.
 type UpdateFileParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListModelsParams defines parameters for ListModels.
+type ListModelsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
