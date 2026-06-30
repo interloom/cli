@@ -30,7 +30,7 @@ func apiResources() []resource {
 		{name: "notes", singular: "note", filters: []filter{
 			filterSpaceID,
 			filterCaseID,
-			{name: "thread_id", usage: "filter by thread ID"},
+			{name: keyThreadID, usage: "filter by thread ID"},
 			filterSort,
 			filterDirection,
 		}, fields: []field{

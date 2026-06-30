@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const threadMessageFileIDsFlag = "file-ids"
+
 // newThreadsCmd builds the threads command. Threads have no collection list
 // endpoint, so there is no `list` verb: `get` fetches a single thread, `events`
 // lists its paginated event stream, and `messages create` posts to the thread.
@@ -116,19 +118,27 @@ func newThreadsMessagesCreateCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("text", "", "message text (equivalent to --data '{\"text\":...}')")
+	cmd.Flags().StringSlice(threadMessageFileIDsFlag, nil, "File IDs to attach to the created thread event (repeatable)")
 	addBodyFlags(cmd)
 	return cmd
 }
 
 func threadMessageBody(cmd *cobra.Command) ([]byte, error) {
 	text, _ := cmd.Flags().GetString("text")
-	if text == "" {
+	fileIDs, _ := cmd.Flags().GetStringSlice(threadMessageFileIDsFlag)
+	hasText := cmd.Flags().Changed("text")
+	hasFileIDs := cmd.Flags().Changed(threadMessageFileIDsFlag)
+	if !hasText && !hasFileIDs {
 		return readBody(cmd)
 	}
 	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
-		return nil, fmt.Errorf("pass either --text or a JSON body, not both")
+		return nil, fmt.Errorf("pass either typed flags or a JSON body, not both")
+	}
+	if !hasText {
+		return nil, fmt.Errorf("missing required flag: --text")
 	}
 	return json.Marshal(struct {
-		Text string `json:"text"`
-	}{Text: text})
+		Text    string   `json:"text"`
+		FileIDs []string `json:"file_ids,omitempty"`
+	}{Text: text, FileIDs: fileIDs})
 }

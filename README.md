@@ -174,6 +174,7 @@ interloom threads events <id> --limit 50 --direction desc
 interloom threads events <id> --cursor <next_cursor>
 interloom threads events <id> --all      # fetch every page into one list
 interloom threads messages create <id> --text "Hello from the CLI"
+interloom threads messages create <id> --text "See attached" --file-ids <file-id>
 interloom threads messages create <id> -d '{"text":"Hello from JSON"}'
 ```
 

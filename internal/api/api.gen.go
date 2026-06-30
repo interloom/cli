@@ -554,7 +554,9 @@ type CreateFileRequest struct {
 
 // CreateMessageRequest defines model for CreateMessageRequest.
 type CreateMessageRequest struct {
-	Text string `json:"text"`
+	// FileIds Optional File IDs to attach to the created thread event.
+	FileIds *[]openapi_types.UUID `json:"file_ids,omitempty"`
+	Text    string                `json:"text"`
 }
 
 // CreateNoteRequest defines model for CreateNoteRequest.

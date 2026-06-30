@@ -90,7 +90,7 @@ func TestMCPToolRegistration(t *testing.T) {
 		"cases_list", "cases_create", "agents_update", "files_upload", toolFilesDownload,
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		"models_list",
-		"users_list", "users_get", "users_me", "threads_get", "threads_events", "threads_messages_create",
+		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
 	} {
 		if !names[name] {
 			t.Fatalf("tool %q not registered", name)
@@ -334,8 +334,50 @@ func TestMCPCreateBodyFromTypedFields(t *testing.T) {
 	if err := json.Unmarshal(body, &got); err != nil {
 		t.Fatalf("unmarshal body: %v", err)
 	}
-	if got.Title != "New case" || got.Description != "Details" || len(got.AttachedFileIDs) != 2 || got.AttachedFileIDs[1] != "file-2" {
+	if got.Title != "New case" || got.Description != "Details" || len(got.AttachedFileIDs) != 2 || got.AttachedFileIDs[1] != testFileID2 {
 		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestMCPThreadMessageCreateSendsFileIDs(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/threads/"+testThreadID+"/messages"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		var body struct {
+			Text    string   `json:"text"`
+			FileIDs []string `json:"file_ids"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if body.Text != testMessageText || len(body.FileIDs) != 2 || body.FileIDs[1] != testFileID2 {
+			t.Fatalf("unexpected body: %+v", body)
+		}
+		_, _ = w.Write([]byte(`{"id":"event-1"}`))
+	}))
+	defer apiServer.Close()
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: toolThreadsMessagesCreate,
+		Arguments: map[string]any{
+			keyThreadID: testThreadID,
+			"text":      testMessageText,
+			keyFileIDs:  []string{testFileID1, testFileID2},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
+	}
+	if got := toolResultText(t, result); !strings.Contains(got, "event-1") {
+		t.Fatalf("tool result = %s, want event id", got)
 	}
 }
 

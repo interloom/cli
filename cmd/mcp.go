@@ -22,16 +22,17 @@ import (
 )
 
 const (
-	mcpCommandName           = "mcp"
-	defaultMCPAddr           = "127.0.0.1:8765"
-	defaultMCPEndpoint       = "/mcp"
-	argLimit                 = "limit"
-	toolCaseIngestionsCreate = "case_ingestions_create"
-	toolCaseIngestionsGet    = "case_ingestions_get"
-	toolCaseIngestionsErrors = "case_ingestions_errors"
-	toolFilesDownload        = "files_download"
-	schemaKeyType            = "type"
-	schemaKeyDesc            = "description"
+	mcpCommandName            = "mcp"
+	defaultMCPAddr            = "127.0.0.1:8765"
+	defaultMCPEndpoint        = "/mcp"
+	argLimit                  = "limit"
+	toolCaseIngestionsCreate  = "case_ingestions_create"
+	toolCaseIngestionsGet     = "case_ingestions_get"
+	toolCaseIngestionsErrors  = "case_ingestions_errors"
+	toolFilesDownload         = "files_download"
+	toolThreadsMessagesCreate = "threads_messages_create"
+	schemaKeyType             = "type"
+	schemaKeyDesc             = "description"
 )
 
 var (
@@ -303,13 +304,14 @@ func (s *mcpService) registerThreadTools(server *mcpsdk.Server) {
 	}, s.threadEventsHandler())
 
 	server.AddTool(&mcpsdk.Tool{
-		Name:        "threads_messages_create",
+		Name:        toolThreadsMessagesCreate,
 		Description: "Create a message in a thread",
 		InputSchema: objectSchema(map[string]any{
-			"thread_id": stringSchema("thread ID"),
+			keyThreadID: stringSchema("thread ID"),
 			"text":      stringSchema("message text"),
+			keyFileIDs:  stringArraySchema("File IDs to attach to the created thread event"),
 			"data":      dataSchema("raw JSON request body"),
-		}, "thread_id"),
+		}, keyThreadID),
 	}, s.threadMessageCreateHandler())
 }
 
@@ -509,34 +511,13 @@ func (s *mcpService) threadMessageCreateHandler() mcpsdk.ToolHandler {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		threadID, err := args.requiredString("thread_id")
+		threadID, err := args.requiredString(keyThreadID)
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		text, hasText, err := args.string("text")
+		body, err := threadMessageBodyFromArgs(args)
 		if err != nil {
 			return toolErrorResult(err), nil
-		}
-		data, hasData, err := args.object("data")
-		if err != nil {
-			return toolErrorResult(err), nil
-		}
-		if hasText && hasData {
-			return toolErrorResult(fmt.Errorf("pass either text or data, not both")), nil
-		}
-		var body []byte
-		switch {
-		case hasData:
-			body = data
-		case hasText:
-			body, err = json.Marshal(struct {
-				Text string `json:"text"`
-			}{Text: text})
-			if err != nil {
-				return toolErrorResult(err), nil
-			}
-		default:
-			return toolErrorResult(fmt.Errorf("missing message body: pass text or data")), nil
 		}
 		resource := "threads/" + url.PathEscape(threadID) + "/messages"
 		raw, err := s.client.Create(ctx, resource, body)
@@ -544,6 +525,38 @@ func (s *mcpService) threadMessageCreateHandler() mcpsdk.ToolHandler {
 			return toolErrorResult(err), nil
 		}
 		return toolJSONResult(raw), nil
+	}
+}
+
+func threadMessageBodyFromArgs(args toolArgs) ([]byte, error) {
+	text, hasText, err := args.string("text")
+	if err != nil {
+		return nil, err
+	}
+	fileIDs, hasFileIDs, err := args.stringSlice(keyFileIDs)
+	if err != nil {
+		return nil, err
+	}
+	data, hasData, err := args.object("data")
+	if err != nil {
+		return nil, err
+	}
+	if hasData && (hasText || hasFileIDs) {
+		return nil, fmt.Errorf("pass either typed fields or data, not both")
+	}
+	switch {
+	case hasData:
+		return data, nil
+	case hasText || hasFileIDs:
+		if !hasText {
+			return nil, fmt.Errorf("missing required argument \"text\"")
+		}
+		return json.Marshal(struct {
+			Text    string   `json:"text"`
+			FileIDs []string `json:"file_ids,omitempty"`
+		}{Text: text, FileIDs: fileIDs})
+	default:
+		return nil, fmt.Errorf("missing message body: pass text or data")
 	}
 }
 
