@@ -339,6 +339,26 @@ func TestMCPCreateBodyFromTypedFields(t *testing.T) {
 	}
 }
 
+func TestMCPAgentBodyIncludesReasoningEffort(t *testing.T) {
+	body, err := bodyFromArgs(toolArgs{
+		keyName:            json.RawMessage(`"Reasoning agent"`),
+		keyReasoningEffort: json.RawMessage(`"HIGH"`),
+	}, apiResource("agents"), true)
+	if err != nil {
+		t.Fatalf("bodyFromArgs: %v", err)
+	}
+	var got struct {
+		Name            string `json:"name"`
+		ReasoningEffort string `json:"reasoning_effort"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	if got.Name != "Reasoning agent" || got.ReasoningEffort != "HIGH" {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
 func TestMCPThreadMessageCreateSendsFileIDs(t *testing.T) {
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.Method, http.MethodPost; got != want {

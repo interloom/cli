@@ -5,7 +5,7 @@ package cmd
 func apiResources() []resource {
 	return []resource{
 		{name: "spaces", singular: "space", fields: []field{
-			{name: "name", usage: "Space name", onCreate: true, onUpdate: true, required: true},
+			{name: keyName, usage: "Space name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Space description", onCreate: true, onUpdate: true},
 		}},
 		{name: resourceCases, singular: "case", filters: []filter{
@@ -47,9 +47,10 @@ func apiResources() []resource {
 			{name: keySpaceID, usage: "owning Space ID", onCreate: true, required: true},
 		}},
 		{name: "agents", singular: "agent", noDelete: true, fields: []field{
-			{name: "name", usage: "Agent name", onCreate: true, onUpdate: true, required: true},
+			{name: keyName, usage: "Agent name", onCreate: true, onUpdate: true, required: true},
 			{name: "job_description", usage: "Agent job description", onCreate: true, onUpdate: true},
 			{name: "model", usage: "model the agent uses", onCreate: true, onUpdate: true},
+			{name: keyReasoningEffort, usage: "reasoning effort: LOW, MEDIUM, HIGH, or XHIGH", onCreate: true, onUpdate: true},
 		}},
 		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
 		{name: "files", singular: "file", noCreate: true, filters: []filter{

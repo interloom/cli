@@ -80,6 +80,27 @@ func TestUpdateBodyDoesNotRequireCreateRequiredFields(t *testing.T) {
 	}
 }
 
+func TestAgentBodyIncludesReasoningEffort(t *testing.T) {
+	agents := apiResource("agents")
+	cmd := agents.createCmd()
+	mustSet(t, cmd, "name", "Reasoning agent")
+	mustSet(t, cmd, "reasoning-effort", "HIGH")
+	body, err := agents.body(cmd, true)
+	if err != nil {
+		t.Fatalf("body: %v", err)
+	}
+	var got struct {
+		Name            string `json:"name"`
+		ReasoningEffort string `json:"reasoning_effort"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got.Name != "Reasoning agent" || got.ReasoningEffort != "HIGH" {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
 func TestBodyFlagsAndJSONAreMutuallyExclusive(t *testing.T) {
 	cmd := bodyResource.createCmd()
 	mustSet(t, cmd, "title", "New case")

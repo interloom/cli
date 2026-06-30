@@ -16,30 +16,6 @@ const (
 	ApiKeyAuthScopes apiKeyAuthContextKey = "ApiKeyAuth.Scopes"
 )
 
-// Defines values for AgentReasoningEffort.
-const (
-	HIGH   AgentReasoningEffort = "HIGH"
-	LOW    AgentReasoningEffort = "LOW"
-	MEDIUM AgentReasoningEffort = "MEDIUM"
-	XHIGH  AgentReasoningEffort = "XHIGH"
-)
-
-// Valid indicates whether the value is a known member of the AgentReasoningEffort enum.
-func (e AgentReasoningEffort) Valid() bool {
-	switch e {
-	case HIGH:
-		return true
-	case LOW:
-		return true
-	case MEDIUM:
-		return true
-	case XHIGH:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CaseIngestionStatus.
 const (
 	CaseIngestionStatusCompleted  CaseIngestionStatus = "completed"
@@ -130,6 +106,30 @@ func (e ModelDeploymentLocation) Valid() bool {
 	case UNITEDSTATES:
 		return true
 	case UNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReasoningEffort.
+const (
+	HIGH   ReasoningEffort = "HIGH"
+	LOW    ReasoningEffort = "LOW"
+	MEDIUM ReasoningEffort = "MEDIUM"
+	XHIGH  ReasoningEffort = "XHIGH"
+)
+
+// Valid indicates whether the value is a known member of the ReasoningEffort enum.
+func (e ReasoningEffort) Valid() bool {
+	switch e {
+	case HIGH:
+		return true
+	case LOW:
+		return true
+	case MEDIUM:
+		return true
+	case XHIGH:
 		return true
 	default:
 		return false
@@ -319,8 +319,9 @@ type Agent struct {
 	Model string `json:"model"`
 
 	// Name Human-readable agent name.
-	Name   string        `json:"name"`
-	Parent *ResourceLink `json:"parent,omitempty"`
+	Name            string           `json:"name"`
+	Parent          *ResourceLink    `json:"parent,omitempty"`
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
 
 	// Type Public resource type for the agent.
 	Type *string `json:"type,omitempty"`
@@ -341,8 +342,9 @@ type AgentListItem struct {
 	Model string `json:"model"`
 
 	// Name Human-readable agent name.
-	Name   string        `json:"name"`
-	Parent *ResourceLink `json:"parent,omitempty"`
+	Name            string           `json:"name"`
+	Parent          *ResourceLink    `json:"parent,omitempty"`
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
 
 	// Type Public resource type for the agent.
 	Type *string `json:"type,omitempty"`
@@ -350,9 +352,6 @@ type AgentListItem struct {
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
-// AgentReasoningEffort defines model for AgentReasoningEffort.
-type AgentReasoningEffort string
 
 // Case defines model for Case.
 type Case struct {
@@ -510,8 +509,9 @@ type CreateAgentRequest struct {
 	JobDescription *string `json:"job_description,omitempty"`
 
 	// Model Optional model used by the agent. Set to null or omit to use the configured default model.
-	Model *string `json:"model,omitempty"`
-	Name  string  `json:"name"`
+	Model           *string          `json:"model,omitempty"`
+	Name            string           `json:"name"`
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
 }
 
 // CreateCaseIngestionRequest defines model for CreateCaseIngestionRequest.
@@ -816,10 +816,10 @@ type ModelDeploymentLocation string
 
 // ModelReasoningCapability defines model for ModelReasoningCapability.
 type ModelReasoningCapability struct {
-	DefaultEffort AgentReasoningEffort `json:"default_effort"`
+	DefaultEffort ReasoningEffort `json:"default_effort"`
 
 	// Efforts Supported reasoning effort values for this model.
-	Efforts []AgentReasoningEffort `json:"efforts"`
+	Efforts []ReasoningEffort `json:"efforts"`
 
 	// Supported Whether reasoning is supported by this model.
 	Supported *bool `json:"supported,omitempty"`
@@ -960,6 +960,9 @@ type ProcedureSummary struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// ReasoningEffort defines model for ReasoningEffort.
+type ReasoningEffort string
+
 // ResourceLink defines model for ResourceLink.
 type ResourceLink struct {
 	// Id Unique identifier for the linked object.
@@ -1055,8 +1058,9 @@ type UpdateAgentRequest struct {
 	JobDescription *string `json:"job_description,omitempty"`
 
 	// Model Optional model used by the agent. Set to null to use the configured default model. Omit to leave the current model setting unchanged.
-	Model *string `json:"model,omitempty"`
-	Name  *string `json:"name,omitempty"`
+	Model           *string          `json:"model,omitempty"`
+	Name            *string          `json:"name,omitempty"`
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
 }
 
 // UpdateCaseRequest defines model for UpdateCaseRequest.

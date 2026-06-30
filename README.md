@@ -88,7 +88,7 @@ the flag. Required-on-create fields are marked `(required)` in help.
 
 ```sh
 interloom notes create --title "Note" --body "..." --space-id <id> --tags a,b
-interloom agents update <id> --model gpt-5
+interloom agents update <id> --model gpt-5 --reasoning-effort HIGH
 ```
 
 Raw JSON still works via `--data/-d` (inline), `--file/-f` (a path, or `-` for
