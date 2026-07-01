@@ -48,7 +48,12 @@ case "$(uname -m)" in
 		;;
 esac
 
-version="${GO_VERSION:-$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -n 1)}"
+if [[ -n "${GO_VERSION:-}" ]]; then
+	version="$GO_VERSION"
+else
+	version_text="$(curl -fsSL 'https://go.dev/VERSION?m=text')"
+	version="$(awk 'NR == 1 { print; exit }' <<<"$version_text")"
+fi
 archive="${version}.linux-${go_arch}.tar.gz"
 download_url="https://go.dev/dl/${archive}"
 
@@ -63,7 +68,8 @@ trap 'rm -rf "$tmp_dir"' EXIT
 echo "Downloading ${download_url}"
 curl -fL --retry 3 -o "$tmp_dir/$archive" "$download_url"
 
-checksum="$(curl -fsSL 'https://go.dev/dl/?mode=json' | awk -v target="$archive" '
+downloads_json="$(curl -fsSL 'https://go.dev/dl/?mode=json')"
+checksum="$(awk -v target="$archive" '
 $0 ~ "\"filename\"[[:space:]]*:[[:space:]]*\"" target "\"" { found = 1 }
 found && /"sha256"[[:space:]]*:/ {
   line = $0
@@ -72,7 +78,7 @@ found && /"sha256"[[:space:]]*:/ {
   print line
   exit
 }
-')"
+' <<<"$downloads_json")"
 
 [[ -n "$checksum" ]] || {
 	echo "could not find checksum for $archive" >&2
