@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Install the latest stable Go toolchain on Linux.
+#
+# Assumes an apt-based Linux image with basic utilities available. Go is
+# installed from go.dev because distro packages often lag behind the latest
+# stable release.
+
+set -euo pipefail
+
+GO_INSTALL_DIR="${GO_INSTALL_DIR:-/usr/local/go}"
+GO_BIN_DIR="${GO_BIN_DIR:-/usr/local/bin}"
+
+need() {
+	command -v "$1" >/dev/null 2>&1 || {
+		echo "missing required command: $1" >&2
+		exit 1
+	}
+}
+
+[[ "$(uname -s)" == "Linux" ]] || {
+	echo ".agents/setup only supports Linux" >&2
+	exit 1
+}
+
+need curl
+need tar
+need sha256sum
+
+sudo_cmd=()
+if [[ "$(id -u)" -ne 0 ]]; then
+	need sudo
+	sudo_cmd=(sudo)
+fi
+
+case "$GO_INSTALL_DIR" in
+	"" | "/" | "/usr" | "/usr/local")
+		echo "refusing unsafe GO_INSTALL_DIR: $GO_INSTALL_DIR" >&2
+		exit 1
+		;;
+esac
+
+case "$(uname -m)" in
+	x86_64 | amd64) go_arch="amd64" ;;
+	aarch64 | arm64) go_arch="arm64" ;;
+	*)
+		echo "unsupported CPU architecture: $(uname -m)" >&2
+		exit 1
+		;;
+esac
+
+version="${GO_VERSION:-$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -n 1)}"
+archive="${version}.linux-${go_arch}.tar.gz"
+download_url="https://go.dev/dl/${archive}"
+
+if [[ -x "$GO_INSTALL_DIR/bin/go" ]] && [[ "$($GO_INSTALL_DIR/bin/go env GOVERSION)" == "$version" ]]; then
+	echo "${version} is already installed at ${GO_INSTALL_DIR}"
+	exit 0
+fi
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+echo "Downloading ${download_url}"
+curl -fL --retry 3 -o "$tmp_dir/$archive" "$download_url"
+
+checksum="$(curl -fsSL 'https://go.dev/dl/?mode=json' | awk -v target="$archive" '
+$0 ~ "\"filename\"[[:space:]]*:[[:space:]]*\"" target "\"" { found = 1 }
+found && /"sha256"[[:space:]]*:/ {
+  line = $0
+  sub(/.*"sha256"[[:space:]]*:[[:space:]]*"/, "", line)
+  sub(/".*/, "", line)
+  print line
+  exit
+}
+')"
+
+[[ -n "$checksum" ]] || {
+	echo "could not find checksum for $archive" >&2
+	exit 1
+}
+
+printf '%s  %s\n' "$checksum" "$tmp_dir/$archive" | sha256sum -c -
+
+echo "Installing ${version} to ${GO_INSTALL_DIR}"
+"${sudo_cmd[@]}" rm -rf "$GO_INSTALL_DIR"
+"${sudo_cmd[@]}" mkdir -p "$GO_INSTALL_DIR" "$GO_BIN_DIR"
+"${sudo_cmd[@]}" tar -C "$GO_INSTALL_DIR" --strip-components=1 -xzf "$tmp_dir/$archive"
+"${sudo_cmd[@]}" ln -sf "$GO_INSTALL_DIR/bin/go" "$GO_BIN_DIR/go"
+"${sudo_cmd[@]}" ln -sf "$GO_INSTALL_DIR/bin/gofmt" "$GO_BIN_DIR/gofmt"
+
+"$GO_BIN_DIR/go" version
