@@ -508,7 +508,7 @@ type CaseStatus string
 type CreateAgentRequest struct {
 	JobDescription *string `json:"job_description,omitempty"`
 
-	// Model Optional model used by the agent. Set to null or omit to use the configured default model.
+	// Model Optional model used by the agent. Set to null or omit to use the configured default model. Use GET /models to discover available model ids.
 	Model           *string          `json:"model,omitempty"`
 	Name            string           `json:"name"`
 	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
@@ -594,6 +594,9 @@ type CurrentUser struct {
 
 	// Id Unique identifier for the user.
 	Id openapi_types.UUID `json:"id"`
+
+	// IsDeactivated True when the user's organization membership is archived.
+	IsDeactivated bool `json:"is_deactivated"`
 
 	// IsPending True when the user has been invited but has not yet signed in via Zitadel.
 	IsPending bool `json:"is_pending"`
@@ -790,11 +793,20 @@ type Model struct {
 	ContextWindow      *int                    `json:"context_window,omitempty"`
 	DeploymentLocation ModelDeploymentLocation `json:"deployment_location"`
 
+	// Description Short model description.
+	Description string `json:"description"`
+
 	// DisplayName Human-readable model name.
 	DisplayName string `json:"display_name"`
 
 	// Id Stable model id sent back when selecting a model.
 	Id string `json:"id"`
+
+	// IsDefault Whether this catalog entry is the deployment default agent model.
+	IsDefault bool `json:"is_default"`
+
+	// IsEnabled Whether this catalog entry is enabled for agent selection in the organization.
+	IsEnabled bool `json:"is_enabled"`
 
 	// MaxOutputTokens Maximum output tokens from the model metadata snapshot.
 	MaxOutputTokens *int `json:"max_output_tokens,omitempty"`
@@ -1057,7 +1069,7 @@ type ThreadEvent_Payloads_Item struct {
 type UpdateAgentRequest struct {
 	JobDescription *string `json:"job_description,omitempty"`
 
-	// Model Optional model used by the agent. Set to null to use the configured default model. Omit to leave the current model setting unchanged.
+	// Model Optional model used by the agent. Set to null to use the configured default model. Omit to leave the current model setting unchanged. Use GET /models to discover available model ids.
 	Model           *string          `json:"model,omitempty"`
 	Name            *string          `json:"name,omitempty"`
 	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
@@ -1124,6 +1136,9 @@ type User struct {
 
 	// Id Unique identifier for the user.
 	Id openapi_types.UUID `json:"id"`
+
+	// IsDeactivated True when the user's organization membership is archived.
+	IsDeactivated bool `json:"is_deactivated"`
 
 	// IsPending True when the user has been invited but has not yet signed in via Zitadel.
 	IsPending bool `json:"is_pending"`
