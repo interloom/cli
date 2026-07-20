@@ -172,6 +172,42 @@ func (e ResourceType) Valid() bool {
 	}
 }
 
+// Defines values for ToolType.
+const (
+	ToolTypeCustom   ToolType = "custom"
+	ToolTypeInternal ToolType = "internal"
+)
+
+// Valid indicates whether the value is a known member of the ToolType enum.
+func (e ToolType) Valid() bool {
+	switch e {
+	case ToolTypeCustom:
+		return true
+	case ToolTypeInternal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ToolListItemType.
+const (
+	ToolListItemTypeCustom   ToolListItemType = "custom"
+	ToolListItemTypeInternal ToolListItemType = "internal"
+)
+
+// Valid indicates whether the value is a known member of the ToolListItemType enum.
+func (e ToolListItemType) Valid() bool {
+	switch e {
+	case ToolListItemTypeCustom:
+		return true
+	case ToolListItemTypeInternal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCasesParamsSort.
 const (
 	ListCasesParamsSortCreatedAt ListCasesParamsSort = "created_at"
@@ -351,6 +387,20 @@ type AgentListItem struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ApplyProcedureSpaceTrigger defines model for ApplyProcedureSpaceTrigger.
+type ApplyProcedureSpaceTrigger struct {
+	// ProcedureId ID of the procedure applied to new cases in the space.
+	ProcedureId openapi_types.UUID `json:"procedure_id"`
+	TriggerType string             `json:"trigger_type"`
+}
+
+// AssigneeSpaceTrigger defines model for AssigneeSpaceTrigger.
+type AssigneeSpaceTrigger struct {
+	// AssigneeId ID of the person or agent assigned to new cases in the space.
+	AssigneeId  openapi_types.UUID `json:"assignee_id"`
+	TriggerType string             `json:"trigger_type"`
 }
 
 // Case defines model for Case.
@@ -612,6 +662,12 @@ type CurrentUser struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// DisabledSpaceTrigger defines model for DisabledSpaceTrigger.
+type DisabledSpaceTrigger struct {
+	// TriggerType Null when the space has no active triage trigger.
+	TriggerType string `json:"trigger_type"`
+}
+
 // File defines model for File.
 type File struct {
 	AdditionalMetadata *AdditionalMetadata `json:"additional_metadata,omitempty"`
@@ -759,6 +815,18 @@ type ListSpacesResponse struct {
 type ListThreadEventsResponse struct {
 	// Data Items in the current page.
 	Data []ThreadEvent `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListToolsResponse defines model for ListToolsResponse.
+type ListToolsResponse struct {
+	// Data Items in the current page.
+	Data []ToolListItem `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -975,6 +1043,13 @@ type ProcedureSummary struct {
 // ReasoningEffort defines model for ReasoningEffort.
 type ReasoningEffort string
 
+// ReferenceTaskSpaceTrigger defines model for ReferenceTaskSpaceTrigger.
+type ReferenceTaskSpaceTrigger struct {
+	// ReferenceCaseId ID of the case used to refine new cases in the space.
+	ReferenceCaseId openapi_types.UUID `json:"reference_case_id"`
+	TriggerType     string             `json:"trigger_type"`
+}
+
 // ResourceLink defines model for ResourceLink.
 type ResourceLink struct {
 	// Id Unique identifier for the linked object.
@@ -1063,6 +1138,61 @@ type ThreadEvent struct {
 // ThreadEvent_Payloads_Item defines model for ThreadEvent.payloads.Item.
 type ThreadEvent_Payloads_Item struct {
 	union json.RawMessage
+}
+
+// Tool defines model for Tool.
+type Tool struct {
+	// Description Human-readable tool description.
+	Description string `json:"description"`
+
+	// Id Unique identifier for the tool.
+	Id      openapi_types.UUID `json:"id"`
+	Manager *ResourceLink      `json:"manager,omitempty"`
+
+	// Name Human-readable tool name.
+	Name string `json:"name"`
+
+	// Parameters Parameters accepted when invoking the tool.
+	Parameters []ToolParameter `json:"parameters"`
+
+	// Type Whether the tool is custom or built into Interloom.
+	Type ToolType `json:"type"`
+}
+
+// ToolType Whether the tool is custom or built into Interloom.
+type ToolType string
+
+// ToolListItem defines model for ToolListItem.
+type ToolListItem struct {
+	// Id Unique identifier for the tool.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsEditable Whether the authenticated user manages and can edit the tool.
+	IsEditable bool `json:"is_editable"`
+
+	// Name Human-readable tool name.
+	Name string `json:"name"`
+
+	// Type Whether the tool is custom or built into Interloom.
+	Type ToolListItemType `json:"type"`
+}
+
+// ToolListItemType Whether the tool is custom or built into Interloom.
+type ToolListItemType string
+
+// ToolParameter defines model for ToolParameter.
+type ToolParameter struct {
+	// Description Human-readable parameter description.
+	Description string `json:"description"`
+
+	// Name Parameter name.
+	Name string `json:"name"`
+
+	// Required Whether the parameter must be provided.
+	Required bool `json:"required"`
+
+	// Type JSON Schema type accepted by the parameter.
+	Type string `json:"type"`
 }
 
 // UpdateAgentRequest defines model for UpdateAgentRequest.
@@ -1451,6 +1581,31 @@ type UpdateSpaceParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// GetSpaceTriggerParams defines parameters for GetSpaceTrigger.
+type GetSpaceTriggerParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetSpaceTrigger200JSONResponseBody defines parameters for GetSpaceTrigger.
+type GetSpaceTrigger200JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// UpdateSpaceTriggerJSONBody defines parameters for UpdateSpaceTrigger.
+type UpdateSpaceTriggerJSONBody struct {
+	union json.RawMessage
+}
+
+// UpdateSpaceTriggerParams defines parameters for UpdateSpaceTrigger.
+type UpdateSpaceTriggerParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// UpdateSpaceTrigger200JSONResponseBody defines parameters for UpdateSpaceTrigger.
+type UpdateSpaceTrigger200JSONResponseBody struct {
+	union json.RawMessage
+}
+
 // GetThreadParams defines parameters for GetThread.
 type GetThreadParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -1474,6 +1629,21 @@ type ListThreadEventsParamsDirection string
 
 // CreateThreadMessageParams defines parameters for CreateThreadMessage.
 type CreateThreadMessageParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListToolsParams defines parameters for ListTools.
+type ListToolsParams struct {
+	// Limit Maximum number of tools to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from next_cursor in a previous response.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetToolParams defines parameters for GetTool.
+type GetToolParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -1535,6 +1705,9 @@ type CreateSpaceJSONRequestBody = CreateSpaceRequest
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = UpdateSpaceRequest
+
+// UpdateSpaceTriggerJSONRequestBody defines body for UpdateSpaceTrigger for application/json ContentType.
+type UpdateSpaceTriggerJSONRequestBody UpdateSpaceTriggerJSONBody
 
 // CreateThreadMessageJSONRequestBody defines body for CreateThreadMessage for application/json ContentType.
 type CreateThreadMessageJSONRequestBody = CreateMessageRequest
@@ -1624,6 +1797,453 @@ func (t ThreadEvent_Payloads_Item) MarshalJSON() ([]byte, error) {
 }
 
 func (t *ThreadEvent_Payloads_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAssigneeSpaceTrigger returns the union data inside the GetSpaceTrigger200JSONResponseBody as a AssigneeSpaceTrigger
+func (t GetSpaceTrigger200JSONResponseBody) AsAssigneeSpaceTrigger() (AssigneeSpaceTrigger, error) {
+	var body AssigneeSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssigneeSpaceTrigger overwrites any union data inside the GetSpaceTrigger200JSONResponseBody as the provided AssigneeSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) FromAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAssigneeSpaceTrigger performs a merge with any union data inside the GetSpaceTrigger200JSONResponseBody, using the provided AssigneeSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) MergeAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReferenceTaskSpaceTrigger returns the union data inside the GetSpaceTrigger200JSONResponseBody as a ReferenceTaskSpaceTrigger
+func (t GetSpaceTrigger200JSONResponseBody) AsReferenceTaskSpaceTrigger() (ReferenceTaskSpaceTrigger, error) {
+	var body ReferenceTaskSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReferenceTaskSpaceTrigger overwrites any union data inside the GetSpaceTrigger200JSONResponseBody as the provided ReferenceTaskSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) FromReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReferenceTaskSpaceTrigger performs a merge with any union data inside the GetSpaceTrigger200JSONResponseBody, using the provided ReferenceTaskSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) MergeReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsApplyProcedureSpaceTrigger returns the union data inside the GetSpaceTrigger200JSONResponseBody as a ApplyProcedureSpaceTrigger
+func (t GetSpaceTrigger200JSONResponseBody) AsApplyProcedureSpaceTrigger() (ApplyProcedureSpaceTrigger, error) {
+	var body ApplyProcedureSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromApplyProcedureSpaceTrigger overwrites any union data inside the GetSpaceTrigger200JSONResponseBody as the provided ApplyProcedureSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) FromApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeApplyProcedureSpaceTrigger performs a merge with any union data inside the GetSpaceTrigger200JSONResponseBody, using the provided ApplyProcedureSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) MergeApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDisabledSpaceTrigger returns the union data inside the GetSpaceTrigger200JSONResponseBody as a DisabledSpaceTrigger
+func (t GetSpaceTrigger200JSONResponseBody) AsDisabledSpaceTrigger() (DisabledSpaceTrigger, error) {
+	var body DisabledSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDisabledSpaceTrigger overwrites any union data inside the GetSpaceTrigger200JSONResponseBody as the provided DisabledSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) FromDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDisabledSpaceTrigger performs a merge with any union data inside the GetSpaceTrigger200JSONResponseBody, using the provided DisabledSpaceTrigger
+func (t *GetSpaceTrigger200JSONResponseBody) MergeDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetSpaceTrigger200JSONResponseBody) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"trigger_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t GetSpaceTrigger200JSONResponseBody) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "DisabledSpaceTrigger":
+		return t.AsDisabledSpaceTrigger()
+	case "apply_procedure":
+		return t.AsApplyProcedureSpaceTrigger()
+	case "assignee":
+		return t.AsAssigneeSpaceTrigger()
+	case "reference_task":
+		return t.AsReferenceTaskSpaceTrigger()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t GetSpaceTrigger200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetSpaceTrigger200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAssigneeSpaceTrigger returns the union data inside the UpdateSpaceTriggerJSONBody as a AssigneeSpaceTrigger
+func (t UpdateSpaceTriggerJSONBody) AsAssigneeSpaceTrigger() (AssigneeSpaceTrigger, error) {
+	var body AssigneeSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssigneeSpaceTrigger overwrites any union data inside the UpdateSpaceTriggerJSONBody as the provided AssigneeSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) FromAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAssigneeSpaceTrigger performs a merge with any union data inside the UpdateSpaceTriggerJSONBody, using the provided AssigneeSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) MergeAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReferenceTaskSpaceTrigger returns the union data inside the UpdateSpaceTriggerJSONBody as a ReferenceTaskSpaceTrigger
+func (t UpdateSpaceTriggerJSONBody) AsReferenceTaskSpaceTrigger() (ReferenceTaskSpaceTrigger, error) {
+	var body ReferenceTaskSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReferenceTaskSpaceTrigger overwrites any union data inside the UpdateSpaceTriggerJSONBody as the provided ReferenceTaskSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) FromReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReferenceTaskSpaceTrigger performs a merge with any union data inside the UpdateSpaceTriggerJSONBody, using the provided ReferenceTaskSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) MergeReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsApplyProcedureSpaceTrigger returns the union data inside the UpdateSpaceTriggerJSONBody as a ApplyProcedureSpaceTrigger
+func (t UpdateSpaceTriggerJSONBody) AsApplyProcedureSpaceTrigger() (ApplyProcedureSpaceTrigger, error) {
+	var body ApplyProcedureSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromApplyProcedureSpaceTrigger overwrites any union data inside the UpdateSpaceTriggerJSONBody as the provided ApplyProcedureSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) FromApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeApplyProcedureSpaceTrigger performs a merge with any union data inside the UpdateSpaceTriggerJSONBody, using the provided ApplyProcedureSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) MergeApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDisabledSpaceTrigger returns the union data inside the UpdateSpaceTriggerJSONBody as a DisabledSpaceTrigger
+func (t UpdateSpaceTriggerJSONBody) AsDisabledSpaceTrigger() (DisabledSpaceTrigger, error) {
+	var body DisabledSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDisabledSpaceTrigger overwrites any union data inside the UpdateSpaceTriggerJSONBody as the provided DisabledSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) FromDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDisabledSpaceTrigger performs a merge with any union data inside the UpdateSpaceTriggerJSONBody, using the provided DisabledSpaceTrigger
+func (t *UpdateSpaceTriggerJSONBody) MergeDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdateSpaceTriggerJSONBody) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"trigger_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t UpdateSpaceTriggerJSONBody) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "DisabledSpaceTrigger":
+		return t.AsDisabledSpaceTrigger()
+	case "apply_procedure":
+		return t.AsApplyProcedureSpaceTrigger()
+	case "assignee":
+		return t.AsAssigneeSpaceTrigger()
+	case "reference_task":
+		return t.AsReferenceTaskSpaceTrigger()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t UpdateSpaceTriggerJSONBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdateSpaceTriggerJSONBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAssigneeSpaceTrigger returns the union data inside the UpdateSpaceTrigger200JSONResponseBody as a AssigneeSpaceTrigger
+func (t UpdateSpaceTrigger200JSONResponseBody) AsAssigneeSpaceTrigger() (AssigneeSpaceTrigger, error) {
+	var body AssigneeSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssigneeSpaceTrigger overwrites any union data inside the UpdateSpaceTrigger200JSONResponseBody as the provided AssigneeSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) FromAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAssigneeSpaceTrigger performs a merge with any union data inside the UpdateSpaceTrigger200JSONResponseBody, using the provided AssigneeSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) MergeAssigneeSpaceTrigger(v AssigneeSpaceTrigger) error {
+	v.TriggerType = "assignee"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReferenceTaskSpaceTrigger returns the union data inside the UpdateSpaceTrigger200JSONResponseBody as a ReferenceTaskSpaceTrigger
+func (t UpdateSpaceTrigger200JSONResponseBody) AsReferenceTaskSpaceTrigger() (ReferenceTaskSpaceTrigger, error) {
+	var body ReferenceTaskSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReferenceTaskSpaceTrigger overwrites any union data inside the UpdateSpaceTrigger200JSONResponseBody as the provided ReferenceTaskSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) FromReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReferenceTaskSpaceTrigger performs a merge with any union data inside the UpdateSpaceTrigger200JSONResponseBody, using the provided ReferenceTaskSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) MergeReferenceTaskSpaceTrigger(v ReferenceTaskSpaceTrigger) error {
+	v.TriggerType = "reference_task"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsApplyProcedureSpaceTrigger returns the union data inside the UpdateSpaceTrigger200JSONResponseBody as a ApplyProcedureSpaceTrigger
+func (t UpdateSpaceTrigger200JSONResponseBody) AsApplyProcedureSpaceTrigger() (ApplyProcedureSpaceTrigger, error) {
+	var body ApplyProcedureSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromApplyProcedureSpaceTrigger overwrites any union data inside the UpdateSpaceTrigger200JSONResponseBody as the provided ApplyProcedureSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) FromApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeApplyProcedureSpaceTrigger performs a merge with any union data inside the UpdateSpaceTrigger200JSONResponseBody, using the provided ApplyProcedureSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) MergeApplyProcedureSpaceTrigger(v ApplyProcedureSpaceTrigger) error {
+	v.TriggerType = "apply_procedure"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDisabledSpaceTrigger returns the union data inside the UpdateSpaceTrigger200JSONResponseBody as a DisabledSpaceTrigger
+func (t UpdateSpaceTrigger200JSONResponseBody) AsDisabledSpaceTrigger() (DisabledSpaceTrigger, error) {
+	var body DisabledSpaceTrigger
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDisabledSpaceTrigger overwrites any union data inside the UpdateSpaceTrigger200JSONResponseBody as the provided DisabledSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) FromDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDisabledSpaceTrigger performs a merge with any union data inside the UpdateSpaceTrigger200JSONResponseBody, using the provided DisabledSpaceTrigger
+func (t *UpdateSpaceTrigger200JSONResponseBody) MergeDisabledSpaceTrigger(v DisabledSpaceTrigger) error {
+	v.TriggerType = "DisabledSpaceTrigger"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdateSpaceTrigger200JSONResponseBody) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"trigger_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t UpdateSpaceTrigger200JSONResponseBody) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "DisabledSpaceTrigger":
+		return t.AsDisabledSpaceTrigger()
+	case "apply_procedure":
+		return t.AsApplyProcedureSpaceTrigger()
+	case "assignee":
+		return t.AsAssigneeSpaceTrigger()
+	case "reference_task":
+		return t.AsReferenceTaskSpaceTrigger()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t UpdateSpaceTrigger200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdateSpaceTrigger200JSONResponseBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

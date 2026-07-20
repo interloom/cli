@@ -4,7 +4,7 @@ package cmd
 // shape here so Cobra commands and MCP tools do not drift.
 func apiResources() []resource {
 	return []resource{
-		{name: "spaces", singular: "space", fields: []field{
+		{name: resourceSpaces, singular: "space", fields: []field{
 			{name: keyName, usage: "Space name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Space description", onCreate: true, onUpdate: true},
 		}},
@@ -53,6 +53,7 @@ func apiResources() []resource {
 			{name: keyReasoningEffort, usage: "reasoning effort: LOW, MEDIUM, HIGH, or XHIGH", onCreate: true, onUpdate: true},
 		}},
 		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
+		{name: resourceTools, singular: "tool", readOnly: true},
 		{name: "files", singular: "file", noCreate: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,

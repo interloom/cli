@@ -101,7 +101,8 @@ interloom cases update <id> -f patch.json
 ```
 
 `agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
-`models` is list-only for discovering model IDs accepted by agent commands.
+`tools` is read-only (`list`, `get`). `models` is list-only for discovering
+model IDs accepted by agent commands.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
 
@@ -128,7 +129,20 @@ Available list filters per resource:
 | `notes`      | `space-id`, `case-id`, `thread-id`, `sort`, `direction`       |
 | `procedures` | `space-id`                                                    |
 | `models`     | —                                                             |
+| `tools`      | —                                                             |
 | `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
+
+### Space triggers
+
+Get or update the triage trigger applied to new cases in a Space. Updates use
+the trigger JSON shape from the API schema; set `trigger_type` to `null` to
+disable the trigger.
+
+```sh
+interloom spaces trigger get <space-id>
+interloom spaces trigger update <space-id> -d '{"trigger_type":"assignee","assignee_id":"<user-or-agent-id>"}'
+interloom spaces trigger update <space-id> -d '{"trigger_type":null}'
+```
 
 ## Files
 

@@ -131,7 +131,7 @@ func TestResourceFilterFlagsUseKebabCaseAndQuerySnakeCase(t *testing.T) {
 	}
 
 	q := r.listQuery(cmd)
-	if got := q.Get("space_id"); got != "space-1" {
+	if got := q.Get("space_id"); got != testSpaceID {
 		t.Fatalf("space_id query = %q", got)
 	}
 	if got := q.Get("parent_case_id"); got != "case-1" {
@@ -208,7 +208,35 @@ func TestModelsCommandIsListOnlyWithoutPaginationFlags(t *testing.T) {
 			t.Fatalf("models list should not expose --%s", flag)
 		}
 	}
-	if child, _, err := models.Find([]string{"get", "model-1"}); err == nil && child != nil && child.Use == commandUseGet {
+	if child, _, err := models.Find([]string{commandNameGet, "model-1"}); err == nil && child != nil && child.Use == commandUseGet {
 		t.Fatalf("models get command should not be registered")
+	}
+}
+
+func TestToolsCommandIsReadOnly(t *testing.T) {
+	tools := newResourceCmd(apiResource(resourceTools))
+	for _, args := range [][]string{{commandUseList}, {commandNameGet, "tool-1"}} {
+		if child, _, err := tools.Find(args); err != nil || child == nil {
+			t.Fatalf("tools command %v not registered: child=%v err=%v", args, child, err)
+		}
+	}
+	for _, verb := range []string{commandUseCreate, commandNameUpdate, "delete"} {
+		if child, _, err := tools.Find([]string{verb}); err == nil && child != nil && child.Name() == verb {
+			t.Fatalf("tools %s command should not be registered", verb)
+		}
+	}
+}
+
+func TestSpacesTriggerCommandShape(t *testing.T) {
+	spaces := newSpacesCmd()
+	for _, args := range [][]string{{commandNameTrigger, commandNameGet, testSpaceID}, {commandNameTrigger, commandNameUpdate, testSpaceID}} {
+		child, _, err := spaces.Find(args)
+		if err != nil || child == nil {
+			t.Fatalf("spaces command %v not registered: child=%v err=%v", args, child, err)
+		}
+	}
+	update, _, err := spaces.Find([]string{commandNameTrigger, commandNameUpdate, testSpaceID})
+	if err != nil || update.Flags().Lookup("data") == nil || update.Flags().Lookup("file") == nil {
+		t.Fatalf("spaces trigger update body flags missing: child=%v err=%v", update, err)
 	}
 }

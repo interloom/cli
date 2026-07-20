@@ -5,6 +5,7 @@
 //   - openapi: 3.1.x      -> 3.0.3
 //   - anyOf/oneOf:[S,{type:null}] -> S + nullable:true (FastAPI optional fields)
 //   - type:[X,"null"]     -> type:X + nullable:true
+//   - type:null           -> type:string (3.0 has no null-only equivalent)
 //   - contentMediaType    -> format:binary (3.1 binary upload encoding)
 //   - discriminator props -> required on each union member schema
 //
@@ -16,6 +17,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+)
+
+const (
+	schemaTypeNull   = "null"
+	schemaTypeString = "string"
 )
 
 func main() {
@@ -67,6 +73,7 @@ func normalizeMap(m map[string]any) {
 		collapseNullableCombinator(m, comb)
 	}
 	collapseTypeArray(m)
+	rewriteNullType(m)
 	rewriteContentMediaType(m)
 }
 
@@ -122,7 +129,7 @@ func collapseTypeArray(m map[string]any) {
 	}
 	var nonNull []any
 	for _, t := range types {
-		if t == "null" {
+		if t == schemaTypeNull {
 			m["nullable"] = true
 			continue
 		}
@@ -131,6 +138,16 @@ func collapseTypeArray(m map[string]any) {
 	if len(nonNull) > 0 {
 		m["type"] = nonNull[0] // OAS 3.0 allows a single type only
 	}
+}
+
+// rewriteNullType approximates a null-only JSON Schema as a string. OpenAPI 3.0
+// has no null-only type, and nullable strings become pointers that oapi-codegen
+// cannot use as discriminators. The original 3.1 spec remains authoritative.
+func rewriteNullType(m map[string]any) {
+	if m["type"] != schemaTypeNull {
+		return
+	}
+	m["type"] = schemaTypeString
 }
 
 // rewriteContentMediaType converts the 3.1 binary upload encoding to 3.0's
@@ -150,7 +167,7 @@ func rewriteContentMediaType(m map[string]any) {
 
 func isNullSchema(v any) bool {
 	m, ok := v.(map[string]any)
-	return ok && len(m) == 1 && m["type"] == "null"
+	return ok && len(m) == 1 && m["type"] == schemaTypeNull
 }
 
 // requireDiscriminatorProps marks every discriminator property as required on
