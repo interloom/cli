@@ -54,6 +54,10 @@ func apiResources() []resource {
 		}},
 		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
 		{name: resourceTools, singular: "tool", readOnly: true},
+		{name: resourceSecrets, singular: "secret", noGet: true, noUpdate: true, fields: []field{
+			{name: keyName, usage: "Secret name", onCreate: true, required: true},
+			{name: "value", usage: "Secret value", onCreate: true, required: true},
+		}},
 		{name: "files", singular: "file", noCreate: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,

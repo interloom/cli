@@ -227,6 +227,45 @@ func TestToolsCommandIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestSecretsCommandOnlyExposesSupportedVerbs(t *testing.T) {
+	secrets := newResourceCmd(apiResource(resourceSecrets))
+	for _, args := range [][]string{{commandUseList}, {commandUseCreate}, {"delete", "secret-1"}} {
+		if child, _, err := secrets.Find(args); err != nil || child == nil {
+			t.Fatalf("secrets command %v not registered: child=%v err=%v", args, child, err)
+		}
+	}
+	for _, verb := range []string{commandNameGet, commandNameUpdate} {
+		if child, _, err := secrets.Find([]string{verb, "secret-1"}); err == nil && child != nil && child.Name() == verb {
+			t.Fatalf("secrets %s command should not be registered", verb)
+		}
+	}
+	create, _, err := secrets.Find([]string{commandUseCreate})
+	if err != nil || create.Flags().Lookup(keyName) == nil || create.Flags().Lookup("value") == nil {
+		t.Fatalf("secrets create field flags missing: child=%v err=%v", create, err)
+	}
+}
+
+func TestAgentToolsCommandShapeAndBody(t *testing.T) {
+	agents := newAgentsCmd()
+	for _, args := range [][]string{{resourceTools, commandUseList, testAgentID}, {resourceTools, "replace", testAgentID}} {
+		if child, _, err := agents.Find(args); err != nil || child == nil {
+			t.Fatalf("agents command %v not registered: child=%v err=%v", args, child, err)
+		}
+	}
+	replace, _, err := agents.Find([]string{resourceTools, "replace", testAgentID})
+	if err != nil {
+		t.Fatalf("find agents tools replace: %v", err)
+	}
+	mustSet(t, replace, agentToolIDsFlag, "tool-1,tool-2")
+	body, err := agentToolsBody(replace)
+	if err != nil {
+		t.Fatalf("agentToolsBody: %v", err)
+	}
+	if got, want := string(body), `{"tool_ids":["tool-1","tool-2"]}`; got != want {
+		t.Fatalf("body = %s, want %s", got, want)
+	}
+}
+
 func TestSpacesTriggerCommandShape(t *testing.T) {
 	spaces := newSpacesCmd()
 	for _, args := range [][]string{{commandNameTrigger, commandNameGet, testSpaceID}, {commandNameTrigger, commandNameUpdate, testSpaceID}} {

@@ -125,6 +125,70 @@ go run . <resource> --help
 go run . <resource> list --limit 1
 ```
 
+### 7. Smoke-test against dev
+
+When `INTERLOOM_API_KEY` is available, exercise both read and write command
+paths against the dev instance. Validate response shapes without printing
+credentials or resource details. Writes are allowed on dev: use unique,
+clearly named test data, clean it up when the API supports deletion, and note
+any fixture that cannot be deleted.
+
+For example, the secrets and Agent tools endpoints can be checked with:
+
+```sh
+test -n "${INTERLOOM_API_KEY:-}"
+export INTERLOOM_BASE_URL=https://dev.interloom.com
+
+secrets_json=$(go run . secrets list --limit 1)
+printf '%s' "$secrets_json" \
+  | jq -e '(.data | type == "array") and (.has_more | type == "boolean")' >/dev/null
+
+agents_json=$(go run . agents list --limit 1)
+printf '%s' "$agents_json" \
+  | jq -e '(.data | type == "array") and (.has_more | type == "boolean")' >/dev/null
+
+agent_id=$(printf '%s' "$agents_json" | jq -r '.data[0].id // empty')
+if test -n "$agent_id"; then
+  tools_json=$(go run . agents tools list "$agent_id")
+  printf '%s' "$tools_json" | jq -e 'type == "array"' >/dev/null
+fi
+```
+
+Also exercise changed write endpoints. Pass secret values through stdin rather
+than command-line arguments, and use a dedicated Agent fixture because the API
+key may not be allowed to modify an arbitrary existing Agent:
+
+```sh
+secret_name="AMP_SCHEMA_SMOKE_$(date +%s)_$$"
+secret_value=$(openssl rand -hex 24)
+secret_body=$(jq -nc --arg name "$secret_name" --arg value "$secret_value" \
+  '{name:$name,value:$value}')
+secret_json=$(printf '%s' "$secret_body" | go run . secrets create)
+secret_id=$(printf '%s' "$secret_json" | jq -r '.id')
+printf '%s' "$secret_json" | jq -e --arg name "$secret_name" \
+  '(.id | type == "string" and length > 0) and .name == $name' >/dev/null
+go run . secrets delete "$secret_id" >/dev/null
+
+agent_name="AMP Schema Smoke $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+agent_body=$(jq -nc --arg name "$agent_name" '{name:$name}')
+agent_json=$(printf '%s' "$agent_body" | go run . agents create)
+agent_id=$(printf '%s' "$agent_json" | jq -r '.id')
+current_tools=$(go run . agents tools list "$agent_id")
+replace_body=$(printf '%s' "$current_tools" | jq -c '{tool_ids: map(.id)}')
+replaced_tools=$(printf '%s' "$replace_body" \
+  | go run . agents tools replace "$agent_id")
+test "$(printf '%s' "$current_tools" | jq -c 'map(.id) | sort')" = \
+  "$(printf '%s' "$replaced_tools" | jq -c 'map(.id) | sort')"
+```
+
+If a write test creates a resource and a later assertion fails, make a
+best-effort cleanup call before reporting the failure. Agents currently have no
+delete endpoint, so the dedicated smoke Agent remains in dev as test data.
+
+Adapt these calls to the endpoints changed by the current schema update. Report
+which calls passed or were skipped, but do not include returned IDs, names,
+secret metadata, or other organization data.
+
 ## Conventions to preserve
 
 - Output is JSON on stdout; pass API responses through raw via `printResult`.

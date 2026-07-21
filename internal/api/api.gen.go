@@ -16,6 +16,24 @@ const (
 	ApiKeyAuthScopes apiKeyAuthContextKey = "ApiKeyAuth.Scopes"
 )
 
+// Defines values for AgentToolLinkType.
+const (
+	AgentToolLinkTypeCustom   AgentToolLinkType = "custom"
+	AgentToolLinkTypeInternal AgentToolLinkType = "internal"
+)
+
+// Valid indicates whether the value is a known member of the AgentToolLinkType enum.
+func (e AgentToolLinkType) Valid() bool {
+	switch e {
+	case AgentToolLinkTypeCustom:
+		return true
+	case AgentToolLinkTypeInternal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaseIngestionStatus.
 const (
 	CaseIngestionStatusCompleted  CaseIngestionStatus = "completed"
@@ -143,6 +161,7 @@ const (
 	FILE      ResourceType = "FILE"
 	NOTE      ResourceType = "NOTE"
 	PROCEDURE ResourceType = "PROCEDURE"
+	SECRET    ResourceType = "SECRET"
 	SPACE     ResourceType = "SPACE"
 	THREAD    ResourceType = "THREAD"
 	USER      ResourceType = "USER"
@@ -160,6 +179,8 @@ func (e ResourceType) Valid() bool {
 	case NOTE:
 		return true
 	case PROCEDURE:
+		return true
+	case SECRET:
 		return true
 	case SPACE:
 		return true
@@ -192,16 +213,16 @@ func (e ToolType) Valid() bool {
 
 // Defines values for ToolListItemType.
 const (
-	ToolListItemTypeCustom   ToolListItemType = "custom"
-	ToolListItemTypeInternal ToolListItemType = "internal"
+	Custom   ToolListItemType = "custom"
+	Internal ToolListItemType = "internal"
 )
 
 // Valid indicates whether the value is a known member of the ToolListItemType enum.
 func (e ToolListItemType) Valid() bool {
 	switch e {
-	case ToolListItemTypeCustom:
+	case Custom:
 		return true
-	case ToolListItemTypeInternal:
+	case Internal:
 		return true
 	default:
 		return false
@@ -388,6 +409,24 @@ type AgentListItem struct {
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// AgentToolLink defines model for AgentToolLink.
+type AgentToolLink struct {
+	// Id Unique identifier for the assigned tool.
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Human-readable tool name.
+	Name string `json:"name"`
+
+	// Type Whether the assigned tool is custom or built into Interloom.
+	Type AgentToolLinkType `json:"type"`
+
+	// Url Canonical public REST URL for the assigned tool.
+	Url *string `json:"url,omitempty"`
+}
+
+// AgentToolLinkType Whether the assigned tool is custom or built into Interloom.
+type AgentToolLinkType string
 
 // ApplyProcedureSpaceTrigger defines model for ApplyProcedureSpaceTrigger.
 type ApplyProcedureSpaceTrigger struct {
@@ -631,6 +670,15 @@ type CreateProcedureRequest struct {
 	Title string `json:"title"`
 }
 
+// CreateSecretRequest defines model for CreateSecretRequest.
+type CreateSecretRequest struct {
+	// Name Name used to reference the secret.
+	Name string `json:"name"`
+
+	// Value Sensitive value to encrypt and store.
+	Value string `json:"value"`
+}
+
 // CreateSpaceRequest defines model for CreateSpaceRequest.
 type CreateSpaceRequest struct {
 	Description *string `json:"description,omitempty"`
@@ -721,6 +769,23 @@ type GameObject struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// InvalidToolIdsError defines model for InvalidToolIdsError.
+type InvalidToolIdsError struct {
+	// Code Stable machine-readable error code.
+	Code string `json:"code"`
+
+	// InvalidToolIds Tool IDs that are unknown or unavailable to the caller.
+	InvalidToolIds []openapi_types.UUID `json:"invalid_tool_ids"`
+
+	// Message Human-readable error message.
+	Message string `json:"message"`
+}
+
+// InvalidToolIdsResponse defines model for InvalidToolIdsResponse.
+type InvalidToolIdsResponse struct {
+	Error InvalidToolIdsError `json:"error"`
+}
+
 // ListAgentsResponse defines model for ListAgentsResponse.
 type ListAgentsResponse struct {
 	// Data Items in the current page.
@@ -791,6 +856,18 @@ type ListNotesResponse struct {
 type ListProceduresResponse struct {
 	// Data Items in the current page.
 	Data []ProcedureSummary `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListSecretsResponse defines model for ListSecretsResponse.
+type ListSecretsResponse struct {
+	// Data Items in the current page.
+	Data []Secret `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -1050,6 +1127,11 @@ type ReferenceTaskSpaceTrigger struct {
 	TriggerType     string             `json:"trigger_type"`
 }
 
+// ReplaceAgentToolsRequest defines model for ReplaceAgentToolsRequest.
+type ReplaceAgentToolsRequest struct {
+	ToolIds []openapi_types.UUID `json:"tool_ids"`
+}
+
 // ResourceLink defines model for ResourceLink.
 type ResourceLink struct {
 	// Id Unique identifier for the linked object.
@@ -1062,6 +1144,18 @@ type ResourceLink struct {
 
 // ResourceType defines model for ResourceType.
 type ResourceType string
+
+// Secret defines model for Secret.
+type Secret struct {
+	// Id Unique identifier for the secret.
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Name used to reference the secret.
+	Name string `json:"name"`
+
+	// Type Public resource type for the secret.
+	Type *string `json:"type,omitempty"`
+}
 
 // Space defines model for Space.
 type Space struct {
@@ -1340,6 +1434,21 @@ type UpdateAgentParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListAgentToolsParams defines parameters for ListAgentTools.
+type ListAgentToolsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ReplaceAgentToolsParams defines parameters for ReplaceAgentTools.
+type ReplaceAgentToolsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ReplaceAgentTools422JSONResponseBody defines parameters for ReplaceAgentTools.
+type ReplaceAgentTools422JSONResponseBody struct {
+	union json.RawMessage
+}
+
 // CreateCaseIngestionParams defines parameters for CreateCaseIngestion.
 type CreateCaseIngestionParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -1551,6 +1660,26 @@ type UpdateProcedureParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListSecretsParams defines parameters for ListSecrets.
+type ListSecretsParams struct {
+	// Limit Maximum number of secrets to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from next_cursor in a previous response.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// CreateSecretParams defines parameters for CreateSecret.
+type CreateSecretParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// DeleteSecretParams defines parameters for DeleteSecret.
+type DeleteSecretParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListSpacesParams defines parameters for ListSpaces.
 type ListSpacesParams struct {
 	// Limit Maximum number of spaces to return.
@@ -1673,6 +1802,9 @@ type CreateAgentJSONRequestBody = CreateAgentRequest
 // UpdateAgentJSONRequestBody defines body for UpdateAgent for application/json ContentType.
 type UpdateAgentJSONRequestBody = UpdateAgentRequest
 
+// ReplaceAgentToolsJSONRequestBody defines body for ReplaceAgentTools for application/json ContentType.
+type ReplaceAgentToolsJSONRequestBody = ReplaceAgentToolsRequest
+
 // CreateCaseIngestionMultipartRequestBody defines body for CreateCaseIngestion for multipart/form-data ContentType.
 type CreateCaseIngestionMultipartRequestBody = CreateCaseIngestionRequest
 
@@ -1699,6 +1831,9 @@ type CreateProcedureJSONRequestBody = CreateProcedureRequest
 
 // UpdateProcedureJSONRequestBody defines body for UpdateProcedure for application/json ContentType.
 type UpdateProcedureJSONRequestBody = UpdateProcedureRequest
+
+// CreateSecretJSONRequestBody defines body for CreateSecret for application/json ContentType.
+type CreateSecretJSONRequestBody = CreateSecretRequest
 
 // CreateSpaceJSONRequestBody defines body for CreateSpace for application/json ContentType.
 type CreateSpaceJSONRequestBody = CreateSpaceRequest
@@ -1797,6 +1932,68 @@ func (t ThreadEvent_Payloads_Item) MarshalJSON() ([]byte, error) {
 }
 
 func (t *ThreadEvent_Payloads_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsInvalidToolIdsResponse returns the union data inside the ReplaceAgentTools422JSONResponseBody as a InvalidToolIdsResponse
+func (t ReplaceAgentTools422JSONResponseBody) AsInvalidToolIdsResponse() (InvalidToolIdsResponse, error) {
+	var body InvalidToolIdsResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromInvalidToolIdsResponse overwrites any union data inside the ReplaceAgentTools422JSONResponseBody as the provided InvalidToolIdsResponse
+func (t *ReplaceAgentTools422JSONResponseBody) FromInvalidToolIdsResponse(v InvalidToolIdsResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeInvalidToolIdsResponse performs a merge with any union data inside the ReplaceAgentTools422JSONResponseBody, using the provided InvalidToolIdsResponse
+func (t *ReplaceAgentTools422JSONResponseBody) MergeInvalidToolIdsResponse(v InvalidToolIdsResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsValidationErrorResponse returns the union data inside the ReplaceAgentTools422JSONResponseBody as a ValidationErrorResponse
+func (t ReplaceAgentTools422JSONResponseBody) AsValidationErrorResponse() (ValidationErrorResponse, error) {
+	var body ValidationErrorResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromValidationErrorResponse overwrites any union data inside the ReplaceAgentTools422JSONResponseBody as the provided ValidationErrorResponse
+func (t *ReplaceAgentTools422JSONResponseBody) FromValidationErrorResponse(v ValidationErrorResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeValidationErrorResponse performs a merge with any union data inside the ReplaceAgentTools422JSONResponseBody, using the provided ValidationErrorResponse
+func (t *ReplaceAgentTools422JSONResponseBody) MergeValidationErrorResponse(v ValidationErrorResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReplaceAgentTools422JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ReplaceAgentTools422JSONResponseBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

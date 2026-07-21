@@ -29,6 +29,8 @@ const (
 	toolCaseIngestionsCreate  = "case_ingestions_create"
 	toolCaseIngestionsGet     = "case_ingestions_get"
 	toolCaseIngestionsErrors  = "case_ingestions_errors"
+	toolAgentToolsList        = "agents_tools_list"
+	toolAgentToolsReplace     = "agents_tools_replace"
 	toolFilesDownload         = "files_download"
 	toolThreadsMessagesCreate = "threads_messages_create"
 	schemaKeyType             = "type"
@@ -205,6 +207,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	})
 	svc := &mcpService{client: c}
 	svc.registerResourceTools(server)
+	svc.registerAgentTools(server)
 	svc.registerUserTools(server)
 	svc.registerThreadTools(server)
 	svc.registerFileTools(server)
@@ -238,11 +241,13 @@ func (s *mcpService) registerResourceTools(server *mcpsdk.Server) {
 				InputSchema: bodyInputSchema(r, true),
 			}, s.createResourceHandler(r))
 		}
-		server.AddTool(&mcpsdk.Tool{
-			Name:        r.name + "_update",
-			Description: fmt.Sprintf("Update a %s by ID", r.singular),
-			InputSchema: updateInputSchema(r),
-		}, s.updateResourceHandler(r))
+		if !r.noUpdate {
+			server.AddTool(&mcpsdk.Tool{
+				Name:        r.name + "_update",
+				Description: fmt.Sprintf("Update a %s by ID", r.singular),
+				InputSchema: updateInputSchema(r),
+			}, s.updateResourceHandler(r))
+		}
 		if !r.noDelete {
 			server.AddTool(&mcpsdk.Tool{
 				Name:        r.name + "_delete",
@@ -251,6 +256,63 @@ func (s *mcpService) registerResourceTools(server *mcpsdk.Server) {
 			}, s.deleteResourceHandler(r))
 		}
 	}
+}
+
+func (s *mcpService) registerAgentTools(server *mcpsdk.Server) {
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolAgentToolsList,
+		Description: "List an Agent's assigned tools",
+		InputSchema: objectSchema(map[string]any{keyAgentID: stringSchema("agent ID")}, keyAgentID),
+	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		agentID, err := args.requiredString(keyAgentID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		resource := "agents/" + url.PathEscape(agentID) + "/tools"
+		raw, err := s.client.List(ctx, resource, nil)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	})
+
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolAgentToolsReplace,
+		Description: "Replace an Agent's assigned tools",
+		InputSchema: objectSchema(map[string]any{
+			keyAgentID: stringSchema("agent ID"),
+			keyToolIDs: stringArraySchema("Tool IDs to assign"),
+		}, keyAgentID, keyToolIDs),
+	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		agentID, err := args.requiredString(keyAgentID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		toolIDs, _, err := args.stringSlice(keyToolIDs)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		body, err := json.Marshal(struct {
+			ToolIDs []string `json:"tool_ids"`
+		}{ToolIDs: toolIDs})
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		resource := "agents/" + url.PathEscape(agentID) + "/tools"
+		raw, err := s.client.Replace(ctx, resource, body)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	})
 }
 
 func (s *mcpService) registerUserTools(server *mcpsdk.Server) {

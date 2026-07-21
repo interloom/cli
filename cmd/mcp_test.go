@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	testAgentID       = "agent-1"
 	testSpaceID       = "space-1"
 	testStatusOpen    = "open"
 	testStatusStarted = "started"
@@ -87,7 +88,8 @@ func TestMCPToolRegistration(t *testing.T) {
 	}
 	for _, name := range []string{
 		"spaces_list", "spaces_get", "spaces_create", "spaces_update", "spaces_delete",
-		"cases_list", "cases_create", "agents_update", "files_upload", toolFilesDownload,
+		"cases_list", "cases_create", "agents_update", toolAgentToolsList, toolAgentToolsReplace,
+		"secrets_list", "secrets_create", "secrets_delete", "files_upload", toolFilesDownload,
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
@@ -96,7 +98,7 @@ func TestMCPToolRegistration(t *testing.T) {
 			t.Fatalf("tool %q not registered", name)
 		}
 	}
-	for _, name := range []string{"agents_delete", "files_create", "models_get", "users_create", "users_delete"} {
+	for _, name := range []string{"agents_delete", "files_create", "models_get", "secrets_get", "secrets_update", "users_create", "users_delete"} {
 		if names[name] {
 			t.Fatalf("unsupported tool %q should not be registered", name)
 		}
@@ -398,6 +400,43 @@ func TestMCPThreadMessageCreateSendsFileIDs(t *testing.T) {
 	}
 	if got := toolResultText(t, result); !strings.Contains(got, "event-1") {
 		t.Fatalf("tool result = %s, want event id", got)
+	}
+}
+
+func TestMCPAgentToolsReplaceUsesPut(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPut; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/agents/"+testAgentID+"/tools"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		var body struct {
+			ToolIDs []string `json:"tool_ids"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if len(body.ToolIDs) != 2 || body.ToolIDs[1] != "tool-2" {
+			t.Fatalf("unexpected body: %+v", body)
+		}
+		_, _ = w.Write([]byte(`[{"id":"tool-1"},{"id":"tool-2"}]`))
+	}))
+	defer apiServer.Close()
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: toolAgentToolsReplace,
+		Arguments: map[string]any{
+			keyAgentID: testAgentID,
+			keyToolIDs: []string{"tool-1", "tool-2"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
 	}
 }
 

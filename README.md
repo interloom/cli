@@ -71,7 +71,7 @@ You can also override per-invocation with `--config-name/-c` and `--base-url`.
 
 ## Resources
 
-`spaces`, `cases`, `notes`, `procedures` and `agents` share the same verbs:
+`spaces`, `cases`, `notes`, `procedures` and `agents` share the standard resource verbs:
 
 ```sh
 interloom cases list
@@ -103,6 +103,8 @@ interloom cases update <id> -f patch.json
 `agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
 `tools` is read-only (`list`, `get`). `models` is list-only for discovering
 model IDs accepted by agent commands.
+`secrets` supports `list`, `create`, and `delete`; secret values are never
+returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
 
@@ -130,6 +132,7 @@ Available list filters per resource:
 | `procedures` | `space-id`                                                    |
 | `models`     | —                                                             |
 | `tools`      | —                                                             |
+| `secrets`    | —                                                             |
 | `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
 
 ### Space triggers
@@ -169,6 +172,27 @@ interloom case-ingestions errors <id> --all
 interloom users me        # the authenticated user
 interloom users list
 interloom users get <id>
+```
+
+## Agent tools
+
+List or replace the complete set of tools assigned to an Agent:
+
+```sh
+interloom agents tools list <agent-id>
+interloom agents tools replace <agent-id> --tool-ids <tool-id-1>,<tool-id-2>
+interloom agents tools replace <agent-id> -d '{"tool_ids":[]}'
+```
+
+## Secrets
+
+Create, list, or delete organization secrets. The API never returns stored
+secret values.
+
+```sh
+interloom secrets create --name EXAMPLE_API_TOKEN --value "$EXAMPLE_API_TOKEN"
+interloom secrets list
+interloom secrets delete <id>
 ```
 
 ## Models

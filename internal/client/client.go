@@ -152,6 +152,11 @@ func (c *Client) Update(ctx context.Context, resource, id string, body []byte) (
 	return c.do(ctx, http.MethodPatch, "/"+resource+"/"+url.PathEscape(id), nil, bytes.NewReader(body), "application/json")
 }
 
+// Replace puts a JSON body to a resource or composed sub-resource path.
+func (c *Client) Replace(ctx context.Context, resource string, body []byte) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodPut, "/"+resource, nil, bytes.NewReader(body), "application/json")
+}
+
 // Delete removes a single resource. A 204 yields an empty body.
 func (c *Client) Delete(ctx context.Context, resource, id string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodDelete, "/"+resource+"/"+url.PathEscape(id), nil, nil, "")

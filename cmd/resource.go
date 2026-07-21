@@ -16,6 +16,7 @@ const (
 	resourceCaseIngestions = "case-ingestions"
 	resourceCases          = "cases"
 	resourceModels         = "models"
+	resourceSecrets        = "secrets"
 	resourceSpaces         = "spaces"
 	resourceTools          = "tools"
 
@@ -34,6 +35,7 @@ const (
 	keyCaseID          = "case_id"
 	keyParentCaseID    = "parent_case_id"
 	keyThreadID        = "thread_id"
+	keyAgentID         = "agent_id"
 	keyAssigneeID      = "assignee_id"
 	keyStatus          = "status"
 	keySort            = "sort"
@@ -41,6 +43,7 @@ const (
 	keyDirection       = "direction"
 	keyManifest        = "manifest"
 	keyFileIDs         = "file_ids"
+	keyToolIDs         = "tool_ids"
 	keyReasoningEffort = "reasoning_effort"
 
 	defaultUnscopedCasesSort      = "created_at"
@@ -102,6 +105,7 @@ type resource struct {
 	readOnly bool     // only list + get (e.g. users)
 	noGet    bool     // no item GET endpoint (e.g. models)
 	noCreate bool     // no generic create (e.g. files, which uses upload)
+	noUpdate bool     // no PATCH endpoint (e.g. secrets)
 	noDelete bool     // no DELETE endpoint (e.g. agents)
 	noPaging bool     // collection list is not cursor-paginated
 	filters  []filter // list query filters
@@ -124,7 +128,9 @@ func newResourceCmd(r resource) *cobra.Command {
 	if !r.noCreate {
 		cmd.AddCommand(r.createCmd())
 	}
-	cmd.AddCommand(r.updateCmd())
+	if !r.noUpdate {
+		cmd.AddCommand(r.updateCmd())
+	}
 	if !r.noDelete {
 		cmd.AddCommand(r.deleteCmd())
 	}
