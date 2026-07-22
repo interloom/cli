@@ -77,7 +77,7 @@ func agentToolsBody(cmd *cobra.Command) ([]byte, error) {
 	if !cmd.Flags().Changed(agentToolIDsFlag) {
 		return readBody(cmd)
 	}
-	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
+	if cmd.Flags().Changed(keyData) || cmd.Flags().Changed("file") {
 		return nil, fmt.Errorf("pass either --%s or a JSON body, not both", agentToolIDsFlag)
 	}
 	toolIDs, _ := cmd.Flags().GetStringSlice(agentToolIDsFlag)

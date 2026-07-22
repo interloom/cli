@@ -131,7 +131,7 @@ func threadMessageBody(cmd *cobra.Command) ([]byte, error) {
 	if !hasText && !hasFileIDs {
 		return readBody(cmd)
 	}
-	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
+	if cmd.Flags().Changed(keyData) || cmd.Flags().Changed("file") {
 		return nil, fmt.Errorf("pass either typed flags or a JSON body, not both")
 	}
 	if !hasText {

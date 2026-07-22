@@ -35,6 +35,7 @@ const (
 	toolThreadsMessagesCreate = "threads_messages_create"
 	schemaKeyType             = "type"
 	schemaKeyDesc             = "description"
+	schemaTypeObject          = "object"
 )
 
 var (
@@ -372,7 +373,7 @@ func (s *mcpService) registerThreadTools(server *mcpsdk.Server) {
 			keyThreadID: stringSchema("thread ID"),
 			"text":      stringSchema("message text"),
 			keyFileIDs:  stringArraySchema("File IDs to attach to the created thread event"),
-			"data":      dataSchema("raw JSON request body"),
+			keyData:     dataSchema("raw JSON request body"),
 		}, keyThreadID),
 	}, s.threadMessageCreateHandler())
 }
@@ -599,7 +600,7 @@ func threadMessageBodyFromArgs(args toolArgs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, hasData, err := args.object("data")
+	data, hasData, err := args.object(keyData)
 	if err != nil {
 		return nil, err
 	}
@@ -860,7 +861,7 @@ func addFilterQueryArg(q url.Values, args toolArgs, f filter) error {
 }
 
 func bodyFromArgs(args toolArgs, r resource, create bool) ([]byte, error) {
-	data, hasData, err := args.object("data")
+	data, hasData, err := args.object(keyData)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,7 +1124,7 @@ func listInputSchema(r resource) map[string]any {
 }
 
 func bodyInputSchema(r resource, create bool) map[string]any {
-	props := map[string]any{"data": dataSchema("raw JSON request body; use this instead of typed field arguments")}
+	props := map[string]any{keyData: dataSchema("raw JSON request body; use this instead of typed field arguments")}
 	for _, f := range r.fieldsFor(create) {
 		desc := f.usage
 		if create && f.required {
@@ -1151,7 +1152,7 @@ func objectSchema(props map[string]any, required ...string) map[string]any {
 		props = map[string]any{}
 	}
 	schema := map[string]any{
-		schemaKeyType: "object",
+		schemaKeyType: schemaTypeObject,
 		"properties":  props,
 	}
 	if len(required) > 0 {
@@ -1177,5 +1178,5 @@ func stringArraySchema(description string) map[string]any {
 }
 
 func dataSchema(description string) map[string]any {
-	return map[string]any{schemaKeyType: "object", schemaKeyDesc: description, "additionalProperties": true}
+	return map[string]any{schemaKeyType: schemaTypeObject, schemaKeyDesc: description, "additionalProperties": true}
 }

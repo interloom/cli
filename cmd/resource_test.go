@@ -104,7 +104,7 @@ func TestAgentBodyIncludesReasoningEffort(t *testing.T) {
 func TestBodyFlagsAndJSONAreMutuallyExclusive(t *testing.T) {
 	cmd := bodyResource.createCmd()
 	mustSet(t, cmd, "title", "New case")
-	mustSet(t, cmd, "data", `{"title":"x"}`)
+	mustSet(t, cmd, keyData, `{"title":"x"}`)
 	if _, err := bodyResource.body(cmd, true); err == nil {
 		t.Fatal("expected error when both field flags and --data are set")
 	}
@@ -213,23 +213,66 @@ func TestModelsCommandIsListOnlyWithoutPaginationFlags(t *testing.T) {
 	}
 }
 
-func TestToolsCommandIsReadOnly(t *testing.T) {
+func TestToolsCommandOnlyExposesSupportedVerbs(t *testing.T) {
 	tools := newResourceCmd(apiResource(resourceTools))
-	for _, args := range [][]string{{commandUseList}, {commandNameGet, "tool-1"}} {
+	for _, args := range [][]string{
+		{commandUseList},
+		{commandNameGet, testToolID},
+		{commandUseCreate},
+		{commandNameUpdate, testToolID},
+	} {
 		if child, _, err := tools.Find(args); err != nil || child == nil {
 			t.Fatalf("tools command %v not registered: child=%v err=%v", args, child, err)
 		}
 	}
-	for _, verb := range []string{commandUseCreate, commandNameUpdate, "delete"} {
-		if child, _, err := tools.Find([]string{verb}); err == nil && child != nil && child.Name() == verb {
-			t.Fatalf("tools %s command should not be registered", verb)
+	if child, _, err := tools.Find([]string{commandNameDelete, testToolID}); err == nil && child != nil && child.Name() == commandNameDelete {
+		t.Fatal("tools delete command should not be registered")
+	}
+
+	create, _, err := tools.Find([]string{commandUseCreate})
+	if err != nil {
+		t.Fatalf("find tools create: %v", err)
+	}
+	secretIDsFlag := field{name: keySecretIDs}.flagName()
+	for _, flag := range []string{keyName, keyDescription, keyScript, secretIDsFlag} {
+		if create.Flags().Lookup(flag) == nil {
+			t.Fatalf("tools create should expose --%s", flag)
 		}
+	}
+	update, _, err := tools.Find([]string{commandNameUpdate, testToolID})
+	if err != nil {
+		t.Fatalf("find tools update: %v", err)
+	}
+	if update.Flags().Lookup("manager-id") == nil {
+		t.Fatal("tools update should expose --manager-id")
+	}
+}
+
+func TestToolUpdateBodyFromFlags(t *testing.T) {
+	tools := apiResource(resourceTools)
+	cmd := tools.updateCmd()
+	mustSet(t, cmd, keyDescription, testUpdatedToolDescription)
+	mustSet(t, cmd, field{name: keySecretIDs}.flagName(), "secret-1,"+testSecretID2)
+
+	body, err := tools.body(cmd, false)
+	if err != nil {
+		t.Fatalf("body: %v", err)
+	}
+	var got struct {
+		Description string   `json:"description"`
+		SecretIDs   []string `json:"secret_ids"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got.Description != testUpdatedToolDescription || len(got.SecretIDs) != 2 || got.SecretIDs[1] != testSecretID2 {
+		t.Fatalf("unexpected body: %s", body)
 	}
 }
 
 func TestSecretsCommandOnlyExposesSupportedVerbs(t *testing.T) {
 	secrets := newResourceCmd(apiResource(resourceSecrets))
-	for _, args := range [][]string{{commandUseList}, {commandUseCreate}, {"delete", "secret-1"}} {
+	for _, args := range [][]string{{commandUseList}, {commandUseCreate}, {commandNameDelete, "secret-1"}} {
 		if child, _, err := secrets.Find(args); err != nil || child == nil {
 			t.Fatalf("secrets command %v not registered: child=%v err=%v", args, child, err)
 		}
@@ -261,7 +304,7 @@ func TestAgentToolsCommandShapeAndBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("agentToolsBody: %v", err)
 	}
-	if got, want := string(body), `{"tool_ids":["tool-1","tool-2"]}`; got != want {
+	if got, want := string(body), `{"tool_ids":["`+testToolID+`","`+testToolID2+`"]}`; got != want {
 		t.Fatalf("body = %s, want %s", got, want)
 	}
 }
@@ -275,7 +318,7 @@ func TestSpacesTriggerCommandShape(t *testing.T) {
 		}
 	}
 	update, _, err := spaces.Find([]string{commandNameTrigger, commandNameUpdate, testSpaceID})
-	if err != nil || update.Flags().Lookup("data") == nil || update.Flags().Lookup("file") == nil {
+	if err != nil || update.Flags().Lookup(keyData) == nil || update.Flags().Lookup("file") == nil {
 		t.Fatalf("spaces trigger update body flags missing: child=%v err=%v", update, err)
 	}
 }

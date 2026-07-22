@@ -17,11 +17,16 @@ import (
 )
 
 const (
-	testAgentID       = "agent-1"
-	testSpaceID       = "space-1"
-	testStatusOpen    = "open"
-	testStatusStarted = "started"
-	testManifestBody  = "{\"title\":\"Case\"}\n"
+	testAgentID                = "agent-1"
+	testSpaceID                = "space-1"
+	testToolID                 = "tool-1"
+	testToolID2                = "tool-2"
+	testToolName               = "test_tool"
+	testSecretID2              = "secret-2"
+	testUpdatedToolDescription = "Updated description"
+	testStatusOpen             = "open"
+	testStatusStarted          = "started"
+	testManifestBody           = "{\"title\":\"Case\"}\n"
 )
 
 func TestMCPCommandShape(t *testing.T) {
@@ -89,6 +94,7 @@ func TestMCPToolRegistration(t *testing.T) {
 	for _, name := range []string{
 		"spaces_list", "spaces_get", "spaces_create", "spaces_update", "spaces_delete",
 		"cases_list", "cases_create", "agents_update", toolAgentToolsList, toolAgentToolsReplace,
+		"tools_list", "tools_get", "tools_create", "tools_update",
 		"secrets_list", "secrets_create", "secrets_delete", "files_upload", toolFilesDownload,
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		"models_list",
@@ -98,7 +104,7 @@ func TestMCPToolRegistration(t *testing.T) {
 			t.Fatalf("tool %q not registered", name)
 		}
 	}
-	for _, name := range []string{"agents_delete", "files_create", "models_get", "secrets_get", "secrets_update", "users_create", "users_delete"} {
+	for _, name := range []string{"agents_delete", "files_create", "models_get", "secrets_get", "secrets_update", "tools_delete", "users_create", "users_delete"} {
 		if names[name] {
 			t.Fatalf("unsupported tool %q should not be registered", name)
 		}
@@ -403,6 +409,75 @@ func TestMCPThreadMessageCreateSendsFileIDs(t *testing.T) {
 	}
 }
 
+func TestMCPToolsCreateAndUpdateUseWriteEndpoints(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assertToolsWriteRequest(t, w, r)
+	}))
+	defer apiServer.Close()
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+
+	createResult, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "tools_create",
+		Arguments: map[string]any{keyData: map[string]any{
+			"name":         testToolName,
+			"description":  "Test tool",
+			keyScript:      "def invoke(interloom): return {}",
+			"input_schema": map[string]any{schemaKeyType: schemaTypeObject},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("CallTool create: %v", err)
+	}
+	if createResult.IsError {
+		t.Fatalf("create tool returned error: %s", toolResultText(t, createResult))
+	}
+
+	updateResult, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "tools_update",
+		Arguments: map[string]any{
+			"id":           testToolID,
+			keyDescription: testUpdatedToolDescription,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool update: %v", err)
+	}
+	if updateResult.IsError {
+		t.Fatalf("update tool returned error: %s", toolResultText(t, updateResult))
+	}
+}
+
+func assertToolsWriteRequest(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+	switch {
+	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/public/tools":
+		var body struct {
+			Name        string         `json:"name"`
+			InputSchema map[string]any `json:"input_schema"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode create body: %v", err)
+		}
+		if body.Name != testToolName || body.InputSchema[schemaKeyType] != schemaTypeObject {
+			t.Fatalf("unexpected create body: %+v", body)
+		}
+		_, _ = w.Write([]byte(`{"id":"` + testToolID + `"}`))
+	case r.Method == http.MethodPatch && r.URL.Path == "/api/v1/public/tools/"+testToolID:
+		var body struct {
+			Description string `json:"description"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode update body: %v", err)
+		}
+		if body.Description != testUpdatedToolDescription {
+			t.Fatalf("unexpected update body: %+v", body)
+		}
+		_, _ = w.Write([]byte(`{"id":"` + testToolID + `"}`))
+	default:
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+	}
+}
+
 func TestMCPAgentToolsReplaceUsesPut(t *testing.T) {
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.Method, http.MethodPut; got != want {
@@ -417,10 +492,10 @@ func TestMCPAgentToolsReplaceUsesPut(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request body: %v", err)
 		}
-		if len(body.ToolIDs) != 2 || body.ToolIDs[1] != "tool-2" {
+		if len(body.ToolIDs) != 2 || body.ToolIDs[1] != testToolID2 {
 			t.Fatalf("unexpected body: %+v", body)
 		}
-		_, _ = w.Write([]byte(`[{"id":"tool-1"},{"id":"tool-2"}]`))
+		_, _ = fmt.Fprintf(w, `[{"id":%q},{"id":%q}]`, testToolID, testToolID2)
 	}))
 	defer apiServer.Close()
 	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
@@ -429,7 +504,7 @@ func TestMCPAgentToolsReplaceUsesPut(t *testing.T) {
 		Name: toolAgentToolsReplace,
 		Arguments: map[string]any{
 			keyAgentID: testAgentID,
-			keyToolIDs: []string{"tool-1", "tool-2"},
+			keyToolIDs: []string{testToolID, testToolID2},
 		},
 	})
 	if err != nil {

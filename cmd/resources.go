@@ -53,7 +53,13 @@ func apiResources() []resource {
 			{name: keyReasoningEffort, usage: "reasoning effort: LOW, MEDIUM, HIGH, or XHIGH", onCreate: true, onUpdate: true},
 		}},
 		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
-		{name: resourceTools, singular: "tool", readOnly: true},
+		{name: resourceTools, singular: "tool", noDelete: true, fields: []field{
+			{name: keyName, usage: "Tool name", onCreate: true, onUpdate: true, required: true},
+			{name: keyDescription, usage: "Tool description", onCreate: true, onUpdate: true, required: true},
+			{name: keyScript, usage: "Python tool script", onCreate: true, onUpdate: true, required: true},
+			{name: keySecretIDs, usage: "associated Secret IDs (repeatable)", multi: true, onCreate: true, onUpdate: true},
+			{name: "manager_id", usage: "new manager User ID", onUpdate: true},
+		}},
 		{name: resourceSecrets, singular: "secret", noGet: true, noUpdate: true, fields: []field{
 			{name: keyName, usage: "Secret name", onCreate: true, required: true},
 			{name: "value", usage: "Secret value", onCreate: true, required: true},

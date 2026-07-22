@@ -20,6 +20,7 @@ const (
 	resourceSpaces         = "spaces"
 	resourceTools          = "tools"
 
+	commandNameDelete  = "delete"
 	commandNameGet     = "get"
 	commandNameTrigger = "trigger"
 	commandNameUpdate  = "update"
@@ -31,6 +32,9 @@ const (
 	keyName            = "name"
 	keyTitle           = "title"
 	keyDescription     = "description"
+	keyData            = "data"
+	keyScript          = "script"
+	keySecretIDs       = "secret_ids"
 	keySpaceID         = "space_id"
 	keyCaseID          = "case_id"
 	keyParentCaseID    = "parent_case_id"
@@ -313,7 +317,7 @@ func (r resource) updateCmd() *cobra.Command {
 
 func (r resource) deleteCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <id>",
+		Use:   commandNameDelete + " <id>",
 		Short: fmt.Sprintf("Delete a %s by ID", r.singular),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -387,7 +391,7 @@ func (r resource) body(cmd *cobra.Command, create bool) ([]byte, error) {
 	if len(out) == 0 {
 		return readBody(cmd)
 	}
-	if cmd.Flags().Changed("data") || cmd.Flags().Changed("file") {
+	if cmd.Flags().Changed(keyData) || cmd.Flags().Changed("file") {
 		return nil, fmt.Errorf("pass either field flags or a JSON body, not both")
 	}
 	if len(missing) > 0 {
@@ -399,12 +403,12 @@ func (r resource) body(cmd *cobra.Command, create bool) ([]byte, error) {
 // addBodyFlags registers the JSON-body input flags shared by create/update.
 func addBodyFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("file", "f", "", "path to a JSON body file, or - for stdin")
-	cmd.Flags().StringP("data", "d", "", "inline JSON body")
+	cmd.Flags().StringP(keyData, "d", "", "inline JSON body")
 }
 
 // readBody resolves the request body: --data > --file > piped stdin.
 func readBody(cmd *cobra.Command) ([]byte, error) {
-	if data, _ := cmd.Flags().GetString("data"); data != "" {
+	if data, _ := cmd.Flags().GetString(keyData); data != "" {
 		return []byte(data), nil
 	}
 	file, _ := cmd.Flags().GetString("file")

@@ -64,7 +64,7 @@ func TestThreadMessageBodyFromTextAndFileIDs(t *testing.T) {
 
 func TestThreadMessageBodyFromJSON(t *testing.T) {
 	cmd := newThreadsMessagesCreateCmd()
-	if err := cmd.Flags().Set("data", `{"text":"hello"}`); err != nil {
+	if err := cmd.Flags().Set(keyData, `{"text":"hello"}`); err != nil {
 		t.Fatalf("set data: %v", err)
 	}
 	body, err := threadMessageBody(cmd)
@@ -81,7 +81,7 @@ func TestThreadMessageBodyRejectsTextAndJSON(t *testing.T) {
 	if err := cmd.Flags().Set("text", testMessageText); err != nil {
 		t.Fatalf("set text: %v", err)
 	}
-	if err := cmd.Flags().Set("data", `{"text":"hello"}`); err != nil {
+	if err := cmd.Flags().Set(keyData, `{"text":"hello"}`); err != nil {
 		t.Fatalf("set data: %v", err)
 	}
 	if _, err := threadMessageBody(cmd); err == nil {

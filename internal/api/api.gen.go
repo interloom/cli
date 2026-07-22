@@ -685,6 +685,24 @@ type CreateSpaceRequest struct {
 	Name        string  `json:"name"`
 }
 
+// CreateToolRequest defines model for CreateToolRequest.
+type CreateToolRequest struct {
+	// Description Human-readable tool description.
+	Description string `json:"description"`
+
+	// InputSchema JSON Schema describing the custom tool input.
+	InputSchema map[string]interface{} `json:"input_schema"`
+
+	// Name Unique name used to call the custom tool.
+	Name string `json:"name"`
+
+	// Script Python script executed by the custom tool.
+	Script string `json:"script"`
+
+	// SecretIds Secret IDs to associate with the custom tool.
+	SecretIds *[]openapi_types.UUID `json:"secret_ids,omitempty"`
+}
+
 // CurrentUser defines model for CurrentUser.
 type CurrentUser struct {
 	// CreatedAt Timestamp when the user was created.
@@ -1240,14 +1258,20 @@ type Tool struct {
 	Description string `json:"description"`
 
 	// Id Unique identifier for the tool.
-	Id      openapi_types.UUID `json:"id"`
-	Manager *ResourceLink      `json:"manager,omitempty"`
+	Id openapi_types.UUID `json:"id"`
+
+	// InputSchema JSON Schema describing the input accepted by the tool.
+	InputSchema map[string]interface{} `json:"input_schema"`
+
+	// IsEditable Whether the authenticated user manages and can edit the tool.
+	IsEditable bool          `json:"is_editable"`
+	Manager    *ResourceLink `json:"manager,omitempty"`
 
 	// Name Human-readable tool name.
 	Name string `json:"name"`
 
-	// Parameters Parameters accepted when invoking the tool.
-	Parameters []ToolParameter `json:"parameters"`
+	// Secrets Accessible secrets associated with the custom tool.
+	Secrets []ToolSecret `json:"secrets"`
 
 	// Type Whether the tool is custom or built into Interloom.
 	Type ToolType `json:"type"`
@@ -1274,19 +1298,19 @@ type ToolListItem struct {
 // ToolListItemType Whether the tool is custom or built into Interloom.
 type ToolListItemType string
 
-// ToolParameter defines model for ToolParameter.
-type ToolParameter struct {
-	// Description Human-readable parameter description.
-	Description string `json:"description"`
+// ToolSecret defines model for ToolSecret.
+type ToolSecret struct {
+	// Id Unique identifier for the linked object.
+	Id openapi_types.UUID `json:"id"`
 
-	// Name Parameter name.
-	Name string `json:"name"`
+	// Name Name used to reference the associated secret.
+	Name *string `json:"name,omitempty"`
 
-	// Required Whether the parameter must be provided.
-	Required bool `json:"required"`
-
-	// Type JSON Schema type accepted by the parameter.
+	// Type Public resource type for the associated secret.
 	Type string `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
 }
 
 // UpdateAgentRequest defines model for UpdateAgentRequest.
@@ -1351,6 +1375,27 @@ type UpdateProcedureRequest struct {
 type UpdateSpaceRequest struct {
 	Description *string `json:"description,omitempty"`
 	Name        *string `json:"name,omitempty"`
+}
+
+// UpdateToolRequest defines model for UpdateToolRequest.
+type UpdateToolRequest struct {
+	// Description Updated tool description. Omit to leave unchanged.
+	Description *string `json:"description,omitempty"`
+
+	// InputSchema Updated input JSON Schema. Omit to leave unchanged.
+	InputSchema *map[string]interface{} `json:"input_schema,omitempty"`
+
+	// ManagerId New manager user ID. The tool must have no associated secrets, and manager_id cannot be combined with other updates.
+	ManagerId *openapi_types.UUID `json:"manager_id,omitempty"`
+
+	// Name Updated unique tool name. Omit to leave unchanged.
+	Name *string `json:"name,omitempty"`
+
+	// Script Updated Python script. Omit to leave unchanged.
+	Script *string `json:"script,omitempty"`
+
+	// SecretIds Replacement secret ID list. Pass an empty list to remove all secrets; omit to leave unchanged.
+	SecretIds *[]openapi_types.UUID `json:"secret_ids,omitempty"`
 }
 
 // User defines model for User.
@@ -1771,8 +1816,18 @@ type ListToolsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// CreateToolParams defines parameters for CreateTool.
+type CreateToolParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // GetToolParams defines parameters for GetTool.
 type GetToolParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// UpdateToolParams defines parameters for UpdateTool.
+type UpdateToolParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -1846,6 +1901,12 @@ type UpdateSpaceTriggerJSONRequestBody UpdateSpaceTriggerJSONBody
 
 // CreateThreadMessageJSONRequestBody defines body for CreateThreadMessage for application/json ContentType.
 type CreateThreadMessageJSONRequestBody = CreateMessageRequest
+
+// CreateToolJSONRequestBody defines body for CreateTool for application/json ContentType.
+type CreateToolJSONRequestBody = CreateToolRequest
+
+// UpdateToolJSONRequestBody defines body for UpdateTool for application/json ContentType.
+type UpdateToolJSONRequestBody = UpdateToolRequest
 
 // AsMessagePayload returns the union data inside the ThreadEvent_Payloads_Item as a MessagePayload
 func (t ThreadEvent_Payloads_Item) AsMessagePayload() (MessagePayload, error) {

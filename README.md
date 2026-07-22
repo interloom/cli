@@ -71,7 +71,8 @@ You can also override per-invocation with `--config-name/-c` and `--base-url`.
 
 ## Resources
 
-`spaces`, `cases`, `notes`, `procedures` and `agents` share the standard resource verbs:
+`spaces`, `cases`, `notes`, `procedures`, `agents`, and `tools` use the standard
+resource commands supported by their API endpoints:
 
 ```sh
 interloom cases list
@@ -100,9 +101,9 @@ interloom cases create -d '{"title":"New case"}'
 interloom cases update <id> -f patch.json
 ```
 
-`agents` has no `delete`. `users` is read-only (`list`, `get`) and adds `me`.
-`tools` is read-only (`list`, `get`). `models` is list-only for discovering
-model IDs accepted by agent commands.
+`agents` and `tools` have no `delete`. `users` is read-only (`list`, `get`) and
+adds `me`. `models` is list-only for discovering model IDs accepted by agent
+commands.
 `secrets` supports `list`, `create`, and `delete`; secret values are never
 returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
@@ -182,6 +183,18 @@ List or replace the complete set of tools assigned to an Agent:
 interloom agents tools list <agent-id>
 interloom agents tools replace <agent-id> --tool-ids <tool-id-1>,<tool-id-2>
 interloom agents tools replace <agent-id> -d '{"tool_ids":[]}'
+```
+
+## Custom tools
+
+Create and update custom tools with the standard `tools` commands. A tool's
+`input_schema` is a nested JSON object, so create requests should use a JSON
+body; scalar and repeatable update fields are also available as flags.
+
+```sh
+interloom tools create -f tool.json
+interloom tools update <tool-id> --description "Updated description"
+interloom tools update <tool-id> --secret-ids <secret-id-1>,<secret-id-2>
 ```
 
 ## Secrets
