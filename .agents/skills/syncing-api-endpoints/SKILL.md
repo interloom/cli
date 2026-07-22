@@ -118,38 +118,49 @@ go test ./...
 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run ./...
 ```
 
-Then spot-check a new command's help and, if you have credentials, a live call:
+Then spot-check a new command's help. Perform live calls only through the
+credential-isolated dev workflow in step 7.
 
 ```sh
 go run . <resource> --help
-go run . <resource> list --limit 1
 ```
 
 ### 7. Smoke-test against dev
 
-When `INTERLOOM_API_KEY` is available, exercise both read and write command
-paths against the dev instance. Validate response shapes without printing
-credentials or resource details. Writes are allowed on dev: use unique,
-clearly named test data, clean it up when the API supports deletion, and note
-any fixture that cannot be deleted.
+When `DEV_INTERLOOM_API_KEY` is available, exercise both read and write command
+paths against `https://dev.interloom.com`. Ignore any ambient
+`INTERLOOM_API_KEY` or `INTERLOOM_BASE_URL`: every live command must override
+both values so the dev credential cannot be sent to another instance and a
+credential for another instance cannot be sent to dev. If
+`DEV_INTERLOOM_API_KEY` is unavailable, skip live calls even when
+`INTERLOOM_API_KEY` is set.
+
+Validate response shapes without printing credentials or resource details.
+Writes are allowed on dev: use unique, clearly named test data, clean it up when
+the API supports deletion, and note any fixture that cannot be deleted. Define
+and use this wrapper for every smoke-test CLI call:
 
 For example, the secrets and Agent tools endpoints can be checked with:
 
 ```sh
-test -n "${INTERLOOM_API_KEY:-}"
-export INTERLOOM_BASE_URL=https://dev.interloom.com
+test -n "${DEV_INTERLOOM_API_KEY:-}"
+run_dev() {
+  INTERLOOM_API_KEY="$DEV_INTERLOOM_API_KEY" \
+    INTERLOOM_BASE_URL=https://dev.interloom.com \
+    go run . "$@"
+}
 
-secrets_json=$(go run . secrets list --limit 1)
+secrets_json=$(run_dev secrets list --limit 1)
 printf '%s' "$secrets_json" \
   | jq -e '(.data | type == "array") and (.has_more | type == "boolean")' >/dev/null
 
-agents_json=$(go run . agents list --limit 1)
+agents_json=$(run_dev agents list --limit 1)
 printf '%s' "$agents_json" \
   | jq -e '(.data | type == "array") and (.has_more | type == "boolean")' >/dev/null
 
 agent_id=$(printf '%s' "$agents_json" | jq -r '.data[0].id // empty')
 if test -n "$agent_id"; then
-  tools_json=$(go run . agents tools list "$agent_id")
+  tools_json=$(run_dev agents tools list "$agent_id")
   printf '%s' "$tools_json" | jq -e 'type == "array"' >/dev/null
 fi
 ```
@@ -163,20 +174,20 @@ secret_name="AMP_SCHEMA_SMOKE_$(date +%s)_$$"
 secret_value=$(openssl rand -hex 24)
 secret_body=$(jq -nc --arg name "$secret_name" --arg value "$secret_value" \
   '{name:$name,value:$value}')
-secret_json=$(printf '%s' "$secret_body" | go run . secrets create)
+secret_json=$(printf '%s' "$secret_body" | run_dev secrets create)
 secret_id=$(printf '%s' "$secret_json" | jq -r '.id')
 printf '%s' "$secret_json" | jq -e --arg name "$secret_name" \
   '(.id | type == "string" and length > 0) and .name == $name' >/dev/null
-go run . secrets delete "$secret_id" >/dev/null
+run_dev secrets delete "$secret_id" >/dev/null
 
 agent_name="AMP Schema Smoke $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 agent_body=$(jq -nc --arg name "$agent_name" '{name:$name}')
-agent_json=$(printf '%s' "$agent_body" | go run . agents create)
+agent_json=$(printf '%s' "$agent_body" | run_dev agents create)
 agent_id=$(printf '%s' "$agent_json" | jq -r '.id')
-current_tools=$(go run . agents tools list "$agent_id")
+current_tools=$(run_dev agents tools list "$agent_id")
 replace_body=$(printf '%s' "$current_tools" | jq -c '{tool_ids: map(.id)}')
 replaced_tools=$(printf '%s' "$replace_body" \
-  | go run . agents tools replace "$agent_id")
+  | run_dev agents tools replace "$agent_id")
 test "$(printf '%s' "$current_tools" | jq -c 'map(.id) | sort')" = \
   "$(printf '%s' "$replaced_tools" | jq -c 'map(.id) | sort')"
 ```
