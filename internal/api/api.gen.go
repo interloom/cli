@@ -1270,6 +1270,9 @@ type Tool struct {
 	// Name Human-readable tool name.
 	Name string `json:"name"`
 
+	// Script Python script for a custom tool managed by the authenticated user, or null otherwise.
+	Script *string `json:"script"`
+
 	// Secrets Accessible secrets associated with the custom tool.
 	Secrets []ToolSecret `json:"secrets"`
 
