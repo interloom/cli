@@ -9,9 +9,9 @@ import (
 )
 
 const (
+	commandNameAdd     = "add"
 	commandNameMembers = "members"
 	commandNameRemove  = "remove"
-	commandNameSet     = "set"
 	keyRole            = "role"
 )
 
@@ -28,7 +28,7 @@ func newSpacesMembersCmd() *cobra.Command {
 		Use:   commandNameMembers,
 		Short: "Manage a Space's members",
 	}
-	cmd.AddCommand(newSpacesMembersListCmd(), newSpacesMembersSetCmd(), newSpacesMembersRemoveCmd())
+	cmd.AddCommand(newSpacesMembersAddCmd(), newSpacesMembersListCmd(), newSpacesMembersRemoveCmd())
 	return cmd
 }
 
@@ -64,10 +64,10 @@ func newSpacesMembersListCmd() *cobra.Command {
 	return cmd
 }
 
-func newSpacesMembersSetCmd() *cobra.Command {
+func newSpacesMembersAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   commandNameSet + " <space-id> <user-id>",
-		Short: "Add or update a Space member",
+		Use:   commandNameAdd + " <space-id> <user-id>",
+		Short: "Add a Space member or update their role",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()

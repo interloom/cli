@@ -155,7 +155,7 @@ member. Membership roles accepted by writes are `member` and `manager`.
 
 ```sh
 interloom spaces members list <space-id>
-interloom spaces members set <space-id> <user-id> --role manager
+interloom spaces members add <space-id> <user-id> --role manager
 interloom spaces members remove <space-id> <user-id>
 ```
 

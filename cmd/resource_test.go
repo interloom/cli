@@ -328,7 +328,7 @@ func TestSpacesMembersCommandShapeAndBody(t *testing.T) {
 	userID := "user-1"
 	for _, args := range [][]string{
 		{commandNameMembers, commandUseList, testSpaceID},
-		{commandNameMembers, commandNameSet, testSpaceID, userID},
+		{commandNameMembers, commandNameAdd, testSpaceID, userID},
 		{commandNameMembers, commandNameRemove, testSpaceID, userID},
 	} {
 		child, _, err := spaces.Find(args)
@@ -347,12 +347,12 @@ func TestSpacesMembersCommandShapeAndBody(t *testing.T) {
 		}
 	}
 
-	set, _, err := spaces.Find([]string{commandNameMembers, commandNameSet, testSpaceID, userID})
+	add, _, err := spaces.Find([]string{commandNameMembers, commandNameAdd, testSpaceID, userID})
 	if err != nil {
-		t.Fatalf("find spaces members set: %v", err)
+		t.Fatalf("find spaces members add: %v", err)
 	}
-	mustSet(t, set, keyRole, "manager")
-	body, err := spaceMemberBody(set)
+	mustSet(t, add, keyRole, "manager")
+	body, err := spaceMemberBody(add)
 	if err != nil {
 		t.Fatalf("spaceMemberBody: %v", err)
 	}
