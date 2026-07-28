@@ -322,3 +322,41 @@ func TestSpacesTriggerCommandShape(t *testing.T) {
 		t.Fatalf("spaces trigger update body flags missing: child=%v err=%v", update, err)
 	}
 }
+
+func TestSpacesMembersCommandShapeAndBody(t *testing.T) {
+	spaces := newSpacesCmd()
+	userID := "user-1"
+	for _, args := range [][]string{
+		{commandNameMembers, commandUseList, testSpaceID},
+		{commandNameMembers, commandNameUpsert, testSpaceID, userID},
+		{commandNameMembers, commandNameRemove, testSpaceID, userID},
+	} {
+		child, _, err := spaces.Find(args)
+		if err != nil || child == nil {
+			t.Fatalf("spaces command %v not registered: child=%v err=%v", args, child, err)
+		}
+	}
+
+	list, _, err := spaces.Find([]string{commandNameMembers, commandUseList, testSpaceID})
+	if err != nil {
+		t.Fatalf("find spaces members list: %v", err)
+	}
+	for _, flag := range []string{"limit", keyCursor, argAll} {
+		if list.Flags().Lookup(flag) == nil {
+			t.Fatalf("spaces members list should expose --%s", flag)
+		}
+	}
+
+	upsert, _, err := spaces.Find([]string{commandNameMembers, commandNameUpsert, testSpaceID, userID})
+	if err != nil {
+		t.Fatalf("find spaces members upsert: %v", err)
+	}
+	mustSet(t, upsert, keyRole, "manager")
+	body, err := spaceMemberBody(upsert)
+	if err != nil {
+		t.Fatalf("spaceMemberBody: %v", err)
+	}
+	if got, want := string(body), `{"role":"manager"}`; got != want {
+		t.Fatalf("body = %s, want %s", got, want)
+	}
+}

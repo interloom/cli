@@ -148,6 +148,17 @@ interloom spaces trigger update <space-id> -d '{"trigger_type":"assignee","assig
 interloom spaces trigger update <space-id> -d '{"trigger_type":null}'
 ```
 
+### Space members
+
+List the users with access to a Space, add or update a membership, or remove a
+member. Membership roles accepted by writes are `member` and `manager`.
+
+```sh
+interloom spaces members list <space-id>
+interloom spaces members upsert <space-id> <user-id> --role manager
+interloom spaces members remove <space-id> <user-id>
+```
+
 ## Files
 
 Files use the shared `list`/`get`/`update`/`delete` plus `upload` and `download`:

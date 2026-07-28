@@ -106,6 +106,27 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
+// Defines values for MembershipRole.
+const (
+	MembershipRoleManager MembershipRole = "manager"
+	MembershipRoleMember  MembershipRole = "member"
+	MembershipRoleOwner   MembershipRole = "owner"
+)
+
+// Valid indicates whether the value is a known member of the MembershipRole enum.
+func (e MembershipRole) Valid() bool {
+	switch e {
+	case MembershipRoleManager:
+		return true
+	case MembershipRoleMember:
+		return true
+	case MembershipRoleOwner:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelDeploymentLocation.
 const (
 	EUROPE       ModelDeploymentLocation = "EUROPE"
@@ -223,6 +244,24 @@ func (e ToolListItemType) Valid() bool {
 	case Custom:
 		return true
 	case Internal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpsertSpaceMemberRequestRole.
+const (
+	UpsertSpaceMemberRequestRoleManager UpsertSpaceMemberRequestRole = "manager"
+	UpsertSpaceMemberRequestRoleMember  UpsertSpaceMemberRequestRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the UpsertSpaceMemberRequestRole enum.
+func (e UpsertSpaceMemberRequestRole) Valid() bool {
+	switch e {
+	case UpsertSpaceMemberRequestRoleManager:
+		return true
+	case UpsertSpaceMemberRequestRoleMember:
 		return true
 	default:
 		return false
@@ -894,6 +933,18 @@ type ListSecretsResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// ListSpaceMembersResponse defines model for ListSpaceMembersResponse.
+type ListSpaceMembersResponse struct {
+	// Data Items in the current page.
+	Data []SpaceMember `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
 // ListSpacesResponse defines model for ListSpacesResponse.
 type ListSpacesResponse struct {
 	// Data Items in the current page.
@@ -941,6 +992,9 @@ type ListUsersResponse struct {
 	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
+
+// MembershipRole defines model for MembershipRole.
+type MembershipRole string
 
 // MessagePayload defines model for MessagePayload.
 type MessagePayload struct {
@@ -1228,6 +1282,14 @@ type SpaceListItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// SpaceMember defines model for SpaceMember.
+type SpaceMember struct {
+	Role MembershipRole `json:"role"`
+
+	// UserId ID of the user. Agent identities also use user IDs.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // Thread defines model for Thread.
 type Thread struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -1400,6 +1462,15 @@ type UpdateToolRequest struct {
 	// SecretIds Replacement secret ID list. Pass an empty list to remove all secrets; omit to leave unchanged.
 	SecretIds *[]openapi_types.UUID `json:"secret_ids,omitempty"`
 }
+
+// UpsertSpaceMemberRequest defines model for UpsertSpaceMemberRequest.
+type UpsertSpaceMemberRequest struct {
+	// Role Role the user should have in the space. Defaults to member, including for an existing membership.
+	Role *UpsertSpaceMemberRequestRole `json:"role,omitempty"`
+}
+
+// UpsertSpaceMemberRequestRole Role the user should have in the space. Defaults to member, including for an existing membership.
+type UpsertSpaceMemberRequestRole string
 
 // User defines model for User.
 type User struct {
@@ -1758,6 +1829,26 @@ type UpdateSpaceParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListSpaceMembersParams defines parameters for ListSpaceMembers.
+type ListSpaceMembersParams struct {
+	// Limit Maximum number of space members to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from next_cursor in a previous response.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// RemoveSpaceMemberParams defines parameters for RemoveSpaceMember.
+type RemoveSpaceMemberParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// UpsertSpaceMemberParams defines parameters for UpsertSpaceMember.
+type UpsertSpaceMemberParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // GetSpaceTriggerParams defines parameters for GetSpaceTrigger.
 type GetSpaceTriggerParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -1898,6 +1989,9 @@ type CreateSpaceJSONRequestBody = CreateSpaceRequest
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = UpdateSpaceRequest
+
+// UpsertSpaceMemberJSONRequestBody defines body for UpsertSpaceMember for application/json ContentType.
+type UpsertSpaceMemberJSONRequestBody = UpsertSpaceMemberRequest
 
 // UpdateSpaceTriggerJSONRequestBody defines body for UpdateSpaceTrigger for application/json ContentType.
 type UpdateSpaceTriggerJSONRequestBody UpdateSpaceTriggerJSONBody
