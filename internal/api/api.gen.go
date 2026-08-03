@@ -106,27 +106,6 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
-// Defines values for MembershipRole.
-const (
-	MembershipRoleManager MembershipRole = "manager"
-	MembershipRoleMember  MembershipRole = "member"
-	MembershipRoleOwner   MembershipRole = "owner"
-)
-
-// Valid indicates whether the value is a known member of the MembershipRole enum.
-func (e MembershipRole) Valid() bool {
-	switch e {
-	case MembershipRoleManager:
-		return true
-	case MembershipRoleMember:
-		return true
-	case MembershipRoleOwner:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ModelDeploymentLocation.
 const (
 	EUROPE       ModelDeploymentLocation = "EUROPE"
@@ -214,6 +193,30 @@ func (e ResourceType) Valid() bool {
 	}
 }
 
+// Defines values for SpaceMembershipRole.
+const (
+	SpaceMembershipRoleManager SpaceMembershipRole = "manager"
+	SpaceMembershipRoleMember  SpaceMembershipRole = "member"
+	SpaceMembershipRoleOwner   SpaceMembershipRole = "owner"
+	SpaceMembershipRoleViewer  SpaceMembershipRole = "viewer"
+)
+
+// Valid indicates whether the value is a known member of the SpaceMembershipRole enum.
+func (e SpaceMembershipRole) Valid() bool {
+	switch e {
+	case SpaceMembershipRoleManager:
+		return true
+	case SpaceMembershipRoleMember:
+		return true
+	case SpaceMembershipRoleOwner:
+		return true
+	case SpaceMembershipRoleViewer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ToolType.
 const (
 	ToolTypeCustom   ToolType = "custom"
@@ -254,6 +257,7 @@ func (e ToolListItemType) Valid() bool {
 const (
 	UpsertSpaceMemberRequestRoleManager UpsertSpaceMemberRequestRole = "manager"
 	UpsertSpaceMemberRequestRoleMember  UpsertSpaceMemberRequestRole = "member"
+	UpsertSpaceMemberRequestRoleViewer  UpsertSpaceMemberRequestRole = "viewer"
 )
 
 // Valid indicates whether the value is a known member of the UpsertSpaceMemberRequestRole enum.
@@ -262,6 +266,8 @@ func (e UpsertSpaceMemberRequestRole) Valid() bool {
 	case UpsertSpaceMemberRequestRoleManager:
 		return true
 	case UpsertSpaceMemberRequestRoleMember:
+		return true
+	case UpsertSpaceMemberRequestRoleViewer:
 		return true
 	default:
 		return false
@@ -993,9 +999,6 @@ type ListUsersResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
-// MembershipRole defines model for MembershipRole.
-type MembershipRole string
-
 // MessagePayload defines model for MessagePayload.
 type MessagePayload struct {
 	PayloadType string `json:"payload_type"`
@@ -1284,11 +1287,14 @@ type SpaceListItem struct {
 
 // SpaceMember defines model for SpaceMember.
 type SpaceMember struct {
-	Role MembershipRole `json:"role"`
+	Role SpaceMembershipRole `json:"role"`
 
 	// UserId ID of the user. Agent identities also use user IDs.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// SpaceMembershipRole defines model for SpaceMembershipRole.
+type SpaceMembershipRole string
 
 // Thread defines model for Thread.
 type Thread struct {

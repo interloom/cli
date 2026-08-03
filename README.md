@@ -151,11 +151,12 @@ interloom spaces trigger update <space-id> -d '{"trigger_type":null}'
 ### Space members
 
 List the users with access to a Space, add or update a membership, or remove a
-member. Membership roles accepted by writes are `member` and `manager`.
+member. Membership roles accepted by writes are `member`, `manager`, and
+`viewer`.
 
 ```sh
 interloom spaces members list <space-id>
-interloom spaces members add <space-id> <user-id> --role manager
+interloom spaces members add <space-id> <user-id> --role viewer
 interloom spaces members remove <space-id> <user-id>
 ```
 

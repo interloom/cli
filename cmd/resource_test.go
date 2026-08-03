@@ -351,12 +351,12 @@ func TestSpacesMembersCommandShapeAndBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find spaces members add: %v", err)
 	}
-	mustSet(t, add, keyRole, "manager")
+	mustSet(t, add, keyRole, "viewer")
 	body, err := spaceMemberBody(add)
 	if err != nil {
 		t.Fatalf("spaceMemberBody: %v", err)
 	}
-	if got, want := string(body), `{"role":"manager"}`; got != want {
+	if got, want := string(body), `{"role":"viewer"}`; got != want {
 		t.Fatalf("body = %s, want %s", got, want)
 	}
 }

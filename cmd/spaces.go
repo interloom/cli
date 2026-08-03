@@ -86,7 +86,7 @@ func newSpacesMembersAddCmd() *cobra.Command {
 			return printResult(raw)
 		},
 	}
-	cmd.Flags().String(keyRole, "", "member role: member or manager")
+	cmd.Flags().String(keyRole, "", "member role: member, manager, or viewer")
 	addBodyFlags(cmd)
 	return cmd
 }
