@@ -8,7 +8,7 @@ require (
 	charm.land/glamour/v2 v2.0.1
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/charmbracelet/x/ansi v0.11.7
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/oapi-codegen/runtime v1.6.0
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.45.0
@@ -48,4 +48,5 @@ require (
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 )
