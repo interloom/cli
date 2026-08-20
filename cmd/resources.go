@@ -4,11 +4,11 @@ package cmd
 // shape here so Cobra commands and MCP tools do not drift.
 func apiResources() []resource {
 	return []resource{
-		{name: resourceSpaces, singular: "space", fields: []field{
+		{name: resourceSpaces, singular: "space", hasRelationships: true, fields: []field{
 			{name: keyName, usage: "Space name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Space description", onCreate: true, onUpdate: true},
 		}},
-		{name: resourceCases, singular: "case", filters: []filter{
+		{name: resourceCases, singular: "case", hasRelationships: true, filters: []filter{
 			filterSpaceID,
 			{name: keyParentCaseID, usage: "filter by parent Case ID"},
 			{name: keyAssigneeID, usage: "filter by assignee User ID"},
@@ -27,7 +27,7 @@ func apiResources() []resource {
 			fieldTags,
 			{name: "attached_file_ids", usage: "attached File IDs (repeatable)", multi: true, onCreate: true},
 		}},
-		{name: "notes", singular: "note", filters: []filter{
+		{name: "notes", singular: "note", hasRelationships: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,
 			{name: keyThreadID, usage: "filter by thread ID"},
@@ -40,13 +40,13 @@ func apiResources() []resource {
 			{name: keyCaseID, usage: "owning Case ID (exactly one of space-id or case-id)", onCreate: true, onUpdate: true},
 			fieldTags,
 		}},
-		{name: "procedures", singular: "procedure", filters: []filter{
+		{name: "procedures", singular: "procedure", hasRelationships: true, filters: []filter{
 			filterSpaceID,
 		}, fields: []field{
 			{name: keyTitle, usage: "Procedure name", onCreate: true, onUpdate: true, required: true},
 			{name: keySpaceID, usage: "owning Space ID", onCreate: true, required: true},
 		}},
-		{name: "agents", singular: "agent", noDelete: true, fields: []field{
+		{name: "agents", singular: "agent", noDelete: true, hasRelationships: true, fields: []field{
 			{name: keyName, usage: "Agent name", onCreate: true, onUpdate: true, required: true},
 			{name: "job_description", usage: "Agent job description", onCreate: true, onUpdate: true},
 			{name: "model", usage: "model the agent uses", onCreate: true, onUpdate: true},
@@ -64,7 +64,7 @@ func apiResources() []resource {
 			{name: keyName, usage: "Secret name", onCreate: true, required: true},
 			{name: "value", usage: "Secret value", onCreate: true, required: true},
 		}},
-		{name: "files", singular: "file", noCreate: true, filters: []filter{
+		{name: "files", singular: "file", noCreate: true, hasRelationships: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,
 			filterSort,
@@ -74,7 +74,7 @@ func apiResources() []resource {
 			fieldCaseID,
 			fieldTags,
 		}},
-		{name: "users", singular: "user", readOnly: true},
+		{name: "users", singular: "user", readOnly: true, hasRelationships: true},
 	}
 }
 

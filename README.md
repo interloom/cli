@@ -136,6 +136,21 @@ Available list filters per resource:
 | `secrets`    | —                                                             |
 | `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
 
+### Relationships
+
+List the resources connected to a Space, Case, Note, Procedure, Agent, File, or
+User. Relationship lists use the same cursor pagination flags as other lists.
+
+```sh
+interloom cases relationships <case-id>
+interloom cases relationships <case-id> --limit 50 --cursor <next_cursor>
+interloom cases relationships <case-id> --all
+```
+
+Each item contains the linked resource `id`, `type`, and `url`. When available,
+it also contains `relationship_type` and `relationship_direction` relative to
+the requested resource.
+
 ### Space triggers
 
 Get or update the triage trigger applied to new cases in a Space. Updates use

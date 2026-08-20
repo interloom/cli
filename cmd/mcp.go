@@ -231,6 +231,18 @@ func (s *mcpService) registerResourceTools(server *mcpsdk.Server) {
 				InputSchema: objectSchema(map[string]any{"id": stringSchema("resource ID")}, "id"),
 			}, s.getResourceHandler(r))
 		}
+		if r.hasRelationships {
+			server.AddTool(&mcpsdk.Tool{
+				Name:        r.name + "_relationships",
+				Description: fmt.Sprintf("List a %s's relationships", r.singular),
+				InputSchema: objectSchema(map[string]any{
+					"id":      stringSchema(r.singular + " ID"),
+					argLimit:  integerSchema("maximum number of relationships to return"),
+					keyCursor: stringSchema("pagination cursor from a previous next_cursor"),
+					argAll:    allSchema(),
+				}, "id"),
+			}, s.relationshipsHandler(r))
+		}
 
 		if r.readOnly {
 			continue
@@ -362,7 +374,7 @@ func (s *mcpService) registerThreadTools(server *mcpsdk.Server) {
 			argLimit:     integerSchema("maximum number of events to return"),
 			keyCursor:    stringSchema("pagination cursor from a previous next_cursor"),
 			keyDirection: stringSchema("sort direction: asc or desc"),
-			argAll:       boolSchema("fetch all pages and aggregate into a single list"),
+			argAll:       allSchema(),
 		}, "id"),
 	}, s.threadEventsHandler())
 
@@ -422,7 +434,7 @@ func (s *mcpService) registerCaseIngestionTools(server *mcpsdk.Server) {
 			"id":      stringSchema("case ingestion ID"),
 			argLimit:  integerSchema("maximum number of failed entries to return"),
 			keyCursor: stringSchema("pagination cursor from a previous next_cursor"),
-			argAll:    boolSchema("fetch all pages and aggregate into a single list"),
+			argAll:    allSchema(),
 		}, "id"),
 	}, s.caseIngestionErrorsHandler())
 }
@@ -439,7 +451,7 @@ func (s *mcpService) listResourceHandler(r resource) mcpsdk.ToolHandler {
 		}
 		all := false
 		if !r.noPaging {
-			all, err = args.bool(argAll)
+			all, err = args.all()
 			if err != nil {
 				return toolErrorResult(err), nil
 			}
@@ -468,6 +480,38 @@ func (s *mcpService) getResourceHandler(r resource) mcpsdk.ToolHandler {
 			return toolErrorResult(err), nil
 		}
 		raw, err := s.client.Get(ctx, r.name, id)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	}
+}
+
+func (s *mcpService) relationshipsHandler(r resource) mcpsdk.ToolHandler {
+	return func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		id, err := args.requiredString("id")
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		query, err := listQueryFromArgs(args, resource{})
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		all, err := args.all()
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		resourcePath := r.name + "/" + url.PathEscape(id) + "/" + commandNameRelationships
+		var raw json.RawMessage
+		if all {
+			raw, err = s.client.ListAll(ctx, resourcePath, query)
+		} else {
+			raw, err = s.client.List(ctx, resourcePath, query)
+		}
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -551,7 +595,7 @@ func (s *mcpService) threadEventsHandler() mcpsdk.ToolHandler {
 			return toolErrorResult(err), nil
 		}
 		resource := "threads/" + url.PathEscape(id) + "/events"
-		all, err := args.bool(argAll)
+		all, err := args.all()
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -755,7 +799,7 @@ func (s *mcpService) caseIngestionErrorsHandler() mcpsdk.ToolHandler {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		all, err := args.bool(argAll)
+		all, err := args.all()
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -1003,14 +1047,14 @@ func (a toolArgs) int(name string) (int, bool, error) {
 	return v, true, nil
 }
 
-func (a toolArgs) bool(name string) (bool, error) {
-	raw, ok := a.raw(name)
+func (a toolArgs) all() (bool, error) {
+	raw, ok := a.raw(argAll)
 	if !ok || isNull(raw) {
 		return false, nil
 	}
 	var v bool
 	if err := json.Unmarshal(raw, &v); err != nil {
-		return false, fmt.Errorf("%s must be a boolean", name)
+		return false, fmt.Errorf("%s must be a boolean", argAll)
 	}
 	return v, nil
 }
@@ -1111,7 +1155,7 @@ func listInputSchema(r resource) map[string]any {
 	if !r.noPaging {
 		props[argLimit] = integerSchema("maximum number of items to return")
 		props[keyCursor] = stringSchema("pagination cursor from a previous next_cursor")
-		props[argAll] = boolSchema("fetch all pages and aggregate into a single list")
+		props[argAll] = allSchema()
 	}
 	for _, f := range r.filters {
 		if f.multi {
@@ -1169,8 +1213,8 @@ func integerSchema(description string) map[string]any {
 	return map[string]any{schemaKeyType: "integer", schemaKeyDesc: description}
 }
 
-func boolSchema(description string) map[string]any {
-	return map[string]any{schemaKeyType: "boolean", schemaKeyDesc: description}
+func allSchema() map[string]any {
+	return map[string]any{schemaKeyType: "boolean", schemaKeyDesc: "fetch all pages and aggregate into a single list"}
 }
 
 func stringArraySchema(description string) map[string]any {

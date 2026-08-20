@@ -18,6 +18,7 @@ import (
 
 const (
 	testAgentID                = "agent-1"
+	testCaseID                 = "case-1"
 	testSpaceID                = "space-1"
 	testToolID                 = "tool-1"
 	testToolID2                = "tool-2"
@@ -99,14 +100,71 @@ func TestMCPToolRegistration(t *testing.T) {
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
+		"spaces_relationships", "cases_relationships", "notes_relationships", "procedures_relationships",
+		"agents_relationships", "files_relationships", "users_relationships",
 	} {
 		if !names[name] {
 			t.Fatalf("tool %q not registered", name)
 		}
 	}
-	for _, name := range []string{"agents_delete", "files_create", "models_get", "secrets_get", "secrets_update", "tools_delete", "users_create", "users_delete"} {
+	for _, name := range []string{
+		"agents_delete", "files_create", "models_get", "secrets_get", "secrets_update",
+		"tools_delete", "users_create", "users_delete", "models_relationships",
+		"secrets_relationships", "tools_relationships",
+	} {
 		if names[name] {
 			t.Fatalf("unsupported tool %q should not be registered", name)
+		}
+	}
+}
+
+func TestMCPRelationshipsAllFollowsPagination(t *testing.T) {
+	requestCount := 0
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/cases/"+testCaseID+"/relationships"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get(argLimit), "1"; got != want {
+			t.Errorf("limit = %q, want %q", got, want)
+		}
+		switch cursor := r.URL.Query().Get(keyCursor); cursor {
+		case "":
+			_, _ = w.Write([]byte(`{"data":[{"id":"linked-1","type":"SPACE","url":"/spaces/linked-1"}],"has_more":true,"next_cursor":"page-2"}`))
+		case "page-2":
+			_, _ = w.Write([]byte(`{"data":[{"id":"linked-2","type":"USER","url":"/users/linked-2"}],"has_more":false}`))
+		default:
+			t.Errorf("unexpected cursor %q", cursor)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer apiServer.Close()
+
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "cases_relationships",
+		Arguments: map[string]any{
+			"id":     testCaseID,
+			argLimit: 1,
+			argAll:   true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
+	}
+	if requestCount != 2 {
+		t.Fatalf("request count = %d, want 2", requestCount)
+	}
+	text := toolResultText(t, result)
+	for _, id := range []string{"linked-1", "linked-2"} {
+		if !strings.Contains(text, id) {
+			t.Fatalf("tool result = %s, want %s", text, id)
 		}
 	}
 }
@@ -119,7 +177,7 @@ func TestMCPToolUsesResolvedConfigToken(t *testing.T) {
 
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assertCaseListRequest(t, r)
-		_, _ = w.Write([]byte(`{"data":[{"id":"case-1"}],"has_more":false}`))
+		_, _ = fmt.Fprintf(w, `{"data":[{"id":%q}],"has_more":false}`, testCaseID)
 	}))
 	defer apiServer.Close()
 
@@ -149,7 +207,7 @@ func TestMCPToolUsesResolvedConfigToken(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %s", toolResultText(t, result))
 	}
-	if got := toolResultText(t, result); !strings.Contains(got, "case-1") {
+	if got := toolResultText(t, result); !strings.Contains(got, testCaseID) {
 		t.Fatalf("tool result = %s, want case id", got)
 	}
 }

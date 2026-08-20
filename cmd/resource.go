@@ -20,14 +20,15 @@ const (
 	resourceSpaces         = "spaces"
 	resourceTools          = "tools"
 
-	commandNameDelete  = "delete"
-	commandNameGet     = "get"
-	commandNameTrigger = "trigger"
-	commandNameUpdate  = "update"
-	commandUseList     = "list"
-	commandUseGet      = commandNameGet + " <id>"
-	commandUseCreate   = "create"
-	argAll             = "all"
+	commandNameDelete        = "delete"
+	commandNameGet           = "get"
+	commandNameRelationships = "relationships"
+	commandNameTrigger       = "trigger"
+	commandNameUpdate        = "update"
+	commandUseList           = "list"
+	commandUseGet            = commandNameGet + " <id>"
+	commandUseCreate         = "create"
+	argAll                   = "all"
 
 	keyName            = "name"
 	keyTitle           = "title"
@@ -104,16 +105,17 @@ var (
 // (list/get/create/update/delete); flags below handle API resources that omit a
 // standard verb or cursor pagination.
 type resource struct {
-	name     string   // URL segment and command name, e.g. "cases"
-	singular string   // e.g. "case", used in help text
-	readOnly bool     // only list + get (e.g. users)
-	noGet    bool     // no item GET endpoint (e.g. models)
-	noCreate bool     // no generic create (e.g. files, which uses upload)
-	noUpdate bool     // no PATCH endpoint (e.g. secrets)
-	noDelete bool     // no DELETE endpoint (e.g. agents)
-	noPaging bool     // collection list is not cursor-paginated
-	filters  []filter // list query filters
-	fields   []field  // create/update body fields
+	name             string   // URL segment and command name, e.g. "cases"
+	singular         string   // e.g. "case", used in help text
+	readOnly         bool     // only list + get (e.g. users)
+	noGet            bool     // no item GET endpoint (e.g. models)
+	noCreate         bool     // no generic create (e.g. files, which uses upload)
+	noUpdate         bool     // no PATCH endpoint (e.g. secrets)
+	noDelete         bool     // no DELETE endpoint (e.g. agents)
+	noPaging         bool     // collection list is not cursor-paginated
+	hasRelationships bool     // item has a paginated relationships sub-resource
+	filters          []filter // list query filters
+	fields           []field  // create/update body fields
 }
 
 func newResourceCmd(r resource) *cobra.Command {
@@ -125,6 +127,9 @@ func newResourceCmd(r resource) *cobra.Command {
 	cmd.AddCommand(r.listCmd())
 	if !r.noGet {
 		cmd.AddCommand(r.getCmd())
+	}
+	if r.hasRelationships {
+		cmd.AddCommand(newRelationshipsCmd(r))
 	}
 	if r.readOnly {
 		return cmd

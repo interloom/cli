@@ -120,7 +120,7 @@ func TestResourceFilterFlagsUseKebabCaseAndQuerySnakeCase(t *testing.T) {
 	if err := cmd.Flags().Set("space-id", "space-1"); err != nil {
 		t.Fatalf("set space-id: %v", err)
 	}
-	if err := cmd.Flags().Set("parent-case-id", "case-1"); err != nil {
+	if err := cmd.Flags().Set("parent-case-id", testCaseID); err != nil {
 		t.Fatalf("set parent-case-id: %v", err)
 	}
 	if err := cmd.Flags().Set("assignee-id", "user-1"); err != nil {
@@ -134,7 +134,7 @@ func TestResourceFilterFlagsUseKebabCaseAndQuerySnakeCase(t *testing.T) {
 	if got := q.Get("space_id"); got != testSpaceID {
 		t.Fatalf("space_id query = %q", got)
 	}
-	if got := q.Get("parent_case_id"); got != "case-1" {
+	if got := q.Get("parent_case_id"); got != testCaseID {
 		t.Fatalf("parent_case_id query = %q", got)
 	}
 	if got := q.Get("assignee_id"); got != "user-1" {

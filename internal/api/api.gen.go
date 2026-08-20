@@ -154,6 +154,57 @@ func (e ReasoningEffort) Valid() bool {
 	}
 }
 
+// Defines values for RelationshipDirection.
+const (
+	INCOMING RelationshipDirection = "INCOMING"
+	OUTGOING RelationshipDirection = "OUTGOING"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipDirection enum.
+func (e RelationshipDirection) Valid() bool {
+	switch e {
+	case INCOMING:
+		return true
+	case OUTGOING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RelationshipType.
+const (
+	AUTOAPPLIEDPROCEDURE     RelationshipType = "AUTO_APPLIED_PROCEDURE"
+	AUTOAPPLIEDREFERENCETASK RelationshipType = "AUTO_APPLIED_REFERENCE_TASK"
+	AUTOASSIGNEE             RelationshipType = "AUTO_ASSIGNEE"
+	MANAGEROF                RelationshipType = "MANAGER_OF"
+	MEMBEROF                 RelationshipType = "MEMBER_OF"
+	OWNS                     RelationshipType = "OWNS"
+	REFERENCES               RelationshipType = "REFERENCES"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipType enum.
+func (e RelationshipType) Valid() bool {
+	switch e {
+	case AUTOAPPLIEDPROCEDURE:
+		return true
+	case AUTOAPPLIEDREFERENCETASK:
+		return true
+	case AUTOASSIGNEE:
+		return true
+	case MANAGEROF:
+		return true
+	case MEMBEROF:
+		return true
+	case OWNS:
+		return true
+	case REFERENCES:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResourceType.
 const (
 	AGENT     ResourceType = "AGENT"
@@ -927,6 +978,18 @@ type ListProceduresResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// ListRelationshipsResponse defines model for ListRelationshipsResponse.
+type ListRelationshipsResponse struct {
+	// Data Items in the current page.
+	Data []RelationshipLink `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
 // ListSecretsResponse defines model for ListSecretsResponse.
 type ListSecretsResponse struct {
 	// Data Items in the current page.
@@ -1201,6 +1264,24 @@ type ReferenceTaskSpaceTrigger struct {
 	ReferenceCaseId openapi_types.UUID `json:"reference_case_id"`
 	TriggerType     string             `json:"trigger_type"`
 }
+
+// RelationshipDirection defines model for RelationshipDirection.
+type RelationshipDirection string
+
+// RelationshipLink defines model for RelationshipLink.
+type RelationshipLink struct {
+	// Id Unique identifier for the linked object.
+	Id                    openapi_types.UUID     `json:"id"`
+	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
+	RelationshipType      *RelationshipType      `json:"relationship_type,omitempty"`
+	Type                  ResourceType           `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
+}
+
+// RelationshipType defines model for RelationshipType.
+type RelationshipType string
 
 // ReplaceAgentToolsRequest defines model for ReplaceAgentToolsRequest.
 type ReplaceAgentToolsRequest struct {
@@ -1559,6 +1640,13 @@ type UpdateAgentParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListAgentRelationshipsParams defines parameters for ListAgentRelationships.
+type ListAgentRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListAgentToolsParams defines parameters for ListAgentTools.
 type ListAgentToolsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -1648,6 +1736,13 @@ type UpdateCaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListCaseRelationshipsParams defines parameters for ListCaseRelationships.
+type ListCaseRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
 	// Limit Maximum number of files to return.
@@ -1693,6 +1788,13 @@ type GetFileParams struct {
 
 // UpdateFileParams defines parameters for UpdateFile.
 type UpdateFileParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListFileRelationshipsParams defines parameters for ListFileRelationships.
+type ListFileRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -1752,6 +1854,13 @@ type UpdateNoteParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListNoteRelationshipsParams defines parameters for ListNoteRelationships.
+type ListNoteRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListProceduresParams defines parameters for ListProcedures.
 type ListProceduresParams struct {
 	// SpaceId Return procedures owned by this Space.
@@ -1782,6 +1891,13 @@ type GetProcedureParams struct {
 
 // UpdateProcedureParams defines parameters for UpdateProcedure.
 type UpdateProcedureParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListProcedureRelationshipsParams defines parameters for ListProcedureRelationships.
+type ListProcedureRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -1852,6 +1968,13 @@ type RemoveSpaceMemberParams struct {
 
 // UpsertSpaceMemberParams defines parameters for UpsertSpaceMember.
 type UpsertSpaceMemberParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListSpaceRelationshipsParams defines parameters for ListSpaceRelationships.
+type ListSpaceRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -1948,6 +2071,13 @@ type GetCurrentUserParams struct {
 
 // GetUserParams defines parameters for GetUser.
 type GetUserParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListUserRelationshipsParams defines parameters for ListUserRelationships.
+type ListUserRelationshipsParams struct {
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
 
