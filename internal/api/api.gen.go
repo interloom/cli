@@ -106,6 +106,54 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
+// Defines values for DatabaseColumnType.
+const (
+	Boolean   DatabaseColumnType = "boolean"
+	Decimal   DatabaseColumnType = "decimal"
+	Integer   DatabaseColumnType = "integer"
+	String    DatabaseColumnType = "string"
+	Timestamp DatabaseColumnType = "timestamp"
+	Uuid      DatabaseColumnType = "uuid"
+)
+
+// Valid indicates whether the value is a known member of the DatabaseColumnType enum.
+func (e DatabaseColumnType) Valid() bool {
+	switch e {
+	case Boolean:
+		return true
+	case Decimal:
+		return true
+	case Integer:
+		return true
+	case String:
+		return true
+	case Timestamp:
+		return true
+	case Uuid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DatabaseSortDirection.
+const (
+	DatabaseSortDirectionAsc  DatabaseSortDirection = "asc"
+	DatabaseSortDirectionDesc DatabaseSortDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the DatabaseSortDirection enum.
+func (e DatabaseSortDirection) Valid() bool {
+	switch e {
+	case DatabaseSortDirectionAsc:
+		return true
+	case DatabaseSortDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelDeploymentLocation.
 const (
 	EUROPE       ModelDeploymentLocation = "EUROPE"
@@ -438,16 +486,16 @@ func (e ListNotesParamsDirection) Valid() bool {
 
 // Defines values for ListThreadEventsParamsDirection.
 const (
-	ListThreadEventsParamsDirectionAsc  ListThreadEventsParamsDirection = "asc"
-	ListThreadEventsParamsDirectionDesc ListThreadEventsParamsDirection = "desc"
+	Asc  ListThreadEventsParamsDirection = "asc"
+	Desc ListThreadEventsParamsDirection = "desc"
 )
 
 // Valid indicates whether the value is a known member of the ListThreadEventsParamsDirection enum.
 func (e ListThreadEventsParamsDirection) Valid() bool {
 	switch e {
-	case ListThreadEventsParamsDirectionAsc:
+	case Asc:
 		return true
-	case ListThreadEventsParamsDirectionDesc:
+	case Desc:
 		return true
 	default:
 		return false
@@ -822,6 +870,117 @@ type CurrentUser struct {
 
 	// UpdatedAt Timestamp when the user was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// DatabaseColumn defines model for DatabaseColumn.
+type DatabaseColumn struct {
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	Nullable    *bool              `json:"nullable,omitempty"`
+	Type        DatabaseColumnType `json:"type"`
+}
+
+// DatabaseColumnType defines model for DatabaseColumnType.
+type DatabaseColumnType string
+
+// DatabaseDescription defines model for DatabaseDescription.
+type DatabaseDescription struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Stable Database UUID.
+	Id openapi_types.UUID `json:"id"`
+
+	// Key Stable key unique within the owning space.
+	Key string `json:"key"`
+
+	// Revision Current Database revision.
+	Revision int `json:"revision"`
+
+	// RowCount Exact current row count; no rows are loaded.
+	RowCount  int            `json:"row_count"`
+	Schema    DatabaseSchema `json:"schema"`
+	Space     DatabaseSpace  `json:"space"`
+	Title     string         `json:"title"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
+// DatabaseEqualityFilter defines model for DatabaseEqualityFilter.
+type DatabaseEqualityFilter struct {
+	// Column Declared column to compare for exact equality.
+	Column string `json:"column"`
+
+	// Value Typed equality value: JSON integer or boolean for those column types; string for string, decimal, timestamp, and UUID columns. Null filters are unsupported.
+	Value *DatabaseEqualityFilter_Value `json:"value"`
+}
+
+// DatabaseEqualityFilterValue0 defines model for .
+type DatabaseEqualityFilterValue0 = string
+
+// DatabaseEqualityFilterValue1 defines model for .
+type DatabaseEqualityFilterValue1 = int
+
+// DatabaseEqualityFilterValue2 defines model for .
+type DatabaseEqualityFilterValue2 = float32
+
+// DatabaseEqualityFilterValue3 defines model for .
+type DatabaseEqualityFilterValue3 = bool
+
+// DatabaseEqualityFilter_Value Typed equality value: JSON integer or boolean for those column types; string for string, decimal, timestamp, and UUID columns. Null filters are unsupported.
+type DatabaseEqualityFilter_Value struct {
+	union json.RawMessage
+}
+
+// DatabaseIdentity defines model for DatabaseIdentity.
+type DatabaseIdentity struct {
+	Id      openapi_types.UUID `json:"id"`
+	Key     string             `json:"key"`
+	SpaceId openapi_types.UUID `json:"space_id"`
+	Title   string             `json:"title"`
+}
+
+// DatabaseRowValue defines model for DatabaseRowValue.
+type DatabaseRowValue struct {
+	union json.RawMessage
+}
+
+// DatabaseRowValue0 defines model for .
+type DatabaseRowValue0 = string
+
+// DatabaseRowValue1 defines model for .
+type DatabaseRowValue1 = int
+
+// DatabaseRowValue2 defines model for .
+type DatabaseRowValue2 = bool
+
+// DatabaseSchema defines model for DatabaseSchema.
+type DatabaseSchema struct {
+	Columns      []DatabaseColumn `json:"columns"`
+	RowKeyColumn string           `json:"row_key_column"`
+}
+
+// DatabaseSort defines model for DatabaseSort.
+type DatabaseSort struct {
+	// Column Declared scalar column to sort by.
+	Column string `json:"column"`
+
+	// Direction Sort direction. Nulls sort last; ties use ascending row key.
+	Direction DatabaseSortDirection `json:"direction"`
+}
+
+// DatabaseSortDirection Sort direction. Nulls sort last; ties use ascending row key.
+type DatabaseSortDirection string
+
+// DatabaseSpace defines model for DatabaseSpace.
+type DatabaseSpace struct {
+	// Id Unique identifier for the linked object.
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Canonical name of the owning space.
+	Name string `json:"name"`
+	Type string `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
 }
 
 // DisabledSpaceTrigger defines model for DisabledSpaceTrigger.
@@ -1253,6 +1412,41 @@ type ProcedureSummary struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// QueryDatabaseRequest defines model for QueryDatabaseRequest.
+type QueryDatabaseRequest struct {
+	// Cursor Opaque next_cursor from the previous page of the same query. Page size may change. Any Database revision change requires a restart.
+	Cursor *string `json:"cursor,omitempty"`
+
+	// Filters Up to five exact equality filters, combined with AND.
+	Filters *[]DatabaseEqualityFilter `json:"filters,omitempty"`
+
+	// PageSize Maximum number of rows to return in this page.
+	PageSize int `json:"page_size"`
+
+	// SelectedColumns Unique declared columns to return, in the requested order.
+	SelectedColumns []string      `json:"selected_columns"`
+	Sort            *DatabaseSort `json:"sort,omitempty"`
+}
+
+// QueryDatabaseResponse defines model for QueryDatabaseResponse.
+type QueryDatabaseResponse struct {
+	// Data Items in the current page.
+	Data     []map[string]*DatabaseRowValue `json:"data"`
+	Database DatabaseIdentity               `json:"database"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// ObservedRevision Database revision observed by this query.
+	ObservedRevision int `json:"observed_revision"`
+
+	// ReturnedCount Number of rows returned in data.
+	ReturnedCount int `json:"returned_count"`
 }
 
 // ReasoningEffort defines model for ReasoningEffort.
@@ -1743,6 +1937,16 @@ type ListCaseRelationshipsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// DescribeDatabaseParams defines parameters for DescribeDatabase.
+type DescribeDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// QueryDatabaseParams defines parameters for QueryDatabase.
+type QueryDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
 	// Limit Maximum number of files to return.
@@ -2099,6 +2303,9 @@ type CreateCaseJSONRequestBody = CreateCaseRequest
 // UpdateCaseJSONRequestBody defines body for UpdateCase for application/json ContentType.
 type UpdateCaseJSONRequestBody = UpdateCaseRequest
 
+// QueryDatabaseJSONRequestBody defines body for QueryDatabase for application/json ContentType.
+type QueryDatabaseJSONRequestBody = QueryDatabaseRequest
+
 // CreateFileMultipartRequestBody defines body for CreateFile for multipart/form-data ContentType.
 type CreateFileMultipartRequestBody = CreateFileRequest
 
@@ -2140,6 +2347,208 @@ type CreateToolJSONRequestBody = CreateToolRequest
 
 // UpdateToolJSONRequestBody defines body for UpdateTool for application/json ContentType.
 type UpdateToolJSONRequestBody = UpdateToolRequest
+
+// AsDatabaseEqualityFilterValue0 returns the union data inside the DatabaseEqualityFilter_Value as a DatabaseEqualityFilterValue0
+func (t DatabaseEqualityFilter_Value) AsDatabaseEqualityFilterValue0() (DatabaseEqualityFilterValue0, error) {
+	var body DatabaseEqualityFilterValue0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseEqualityFilterValue0 overwrites any union data inside the DatabaseEqualityFilter_Value as the provided DatabaseEqualityFilterValue0
+func (t *DatabaseEqualityFilter_Value) FromDatabaseEqualityFilterValue0(v DatabaseEqualityFilterValue0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseEqualityFilterValue0 performs a merge with any union data inside the DatabaseEqualityFilter_Value, using the provided DatabaseEqualityFilterValue0
+func (t *DatabaseEqualityFilter_Value) MergeDatabaseEqualityFilterValue0(v DatabaseEqualityFilterValue0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDatabaseEqualityFilterValue1 returns the union data inside the DatabaseEqualityFilter_Value as a DatabaseEqualityFilterValue1
+func (t DatabaseEqualityFilter_Value) AsDatabaseEqualityFilterValue1() (DatabaseEqualityFilterValue1, error) {
+	var body DatabaseEqualityFilterValue1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseEqualityFilterValue1 overwrites any union data inside the DatabaseEqualityFilter_Value as the provided DatabaseEqualityFilterValue1
+func (t *DatabaseEqualityFilter_Value) FromDatabaseEqualityFilterValue1(v DatabaseEqualityFilterValue1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseEqualityFilterValue1 performs a merge with any union data inside the DatabaseEqualityFilter_Value, using the provided DatabaseEqualityFilterValue1
+func (t *DatabaseEqualityFilter_Value) MergeDatabaseEqualityFilterValue1(v DatabaseEqualityFilterValue1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDatabaseEqualityFilterValue2 returns the union data inside the DatabaseEqualityFilter_Value as a DatabaseEqualityFilterValue2
+func (t DatabaseEqualityFilter_Value) AsDatabaseEqualityFilterValue2() (DatabaseEqualityFilterValue2, error) {
+	var body DatabaseEqualityFilterValue2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseEqualityFilterValue2 overwrites any union data inside the DatabaseEqualityFilter_Value as the provided DatabaseEqualityFilterValue2
+func (t *DatabaseEqualityFilter_Value) FromDatabaseEqualityFilterValue2(v DatabaseEqualityFilterValue2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseEqualityFilterValue2 performs a merge with any union data inside the DatabaseEqualityFilter_Value, using the provided DatabaseEqualityFilterValue2
+func (t *DatabaseEqualityFilter_Value) MergeDatabaseEqualityFilterValue2(v DatabaseEqualityFilterValue2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDatabaseEqualityFilterValue3 returns the union data inside the DatabaseEqualityFilter_Value as a DatabaseEqualityFilterValue3
+func (t DatabaseEqualityFilter_Value) AsDatabaseEqualityFilterValue3() (DatabaseEqualityFilterValue3, error) {
+	var body DatabaseEqualityFilterValue3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseEqualityFilterValue3 overwrites any union data inside the DatabaseEqualityFilter_Value as the provided DatabaseEqualityFilterValue3
+func (t *DatabaseEqualityFilter_Value) FromDatabaseEqualityFilterValue3(v DatabaseEqualityFilterValue3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseEqualityFilterValue3 performs a merge with any union data inside the DatabaseEqualityFilter_Value, using the provided DatabaseEqualityFilterValue3
+func (t *DatabaseEqualityFilter_Value) MergeDatabaseEqualityFilterValue3(v DatabaseEqualityFilterValue3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t DatabaseEqualityFilter_Value) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *DatabaseEqualityFilter_Value) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsDatabaseRowValue0 returns the union data inside the DatabaseRowValue as a DatabaseRowValue0
+func (t DatabaseRowValue) AsDatabaseRowValue0() (DatabaseRowValue0, error) {
+	var body DatabaseRowValue0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseRowValue0 overwrites any union data inside the DatabaseRowValue as the provided DatabaseRowValue0
+func (t *DatabaseRowValue) FromDatabaseRowValue0(v DatabaseRowValue0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseRowValue0 performs a merge with any union data inside the DatabaseRowValue, using the provided DatabaseRowValue0
+func (t *DatabaseRowValue) MergeDatabaseRowValue0(v DatabaseRowValue0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDatabaseRowValue1 returns the union data inside the DatabaseRowValue as a DatabaseRowValue1
+func (t DatabaseRowValue) AsDatabaseRowValue1() (DatabaseRowValue1, error) {
+	var body DatabaseRowValue1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseRowValue1 overwrites any union data inside the DatabaseRowValue as the provided DatabaseRowValue1
+func (t *DatabaseRowValue) FromDatabaseRowValue1(v DatabaseRowValue1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseRowValue1 performs a merge with any union data inside the DatabaseRowValue, using the provided DatabaseRowValue1
+func (t *DatabaseRowValue) MergeDatabaseRowValue1(v DatabaseRowValue1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDatabaseRowValue2 returns the union data inside the DatabaseRowValue as a DatabaseRowValue2
+func (t DatabaseRowValue) AsDatabaseRowValue2() (DatabaseRowValue2, error) {
+	var body DatabaseRowValue2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDatabaseRowValue2 overwrites any union data inside the DatabaseRowValue as the provided DatabaseRowValue2
+func (t *DatabaseRowValue) FromDatabaseRowValue2(v DatabaseRowValue2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDatabaseRowValue2 performs a merge with any union data inside the DatabaseRowValue, using the provided DatabaseRowValue2
+func (t *DatabaseRowValue) MergeDatabaseRowValue2(v DatabaseRowValue2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t DatabaseRowValue) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *DatabaseRowValue) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsMessagePayload returns the union data inside the ThreadEvent_Payloads_Item as a MessagePayload
 func (t ThreadEvent_Payloads_Item) AsMessagePayload() (MessagePayload, error) {

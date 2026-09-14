@@ -108,6 +108,8 @@ commands.
 returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
+`databases` describes database schemas and queries bounded pages of selected
+columns. It does not expose a collection list command.
 
 ### Listing and pagination
 
@@ -173,6 +175,20 @@ member. Membership roles accepted by writes are `member`, `manager`, and
 interloom spaces members list <space-id>
 interloom spaces members add <space-id> <user-id> --role viewer
 interloom spaces members remove <space-id> <user-id>
+```
+
+### Databases
+
+Describe a database without loading rows, or query up to 100 rows from selected
+columns. Query requests accept the JSON body through `--data`, `--file`, or
+stdin. Equality filters and one scalar sort are optional. Pass `next_cursor`
+back as `cursor` in the next request; restart without a cursor if the database
+revision changes.
+
+```sh
+interloom databases get <database-id>
+interloom databases query <database-id> -d '{"selected_columns":["row_id","status"],"page_size":100}'
+interloom databases query <database-id> -f query.json
 ```
 
 ## Files

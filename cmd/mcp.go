@@ -29,6 +29,8 @@ const (
 	toolCaseIngestionsCreate  = "case_ingestions_create"
 	toolCaseIngestionsGet     = "case_ingestions_get"
 	toolCaseIngestionsErrors  = "case_ingestions_errors"
+	toolDatabasesGet          = "databases_get"
+	toolDatabasesQuery        = "databases_query"
 	toolAgentToolsList        = "agents_tools_list"
 	toolAgentToolsReplace     = "agents_tools_replace"
 	toolFilesDownload         = "files_download"
@@ -213,6 +215,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerThreadTools(server)
 	svc.registerFileTools(server)
 	svc.registerCaseIngestionTools(server)
+	svc.registerDatabaseTools(server)
 	return server
 }
 
@@ -437,6 +440,61 @@ func (s *mcpService) registerCaseIngestionTools(server *mcpsdk.Server) {
 			argAll:    allSchema(),
 		}, "id"),
 	}, s.caseIngestionErrorsHandler())
+}
+
+func (s *mcpService) registerDatabaseTools(server *mcpsdk.Server) {
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolDatabasesGet,
+		Description: "Describe a database by ID without loading rows",
+		InputSchema: objectSchema(map[string]any{
+			keyDatabaseID: stringSchema("database ID"),
+		}, keyDatabaseID),
+	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		databaseID, err := args.requiredString(keyDatabaseID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		raw, err := s.client.Get(ctx, resourceDatabases, databaseID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	})
+
+	server.AddTool(&mcpsdk.Tool{
+		Name:        toolDatabasesQuery,
+		Description: "Query a bounded page of database rows",
+		InputSchema: objectSchema(map[string]any{
+			keyDatabaseID: stringSchema("database ID"),
+			keyData:       dataSchema("QueryDatabaseRequest JSON body"),
+		}, keyDatabaseID, keyData),
+	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		databaseID, err := args.requiredString(keyDatabaseID)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		body, ok, err := args.object(keyData)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		if !ok {
+			return toolErrorResult(fmt.Errorf("missing required argument %q", keyData)), nil
+		}
+		resource := resourceDatabases + "/" + url.PathEscape(databaseID) + "/query"
+		raw, err := s.client.Create(ctx, resource, body)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	})
 }
 
 func (s *mcpService) listResourceHandler(r resource) mcpsdk.ToolHandler {

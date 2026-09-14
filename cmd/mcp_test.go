@@ -98,6 +98,7 @@ func TestMCPToolRegistration(t *testing.T) {
 		"tools_list", "tools_get", "tools_create", "tools_update",
 		"secrets_list", "secrets_create", "secrets_delete", "files_upload", toolFilesDownload,
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
+		toolDatabasesGet, toolDatabasesQuery,
 		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
 		"spaces_relationships", "cases_relationships", "notes_relationships", "procedures_relationships",
@@ -115,6 +116,44 @@ func TestMCPToolRegistration(t *testing.T) {
 		if names[name] {
 			t.Fatalf("unsupported tool %q should not be registered", name)
 		}
+	}
+}
+
+func TestMCPDatabasesQuerySendsJSONBody(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/databases/"+testDatabaseID+"/query"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if got, want := body["page_size"], float64(23); got != want {
+			t.Errorf("page_size = %v, want %v", got, want)
+		}
+		_, _ = w.Write([]byte(`{"data":[],"has_more":false,"database":{"id":"database-1"},"observed_revision":1,"returned_count":0}`))
+	}))
+	defer apiServer.Close()
+
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: toolDatabasesQuery,
+		Arguments: map[string]any{
+			keyDatabaseID: testDatabaseID,
+			keyData: map[string]any{
+				"selected_columns": []string{"row_id"},
+				"page_size":        23,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
 	}
 }
 
