@@ -31,6 +31,7 @@ const (
 	toolCaseIngestionsErrors  = "case_ingestions_errors"
 	toolDatabasesGet          = "databases_get"
 	toolDatabasesQuery        = "databases_query"
+	toolDatabasesAggregate    = "databases_aggregate"
 	toolAgentToolsList        = "agents_tools_list"
 	toolAgentToolsReplace     = "agents_tools_replace"
 	toolFilesDownload         = "files_download"
@@ -465,12 +466,25 @@ func (s *mcpService) registerDatabaseTools(server *mcpsdk.Server) {
 		return toolJSONResult(raw), nil
 	})
 
+	s.registerDatabaseActionTool(server, toolDatabasesQuery,
+		"Query a bounded page of database rows", "QueryDatabaseRequest", "query")
+	s.registerDatabaseActionTool(server, toolDatabasesAggregate,
+		"Calculate aggregate values for database rows", "AggregateDatabaseRequest", "aggregate")
+}
+
+func (s *mcpService) registerDatabaseActionTool(
+	server *mcpsdk.Server,
+	name string,
+	description string,
+	requestSchema string,
+	action string,
+) {
 	server.AddTool(&mcpsdk.Tool{
-		Name:        toolDatabasesQuery,
-		Description: "Query a bounded page of database rows",
+		Name:        name,
+		Description: description,
 		InputSchema: objectSchema(map[string]any{
 			keyDatabaseID: stringSchema("database ID"),
-			keyData:       dataSchema("QueryDatabaseRequest JSON body"),
+			keyData:       dataSchema(requestSchema + " JSON body"),
 		}, keyDatabaseID, keyData),
 	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
 		args, err := parseToolArgs(req)
@@ -481,14 +495,14 @@ func (s *mcpService) registerDatabaseTools(server *mcpsdk.Server) {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		body, ok, err := args.object(keyData)
+		body, ok, err := args.object()
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
 		if !ok {
 			return toolErrorResult(fmt.Errorf("missing required argument %q", keyData)), nil
 		}
-		resource := resourceDatabases + "/" + url.PathEscape(databaseID) + "/query"
+		resource := resourceDatabases + "/" + url.PathEscape(databaseID) + "/" + action
 		raw, err := s.client.Create(ctx, resource, body)
 		if err != nil {
 			return toolErrorResult(err), nil
@@ -702,7 +716,7 @@ func threadMessageBodyFromArgs(args toolArgs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, hasData, err := args.object(keyData)
+	data, hasData, err := args.object()
 	if err != nil {
 		return nil, err
 	}
@@ -963,7 +977,7 @@ func addFilterQueryArg(q url.Values, args toolArgs, f filter) error {
 }
 
 func bodyFromArgs(args toolArgs, r resource, create bool) ([]byte, error) {
-	data, hasData, err := args.object(keyData)
+	data, hasData, err := args.object()
 	if err != nil {
 		return nil, err
 	}
@@ -1133,17 +1147,17 @@ func (a toolArgs) stringSlice(name string) ([]string, bool, error) {
 	return splitStringSlice(single), true, nil
 }
 
-func (a toolArgs) object(name string) ([]byte, bool, error) {
-	raw, ok := a.raw(name)
+func (a toolArgs) object() ([]byte, bool, error) {
+	raw, ok := a.raw(keyData)
 	if !ok || isNull(raw) {
 		return nil, false, nil
 	}
 	if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("{")) {
-		return nil, true, fmt.Errorf("%s must be a JSON object", name)
+		return nil, true, fmt.Errorf("%s must be a JSON object", keyData)
 	}
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &obj); err != nil {
-		return nil, true, fmt.Errorf("%s must be a JSON object: %w", name, err)
+		return nil, true, fmt.Errorf("%s must be a JSON object: %w", keyData, err)
 	}
 	return raw, true, nil
 }

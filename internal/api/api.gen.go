@@ -106,6 +106,33 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
+// Defines values for DatabaseAggregateExpressionFunction.
+const (
+	Avg   DatabaseAggregateExpressionFunction = "avg"
+	Count DatabaseAggregateExpressionFunction = "count"
+	Max   DatabaseAggregateExpressionFunction = "max"
+	Min   DatabaseAggregateExpressionFunction = "min"
+	Sum   DatabaseAggregateExpressionFunction = "sum"
+)
+
+// Valid indicates whether the value is a known member of the DatabaseAggregateExpressionFunction enum.
+func (e DatabaseAggregateExpressionFunction) Valid() bool {
+	switch e {
+	case Avg:
+		return true
+	case Count:
+		return true
+	case Max:
+		return true
+	case Min:
+		return true
+	case Sum:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DatabaseColumnType.
 const (
 	Boolean   DatabaseColumnType = "boolean"
@@ -572,6 +599,26 @@ type AgentToolLink struct {
 // AgentToolLinkType Whether the assigned tool is custom or built into Interloom.
 type AgentToolLinkType string
 
+// AggregateDatabaseRequest defines model for AggregateDatabaseRequest.
+type AggregateDatabaseRequest struct {
+	// Expressions Up to ten uniquely named ungrouped aggregate expressions.
+	Expressions []DatabaseAggregateExpression `json:"expressions"`
+
+	// Filters Up to five exact equality filters, combined with AND.
+	Filters *[]DatabaseEqualityFilter `json:"filters,omitempty"`
+}
+
+// AggregateDatabaseResponse defines model for AggregateDatabaseResponse.
+type AggregateDatabaseResponse struct {
+	Database DatabaseIdentity `json:"database"`
+
+	// ObservedRevision Database revision observed by the aggregate statement.
+	ObservedRevision int `json:"observed_revision"`
+
+	// Values Scalar results keyed by expression name. Decimal results are canonical strings.
+	Values map[string]*DatabaseRowValue `json:"values"`
+}
+
 // ApplyProcedureSpaceTrigger defines model for ApplyProcedureSpaceTrigger.
 type ApplyProcedureSpaceTrigger struct {
 	// ProcedureId ID of the procedure applied to new cases in the space.
@@ -871,6 +918,19 @@ type CurrentUser struct {
 	// UpdatedAt Timestamp when the user was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// DatabaseAggregateExpression defines model for DatabaseAggregateExpression.
+type DatabaseAggregateExpression struct {
+	// Column Declared column to aggregate. Only count may omit the column or use null to count matching rows.
+	Column   *string                             `json:"column,omitempty"`
+	Function DatabaseAggregateExpressionFunction `json:"function"`
+
+	// Name Unique name for this aggregate result.
+	Name string `json:"name"`
+}
+
+// DatabaseAggregateExpressionFunction defines model for DatabaseAggregateExpression.Function.
+type DatabaseAggregateExpressionFunction string
 
 // DatabaseColumn defines model for DatabaseColumn.
 type DatabaseColumn struct {
@@ -1942,6 +2002,11 @@ type DescribeDatabaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// AggregateDatabaseParams defines parameters for AggregateDatabase.
+type AggregateDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // QueryDatabaseParams defines parameters for QueryDatabase.
 type QueryDatabaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -2302,6 +2367,9 @@ type CreateCaseJSONRequestBody = CreateCaseRequest
 
 // UpdateCaseJSONRequestBody defines body for UpdateCase for application/json ContentType.
 type UpdateCaseJSONRequestBody = UpdateCaseRequest
+
+// AggregateDatabaseJSONRequestBody defines body for AggregateDatabase for application/json ContentType.
+type AggregateDatabaseJSONRequestBody = AggregateDatabaseRequest
 
 // QueryDatabaseJSONRequestBody defines body for QueryDatabase for application/json ContentType.
 type QueryDatabaseJSONRequestBody = QueryDatabaseRequest

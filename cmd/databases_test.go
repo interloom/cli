@@ -19,6 +19,7 @@ func TestDatabasesCommandShape(t *testing.T) {
 	}{
 		{args: []string{resourceDatabases, commandNameGet, testDatabaseID}, use: commandUseGet},
 		{args: []string{resourceDatabases, "query", testDatabaseID}, use: "query <id>"},
+		{args: []string{resourceDatabases, "aggregate", testDatabaseID}, use: "aggregate <id>"},
 	} {
 		cmd, _, err := root.Find(tc.args)
 		if err != nil || cmd == nil || cmd.Use != tc.use {
@@ -85,6 +86,45 @@ func TestDatabasesQuerySendsJSONBody(t *testing.T) {
 	})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("execute databases query: %v", err)
+	}
+}
+
+func TestDatabasesAggregateSendsJSONBody(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/databases/"+testDatabaseID+"/aggregate"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		var body struct {
+			Expressions []struct {
+				Name     string `json:"name"`
+				Function string `json:"function"`
+				Column   string `json:"column"`
+			} `json:"expressions"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if len(body.Expressions) != 1 || body.Expressions[0].Name != "total" ||
+			body.Expressions[0].Function != "sum" || body.Expressions[0].Column != "amount" {
+			t.Errorf("unexpected body: %+v", body)
+		}
+		_, _ = w.Write([]byte(`{"database":{"id":"database-1"},"observed_revision":2,"values":{"total":"42.5"}}`))
+	}))
+	defer apiServer.Close()
+
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{
+		resourceDatabases,
+		"aggregate",
+		testDatabaseID,
+		"--data", `{"expressions":[{"name":"total","function":"sum","column":"amount"}]}`,
+	})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("execute databases aggregate: %v", err)
 	}
 }
 

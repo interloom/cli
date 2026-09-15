@@ -108,8 +108,9 @@ commands.
 returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
-`databases` describes database schemas and queries bounded pages of selected
-columns. It does not expose a collection list command.
+`databases` describes database schemas, queries bounded pages of selected
+columns, and calculates aggregate values. It does not expose a collection list
+command.
 
 ### Listing and pagination
 
@@ -179,16 +180,18 @@ interloom spaces members remove <space-id> <user-id>
 
 ### Databases
 
-Describe a database without loading rows, or query up to 100 rows from selected
-columns. Query requests accept the JSON body through `--data`, `--file`, or
-stdin. Equality filters and one scalar sort are optional. Pass `next_cursor`
-back as `cursor` in the next request; restart without a cursor if the database
-revision changes.
+Describe a database without loading rows, query up to 100 rows from selected
+columns, or calculate up to 10 named aggregate values. Query and aggregate
+requests accept the JSON body through `--data`, `--file`, or stdin. Equality
+filters are optional. Queries also support one scalar sort. Pass `next_cursor`
+back as `cursor` in the next query request; restart without a cursor if the
+database revision changes.
 
 ```sh
 interloom databases get <database-id>
 interloom databases query <database-id> -d '{"selected_columns":["row_id","status"],"page_size":100}'
 interloom databases query <database-id> -f query.json
+interloom databases aggregate <database-id> -d '{"expressions":[{"name":"rows","function":"count"},{"name":"total","function":"sum","column":"amount"}]}'
 ```
 
 ## Files

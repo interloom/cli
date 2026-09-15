@@ -98,7 +98,7 @@ func TestMCPToolRegistration(t *testing.T) {
 		"tools_list", "tools_get", "tools_create", "tools_update",
 		"secrets_list", "secrets_create", "secrets_delete", "files_upload", toolFilesDownload,
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
-		toolDatabasesGet, toolDatabasesQuery,
+		toolDatabasesGet, toolDatabasesQuery, toolDatabasesAggregate,
 		"models_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
 		"spaces_relationships", "cases_relationships", "notes_relationships", "procedures_relationships",
@@ -146,6 +146,47 @@ func TestMCPDatabasesQuerySendsJSONBody(t *testing.T) {
 			keyData: map[string]any{
 				"selected_columns": []string{"row_id"},
 				"page_size":        23,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("tool returned error: %s", toolResultText(t, result))
+	}
+}
+
+func TestMCPDatabasesAggregateSendsJSONBody(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodPost; got != want {
+			t.Errorf("method = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Path, "/api/v1/public/databases/"+testDatabaseID+"/aggregate"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		expressions, ok := body["expressions"].([]any)
+		if !ok || len(expressions) != 2 {
+			t.Errorf("expressions = %v, want two expressions", body["expressions"])
+		}
+		_, _ = w.Write([]byte(`{"database":{"id":"database-1"},"observed_revision":2,"values":{"rows":8,"maximum":17}}`))
+	}))
+	defer apiServer.Close()
+
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: toolDatabasesAggregate,
+		Arguments: map[string]any{
+			keyDatabaseID: testDatabaseID,
+			keyData: map[string]any{
+				"expressions": []any{
+					map[string]any{keyName: "rows", "function": "count"},
+					map[string]any{keyName: "maximum", "function": "max", "column": "score"},
+				},
 			},
 		},
 	})

@@ -12,14 +12,15 @@ const (
 )
 
 // newDatabasesCmd builds the databases command. Databases have no collection
-// endpoint: get describes one database and query reads a bounded page of rows.
+// endpoint: get describes one database, query reads rows, and aggregate
+// calculates scalar values.
 func newDatabasesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   resourceDatabases,
-		Short: "Inspect and query databases",
+		Short: "Inspect, query, and aggregate databases",
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd())
+	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd(), newDatabasesAggregateCmd())
 	return cmd
 }
 
@@ -59,6 +60,34 @@ func newDatabasesQueryCmd() *cobra.Command {
 				return err
 			}
 			resource := resourceDatabases + "/" + url.PathEscape(args[0]) + "/query"
+			raw, err := c.Create(cmd.Context(), resource, body)
+			if err != nil {
+				return err
+			}
+			return printResult(raw)
+		},
+	}
+	addBodyFlags(cmd)
+	return cmd
+}
+
+func newDatabasesAggregateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "aggregate <id>",
+		Short: "Calculate aggregate values for database rows",
+		Long: "Calculate aggregate values for database rows. The JSON body must contain\n" +
+			"expressions and may contain up to five equality filters.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			body, err := readBody(cmd)
+			if err != nil {
+				return err
+			}
+			resource := resourceDatabases + "/" + url.PathEscape(args[0]) + "/aggregate"
 			raw, err := c.Create(cmd.Context(), resource, body)
 			if err != nil {
 				return err
