@@ -2,14 +2,20 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/interloom/cli/internal/client"
 	"github.com/interloom/cli/internal/config"
 )
 
-const testDatabaseID = "database-1"
+const (
+	testDatabaseID     = "database-1"
+	testDatabaseUpsert = "upsert"
+)
 
 func TestDatabasesCommandShape(t *testing.T) {
 	root := newRootCmd()
@@ -20,6 +26,7 @@ func TestDatabasesCommandShape(t *testing.T) {
 		{args: []string{resourceDatabases, commandNameGet, testDatabaseID}, use: commandUseGet},
 		{args: []string{resourceDatabases, "query", testDatabaseID}, use: "query <id>"},
 		{args: []string{resourceDatabases, "aggregate", testDatabaseID}, use: "aggregate <id>"},
+		{args: []string{resourceDatabases, testDatabaseUpsert, testDatabaseID}, use: "upsert <id>"},
 	} {
 		cmd, _, err := root.Find(tc.args)
 		if err != nil || cmd == nil || cmd.Use != tc.use {
@@ -125,6 +132,53 @@ func TestDatabasesAggregateSendsJSONBody(t *testing.T) {
 	})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("execute databases aggregate: %v", err)
+	}
+}
+
+func TestDatabasesUpsertSendsExactJSONBody(t *testing.T) {
+	const body = `{"expected_revision":9007199254740993,"rows":[{"row_id":"row-2","count":7,"active":false,"value":null,"amount":"12.30"}]}`
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/public/databases/"+testDatabaseID+"/upsert" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Error("missing JSON content type")
+		}
+		got, err := io.ReadAll(r.Body)
+		if err != nil || string(got) != body {
+			t.Errorf("body = %s, error = %v; want %s", got, err, body)
+		}
+		_, _ = w.Write([]byte(`{"database_id":"database-1","committed_revision":9007199254740994,"resulting_row_count":3,"inserted_count":1,"updated_count":0}`))
+	}))
+	defer apiServer.Close()
+
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, testDatabaseUpsert, testDatabaseID, "-d", body})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("execute databases upsert: %v", err)
+	}
+}
+
+func TestDatabasesUpsertConflictDoesNotRetry(t *testing.T) {
+	calls := 0
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":{"code":"write_conflict","message":"Database revision does not match expected revision."}}`))
+	}))
+	defer apiServer.Close()
+
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, testDatabaseUpsert, testDatabaseID, "-d", `{"expected_revision":3,"rows":[]}`})
+	err := root.Execute()
+	var apiErr *client.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != "write_conflict" || apiErr.StatusCode != http.StatusConflict {
+		t.Fatalf("expected write_conflict, got %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("requests = %d, want 1 (no automatic retry)", calls)
 	}
 }
 

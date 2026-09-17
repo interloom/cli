@@ -109,8 +109,8 @@ returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
 `databases` describes database schemas, queries bounded pages of selected
-columns, and calculates aggregate values. It does not expose a collection list
-command.
+columns, calculates aggregate values, and adds or replaces rows. It does not
+expose a collection list command.
 
 ### Listing and pagination
 
@@ -193,6 +193,26 @@ interloom databases query <database-id> -d '{"selected_columns":["row_id","statu
 interloom databases query <database-id> -f query.json
 interloom databases aggregate <database-id> -d '{"expressions":[{"name":"rows","function":"count"},{"name":"total","function":"sum","column":"amount"}]}'
 ```
+
+Use `databases upsert <database-id> -f batch.json` to add or fully replace rows.
+The command also accepts `--data` or stdin. Fetch the schema and revision with
+`databases get` first. The body must contain `expected_revision` and `rows`:
+
+```json
+{"expected_revision":4,"rows":[{"row_id":"example-1","status":"open"}]}
+```
+
+Use the actual revision and declared column names from your database. Each row
+must include its key and all required columns. Omitted optional values become
+null; this is not a partial update. Send decimals, UUIDs, and timestamps as
+strings, with a timezone for timestamps. Aim for 100–250 rows per batch. The
+limits are 1,000 rows per request, 64 KiB per row, and 5 MiB per batch (compact,
+normalized UTF-8 JSON). A database can hold up to 100,000 rows.
+
+Each new batch, including an empty batch, advances the revision once. Use the
+returned `committed_revision` for the next batch. If a response is lost, retry
+the same rows with the original `expected_revision` to get the original result.
+On `write_conflict`, read the latest data and revise the batch before retrying.
 
 ## Files
 

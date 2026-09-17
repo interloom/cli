@@ -1804,6 +1804,45 @@ type UpdateToolRequest struct {
 	SecretIds *[]openapi_types.UUID `json:"secret_ids,omitempty"`
 }
 
+// UpsertDatabaseRowsRequest defines model for UpsertDatabaseRowsRequest.
+type UpsertDatabaseRowsRequest struct {
+	// ExpectedRevision Observed database revision. Preserve this value and the same rows for an exact retry.
+	ExpectedRevision int `json:"expected_revision"`
+
+	// Rows Up to 1,000 complete rows, including the declared row-key column. Omitted nullable columns become null.
+	Rows []map[string]*UpsertDatabaseRowsRequest_Rows_AdditionalProperties `json:"rows"`
+}
+
+// UpsertDatabaseRowsRequestRows0 defines model for .
+type UpsertDatabaseRowsRequestRows0 = string
+
+// UpsertDatabaseRowsRequestRows1 defines model for .
+type UpsertDatabaseRowsRequestRows1 = int
+
+// UpsertDatabaseRowsRequestRows2 defines model for .
+type UpsertDatabaseRowsRequestRows2 = bool
+
+// UpsertDatabaseRowsRequest_Rows_AdditionalProperties defines model for UpsertDatabaseRowsRequest.rows.AdditionalProperties.
+type UpsertDatabaseRowsRequest_Rows_AdditionalProperties struct {
+	union json.RawMessage
+}
+
+// UpsertDatabaseRowsResponse defines model for UpsertDatabaseRowsResponse.
+type UpsertDatabaseRowsResponse struct {
+	// CommittedRevision Revision committed by this batch.
+	CommittedRevision int                `json:"committed_revision"`
+	DatabaseId        openapi_types.UUID `json:"database_id"`
+
+	// InsertedCount Number of new rows inserted by this batch.
+	InsertedCount int `json:"inserted_count"`
+
+	// ResultingRowCount Total row count when this batch committed.
+	ResultingRowCount int `json:"resulting_row_count"`
+
+	// UpdatedCount Number of existing rows replaced by this batch.
+	UpdatedCount int `json:"updated_count"`
+}
+
 // UpsertSpaceMemberRequest defines model for UpsertSpaceMemberRequest.
 type UpsertSpaceMemberRequest struct {
 	// Role Role the user should have in the space. Defaults to member, including for an existing membership.
@@ -2009,6 +2048,11 @@ type AggregateDatabaseParams struct {
 
 // QueryDatabaseParams defines parameters for QueryDatabase.
 type QueryDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// UpsertDatabaseRowsParams defines parameters for UpsertDatabaseRows.
+type UpsertDatabaseRowsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -2374,6 +2418,9 @@ type AggregateDatabaseJSONRequestBody = AggregateDatabaseRequest
 // QueryDatabaseJSONRequestBody defines body for QueryDatabase for application/json ContentType.
 type QueryDatabaseJSONRequestBody = QueryDatabaseRequest
 
+// UpsertDatabaseRowsJSONRequestBody defines body for UpsertDatabaseRows for application/json ContentType.
+type UpsertDatabaseRowsJSONRequestBody = UpsertDatabaseRowsRequest
+
 // CreateFileMultipartRequestBody defines body for CreateFile for multipart/form-data ContentType.
 type CreateFileMultipartRequestBody = CreateFileRequest
 
@@ -2703,6 +2750,94 @@ func (t ThreadEvent_Payloads_Item) MarshalJSON() ([]byte, error) {
 }
 
 func (t *ThreadEvent_Payloads_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUpsertDatabaseRowsRequestRows0 returns the union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as a UpsertDatabaseRowsRequestRows0
+func (t UpsertDatabaseRowsRequest_Rows_AdditionalProperties) AsUpsertDatabaseRowsRequestRows0() (UpsertDatabaseRowsRequestRows0, error) {
+	var body UpsertDatabaseRowsRequestRows0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpsertDatabaseRowsRequestRows0 overwrites any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as the provided UpsertDatabaseRowsRequestRows0
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) FromUpsertDatabaseRowsRequestRows0(v UpsertDatabaseRowsRequestRows0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpsertDatabaseRowsRequestRows0 performs a merge with any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties, using the provided UpsertDatabaseRowsRequestRows0
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) MergeUpsertDatabaseRowsRequestRows0(v UpsertDatabaseRowsRequestRows0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpsertDatabaseRowsRequestRows1 returns the union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as a UpsertDatabaseRowsRequestRows1
+func (t UpsertDatabaseRowsRequest_Rows_AdditionalProperties) AsUpsertDatabaseRowsRequestRows1() (UpsertDatabaseRowsRequestRows1, error) {
+	var body UpsertDatabaseRowsRequestRows1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpsertDatabaseRowsRequestRows1 overwrites any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as the provided UpsertDatabaseRowsRequestRows1
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) FromUpsertDatabaseRowsRequestRows1(v UpsertDatabaseRowsRequestRows1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpsertDatabaseRowsRequestRows1 performs a merge with any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties, using the provided UpsertDatabaseRowsRequestRows1
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) MergeUpsertDatabaseRowsRequestRows1(v UpsertDatabaseRowsRequestRows1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpsertDatabaseRowsRequestRows2 returns the union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as a UpsertDatabaseRowsRequestRows2
+func (t UpsertDatabaseRowsRequest_Rows_AdditionalProperties) AsUpsertDatabaseRowsRequestRows2() (UpsertDatabaseRowsRequestRows2, error) {
+	var body UpsertDatabaseRowsRequestRows2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpsertDatabaseRowsRequestRows2 overwrites any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties as the provided UpsertDatabaseRowsRequestRows2
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) FromUpsertDatabaseRowsRequestRows2(v UpsertDatabaseRowsRequestRows2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpsertDatabaseRowsRequestRows2 performs a merge with any union data inside the UpsertDatabaseRowsRequest_Rows_AdditionalProperties, using the provided UpsertDatabaseRowsRequestRows2
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) MergeUpsertDatabaseRowsRequestRows2(v UpsertDatabaseRowsRequestRows2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpsertDatabaseRowsRequest_Rows_AdditionalProperties) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

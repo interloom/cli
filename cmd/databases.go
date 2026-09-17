@@ -13,14 +13,14 @@ const (
 
 // newDatabasesCmd builds the databases command. Databases have no collection
 // endpoint: get describes one database, query reads rows, and aggregate
-// calculates scalar values.
+// calculates scalar values. Upsert adds or replaces rows.
 func newDatabasesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   resourceDatabases,
-		Short: "Inspect, query, and aggregate databases",
+		Short: "Inspect, query, aggregate, and write databases",
 	}
 	addConfigNameFlag(cmd)
-	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd(), newDatabasesAggregateCmd())
+	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd(), newDatabasesAggregateCmd(), newDatabasesUpsertCmd())
 	return cmd
 }
 
@@ -60,6 +60,36 @@ func newDatabasesQueryCmd() *cobra.Command {
 				return err
 			}
 			resource := resourceDatabases + "/" + url.PathEscape(args[0]) + "/query"
+			raw, err := c.Create(cmd.Context(), resource, body)
+			if err != nil {
+				return err
+			}
+			return printResult(raw)
+		},
+	}
+	addBodyFlags(cmd)
+	return cmd
+}
+
+func newDatabasesUpsertCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "upsert <id>",
+		Short: "Add or fully replace database rows",
+		Long: "Add or fully replace database rows. The JSON body must contain\n" +
+			"expected_revision and rows (up to 1,000 complete rows with their keys).\n" +
+			"Fetch the schema and revision first. Omitted optional values become null.\n" +
+			"For an exact retry, preserve the original expected_revision and rows.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			body, err := readBody(cmd)
+			if err != nil {
+				return err
+			}
+			resource := resourceDatabases + "/" + url.PathEscape(args[0]) + "/upsert"
 			raw, err := c.Create(cmd.Context(), resource, body)
 			if err != nil {
 				return err
