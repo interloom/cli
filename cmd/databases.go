@@ -11,15 +11,28 @@ const (
 	keyDatabaseID     = "database_id"
 )
 
-// newDatabasesCmd builds the databases command. Databases have no collection
-// endpoint: get describes one database, query reads rows, and aggregate
-// calculates scalar values. Upsert adds or replaces rows.
+// newDatabasesCmd combines database lifecycle commands with row operations.
 func newDatabasesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   resourceDatabases,
-		Short: "Inspect, query, aggregate, and write databases",
+		Short: "Create, list, inspect, write, and delete databases",
 	}
 	addConfigNameFlag(cmd)
+	r := resource{name: resourceDatabases, singular: "database", filters: []filter{filterSpaceID}, fields: []field{
+		{name: keySpaceID, usage: fieldSpaceID.usage, onCreate: true, required: true},
+		{name: "key", usage: "stable lower-case key unique within the space", onCreate: true, required: true},
+		{name: keyTitle, usage: "Database title", onCreate: true, required: true},
+	}}
+	list := r.listCmd()
+	// The flag is registered by listCmd, so marking it required cannot fail.
+	_ = list.MarkFlagRequired("space-id")
+	create := r.createCmd()
+	create.Long = "Create a database or retrieve a compatible database with the same space-local key.\n" +
+		"Use --data, --file, or stdin to supply space_id, key, title, and the required\n" +
+		"nested schema (columns and row_key_column). The schema is immutable."
+	deleteCmd := r.deleteCmd()
+	deleteCmd.Short = "Permanently delete a database and all its rows"
+	cmd.AddCommand(list, create, deleteCmd)
 	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd(), newDatabasesAggregateCmd(), newDatabasesUpsertCmd())
 	return cmd
 }

@@ -109,8 +109,8 @@ returned by the API.
 `case-ingestions` imports cases from JSONL manifest files and exposes ingestion
 status plus failed-entry pagination.
 `databases` describes database schemas, queries bounded pages of selected
-columns, calculates aggregate values, and adds or replaces rows. It does not
-expose a collection list command.
+columns, calculates aggregate values, and adds or replaces rows. It also
+supports `list`, `create`, and `delete`, but not `update`.
 
 ### Listing and pagination
 
@@ -134,6 +134,7 @@ Available list filters per resource:
 | `cases`      | `space-id`, `parent-case-id`, `assignee-id`, `status` (repeatable), `sort`, `direction` |
 | `notes`      | `space-id`, `case-id`, `thread-id`, `sort`, `direction`       |
 | `procedures` | `space-id`                                                    |
+| `databases`  | `space-id` (required)                                         |
 | `models`     | —                                                             |
 | `tools`      | —                                                             |
 | `secrets`    | —                                                             |
@@ -179,6 +180,26 @@ interloom spaces members remove <space-id> <user-id>
 ```
 
 ### Databases
+
+List databases in one space with `databases list --space-id <space-id>`.
+The list supports `--limit`, `--cursor`, and `--all` without loading rows.
+Create a database with `databases create -f database.json`, using this body:
+
+```json
+{"space_id":"<space-id>","key":"example_records","title":"Example records","schema":{"columns":[{"name":"row_id","type":"string"},{"name":"status","type":"string","nullable":true}],"row_key_column":"row_id"}}
+```
+
+The schema is immutable and accepts at most 100 columns. Its row-key column
+must be a non-nullable string. Creation with a compatible schema and the same
+space-local key returns the existing database without changing its title,
+rows, or revision. An incompatible schema returns `database_schema_conflict`.
+The scalar fields have `--space-id`, `--key`, and `--title` flags, but the
+required nested `schema` needs a complete raw JSON body (`--data`, `--file`,
+or stdin). Raw JSON and field flags cannot be combined.
+
+Use `databases delete <database-id>` to permanently delete a database, its
+rows, and its write-idempotency records. There is no revision precondition.
+These lifecycle endpoints require the `pro-2030-databases-v1` feature flag.
 
 Describe a database without loading rows, query up to 100 rows from selected
 columns, or calculate up to 10 named aggregate values. Query and aggregate

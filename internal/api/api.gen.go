@@ -820,6 +820,19 @@ type CreateCaseRequest struct {
 	Title   string              `json:"title"`
 }
 
+// CreateDatabaseRequest defines model for CreateDatabaseRequest.
+type CreateDatabaseRequest struct {
+	// Key Stable lower-case identifier unique within the space, at most 100 characters.
+	Key    string              `json:"key"`
+	Schema DatabaseSchemaInput `json:"schema"`
+
+	// SpaceId Explicit UUID of the space to write to.
+	SpaceId openapi_types.UUID `json:"space_id"`
+
+	// Title Non-empty human-readable Database title.
+	Title string `json:"title"`
+}
+
 // CreateFileRequest defines model for CreateFileRequest.
 type CreateFileRequest struct {
 	// CaseId Target Case ID for a case-owned file. Provide at most one of space_id or case_id.
@@ -940,6 +953,19 @@ type DatabaseColumn struct {
 	Type        DatabaseColumnType `json:"type"`
 }
 
+// DatabaseColumnInput defines model for DatabaseColumnInput.
+type DatabaseColumnInput struct {
+	// Description Optional concise description of the column.
+	Description *string `json:"description,omitempty"`
+
+	// Name Lower-case column identifier.
+	Name string `json:"name"`
+
+	// Nullable Whether the column may contain null values.
+	Nullable *bool              `json:"nullable,omitempty"`
+	Type     DatabaseColumnType `json:"type"`
+}
+
 // DatabaseColumnType defines model for DatabaseColumnType.
 type DatabaseColumnType string
 
@@ -998,6 +1024,20 @@ type DatabaseIdentity struct {
 	Title   string             `json:"title"`
 }
 
+// DatabaseListItem defines model for DatabaseListItem.
+type DatabaseListItem struct {
+	Id  openapi_types.UUID `json:"id"`
+	Key string             `json:"key"`
+
+	// Revision Current Database revision.
+	Revision int `json:"revision"`
+
+	// RowCount Exact current row count; no rows are loaded.
+	RowCount int                `json:"row_count"`
+	SpaceId  openapi_types.UUID `json:"space_id"`
+	Title    string             `json:"title"`
+}
+
 // DatabaseRowValue defines model for DatabaseRowValue.
 type DatabaseRowValue struct {
 	union json.RawMessage
@@ -1016,6 +1056,15 @@ type DatabaseRowValue2 = bool
 type DatabaseSchema struct {
 	Columns      []DatabaseColumn `json:"columns"`
 	RowKeyColumn string           `json:"row_key_column"`
+}
+
+// DatabaseSchemaInput defines model for DatabaseSchemaInput.
+type DatabaseSchemaInput struct {
+	// Columns Ordered column definitions for the immutable database schema.
+	Columns []DatabaseColumnInput `json:"columns"`
+
+	// RowKeyColumn Name of the one non-nullable string column that uniquely identifies rows.
+	RowKeyColumn string `json:"row_key_column"`
 }
 
 // DatabaseSort defines model for DatabaseSort.
@@ -1396,6 +1445,18 @@ type Organization struct {
 
 	// Slug URL-safe slug for the organization.
 	Slug string `json:"slug"`
+}
+
+// PaginatedResponseDatabaseListItem defines model for PaginatedResponse_DatabaseListItem_.
+type PaginatedResponseDatabaseListItem struct {
+	// Data Items in the current page.
+	Data []DatabaseListItem `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
 // Procedure defines model for Procedure.
@@ -2036,6 +2097,29 @@ type ListCaseRelationshipsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListDatabasesParams defines parameters for ListDatabases.
+type ListDatabasesParams struct {
+	// SpaceId Space UUID to list Databases in.
+	SpaceId openapi_types.UUID `form:"space_id" json:"space_id"`
+
+	// Limit Maximum number of Databases to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque next_cursor from the previous page in this space.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// CreateDatabaseParams defines parameters for CreateDatabase.
+type CreateDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// DeleteDatabaseParams defines parameters for DeleteDatabase.
+type DeleteDatabaseParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // DescribeDatabaseParams defines parameters for DescribeDatabase.
 type DescribeDatabaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -2411,6 +2495,9 @@ type CreateCaseJSONRequestBody = CreateCaseRequest
 
 // UpdateCaseJSONRequestBody defines body for UpdateCase for application/json ContentType.
 type UpdateCaseJSONRequestBody = UpdateCaseRequest
+
+// CreateDatabaseJSONRequestBody defines body for CreateDatabase for application/json ContentType.
+type CreateDatabaseJSONRequestBody = CreateDatabaseRequest
 
 // AggregateDatabaseJSONRequestBody defines body for AggregateDatabase for application/json ContentType.
 type AggregateDatabaseJSONRequestBody = AggregateDatabaseRequest

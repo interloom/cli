@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/interloom/cli/internal/client"
@@ -23,6 +24,9 @@ func TestDatabasesCommandShape(t *testing.T) {
 		args []string
 		use  string
 	}{
+		{args: []string{resourceDatabases, commandUseList}, use: commandUseList},
+		{args: []string{resourceDatabases, commandUseCreate}, use: commandUseCreate},
+		{args: []string{resourceDatabases, commandNameDelete, testDatabaseID}, use: "delete <id>"},
 		{args: []string{resourceDatabases, commandNameGet, testDatabaseID}, use: commandUseGet},
 		{args: []string{resourceDatabases, "query", testDatabaseID}, use: "query <id>"},
 		{args: []string{resourceDatabases, "aggregate", testDatabaseID}, use: "aggregate <id>"},
@@ -179,6 +183,75 @@ func TestDatabasesUpsertConflictDoesNotRetry(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Errorf("requests = %d, want 1 (no automatic retry)", calls)
+	}
+}
+
+func TestDatabasesListRequiresSpace(t *testing.T) {
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, commandUseList})
+	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "space-id") {
+		t.Fatalf("expected required space-id error, got %v", err)
+	}
+}
+
+func TestDatabasesListSendsScopeAndPaging(t *testing.T) {
+	const cursor = "database-page-2"
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/public/databases" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.URL.Query(); got.Get(keySpaceID) != "space-2" || got.Get("limit") != "7" || got.Get(keyCursor) != cursor {
+			t.Errorf("unexpected query: %v", got)
+		}
+		_, _ = w.Write([]byte(`{"data":[],"has_more":false}`))
+	}))
+	defer apiServer.Close()
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, commandUseList, "--space-id", "space-2", "--limit", "7", "--cursor", cursor})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDatabasesCreateSendsSchema(t *testing.T) {
+	const body = `{"space_id":"space-2","key":"records","title":"Records","schema":{"row_key_column":"code","columns":[{"name":"code","type":"string"},{"name":"count","type":"integer","nullable":true}]}}`
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/public/databases" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		got, err := io.ReadAll(r.Body)
+		if err != nil || string(got) != body {
+			t.Errorf("body = %s, error = %v; want %s", got, err, body)
+		}
+		_, _ = w.Write([]byte(`{"id":"database-1","revision":0,"row_count":0}`))
+	}))
+	defer apiServer.Close()
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, commandUseCreate, "-d", body})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDatabasesDeleteSendsRequest(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/api/v1/public/databases/"+testDatabaseID {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		got, err := io.ReadAll(r.Body)
+		if err != nil || len(got) != 0 {
+			t.Errorf("expected empty body, got %s, error %v", got, err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer apiServer.Close()
+	setDatabaseTestEnv(t, apiServer.URL)
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, commandNameDelete, testDatabaseID})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
 	}
 }
 
