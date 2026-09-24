@@ -55,6 +55,7 @@ func newRootCmd() *cobra.Command {
 		newFilesCmd(),
 		newUsersCmd(),
 		newThreadsCmd(),
+		newInvocationsCmd(),
 		newMCPCmd(),
 		newTUICmd(),
 		newVersionCmd(),

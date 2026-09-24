@@ -199,7 +199,6 @@ or stdin). Raw JSON and field flags cannot be combined.
 
 Use `databases delete <database-id>` to permanently delete a database, its
 rows, and its write-idempotency records. There is no revision precondition.
-These lifecycle endpoints require the `pro-2030-databases-v1` feature flag.
 
 Describe a database without loading rows, query up to 100 rows from selected
 columns, or calculate up to 10 named aggregate values. Query and aggregate
@@ -315,6 +314,26 @@ interloom threads messages create <id> --text "Hello from the CLI"
 interloom threads messages create <id> --text "See attached" --file-ids <file-id>
 interloom threads messages create <id> -d '{"text":"Hello from JSON"}'
 ```
+
+Thread event payloads can also contain `agent_invocation` links. Use the
+linked invocation ID to inspect an agent execution.
+
+## Invocations
+
+Invocations are read-only agent executions, not individual LLM turns. There is
+no collection list or write command. Discover IDs through thread events:
+
+```sh
+interloom invocations get <id>
+interloom invocations steps <id> --limit 50
+interloom invocations steps <id> --cursor <next_cursor>
+interloom invocations steps <id> --all
+```
+
+Steps are ordered by creation time and ID. Tool-call steps include raw inputs
+and outputs, which may contain sensitive data. Thinking and reasoning-summary
+steps expose metadata only; their content is withheld. Final responses remain
+in thread messages. Per-step token usage and cost are not exposed.
 
 ## MCP server
 

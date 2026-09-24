@@ -16,6 +16,27 @@ const (
 	ApiKeyAuthScopes apiKeyAuthContextKey = "ApiKeyAuth.Scopes"
 )
 
+// Defines values for AgentInvocationOutcome.
+const (
+	AgentInvocationOutcomeCancelled AgentInvocationOutcome = "cancelled"
+	AgentInvocationOutcomeFailed    AgentInvocationOutcome = "failed"
+	AgentInvocationOutcomeSucceeded AgentInvocationOutcome = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the AgentInvocationOutcome enum.
+func (e AgentInvocationOutcome) Valid() bool {
+	switch e {
+	case AgentInvocationOutcomeCancelled:
+		return true
+	case AgentInvocationOutcomeFailed:
+		return true
+	case AgentInvocationOutcomeSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolLinkType.
 const (
 	AgentToolLinkTypeCustom   AgentToolLinkType = "custom"
@@ -60,19 +81,19 @@ func (e CaseIngestionStatus) Valid() bool {
 
 // Defines values for CaseIngestionFailedEntryStatus.
 const (
-	CaseIngestionFailedEntryStatusFailed  CaseIngestionFailedEntryStatus = "failed"
-	CaseIngestionFailedEntryStatusSkipped CaseIngestionFailedEntryStatus = "skipped"
-	CaseIngestionFailedEntryStatusSuccess CaseIngestionFailedEntryStatus = "success"
+	Failed  CaseIngestionFailedEntryStatus = "failed"
+	Skipped CaseIngestionFailedEntryStatus = "skipped"
+	Success CaseIngestionFailedEntryStatus = "success"
 )
 
 // Valid indicates whether the value is a known member of the CaseIngestionFailedEntryStatus enum.
 func (e CaseIngestionFailedEntryStatus) Valid() bool {
 	switch e {
-	case CaseIngestionFailedEntryStatusFailed:
+	case Failed:
 		return true
-	case CaseIngestionFailedEntryStatusSkipped:
+	case Skipped:
 		return true
-	case CaseIngestionFailedEntryStatusSuccess:
+	case Success:
 		return true
 	default:
 		return false
@@ -205,6 +226,24 @@ func (e ModelDeploymentLocation) Valid() bool {
 	}
 }
 
+// Defines values for PrivateContentStepType.
+const (
+	Reasoning PrivateContentStepType = "reasoning"
+	Thinking  PrivateContentStepType = "thinking"
+)
+
+// Valid indicates whether the value is a known member of the PrivateContentStepType enum.
+func (e PrivateContentStepType) Valid() bool {
+	switch e {
+	case Reasoning:
+		return true
+	case Thinking:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReasoningEffort.
 const (
 	HIGH   ReasoningEffort = "HIGH"
@@ -282,15 +321,16 @@ func (e RelationshipType) Valid() bool {
 
 // Defines values for ResourceType.
 const (
-	AGENT     ResourceType = "AGENT"
-	CASE      ResourceType = "CASE"
-	FILE      ResourceType = "FILE"
-	NOTE      ResourceType = "NOTE"
-	PROCEDURE ResourceType = "PROCEDURE"
-	SECRET    ResourceType = "SECRET"
-	SPACE     ResourceType = "SPACE"
-	THREAD    ResourceType = "THREAD"
-	USER      ResourceType = "USER"
+	AGENT      ResourceType = "AGENT"
+	CASE       ResourceType = "CASE"
+	FILE       ResourceType = "FILE"
+	INVOCATION ResourceType = "INVOCATION"
+	NOTE       ResourceType = "NOTE"
+	PROCEDURE  ResourceType = "PROCEDURE"
+	SECRET     ResourceType = "SECRET"
+	SPACE      ResourceType = "SPACE"
+	THREAD     ResourceType = "THREAD"
+	USER       ResourceType = "USER"
 )
 
 // Valid indicates whether the value is a known member of the ResourceType enum.
@@ -301,6 +341,8 @@ func (e ResourceType) Valid() bool {
 	case CASE:
 		return true
 	case FILE:
+		return true
+	case INVOCATION:
 		return true
 	case NOTE:
 		return true
@@ -556,6 +598,15 @@ type Agent struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// AgentInvocationOutcome defines model for AgentInvocationOutcome.
+type AgentInvocationOutcome string
+
+// AgentInvocationPayload defines model for AgentInvocationPayload.
+type AgentInvocationPayload struct {
+	Invocation  ResourceLink `json:"invocation"`
+	PayloadType string       `json:"payload_type"`
 }
 
 // AgentListItem defines model for AgentListItem.
@@ -1168,6 +1219,21 @@ type InvalidToolIdsResponse struct {
 	Error InvalidToolIdsError `json:"error"`
 }
 
+// Invocation defines model for Invocation.
+type Invocation struct {
+	Agent       ResourceLink `json:"agent"`
+	CompletedAt *time.Time   `json:"completed_at"`
+	CreatedAt   time.Time    `json:"created_at"`
+
+	// DurationSeconds Seconds from creation to completion; null until completion.
+	DurationSeconds *float32               `json:"duration_seconds,omitempty"`
+	Id              openapi_types.UUID     `json:"id"`
+	Outcome         AgentInvocationOutcome `json:"outcome"`
+	StepsUrl        *string                `json:"steps_url,omitempty"`
+	Type            *string                `json:"type,omitempty"`
+	UpdatedAt       time.Time              `json:"updated_at"`
+}
+
 // ListAgentsResponse defines model for ListAgentsResponse.
 type ListAgentsResponse struct {
 	// Data Items in the current page.
@@ -1447,6 +1513,23 @@ type Organization struct {
 	Slug string `json:"slug"`
 }
 
+// PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType defines model for PaginatedResponse_Annotated_Union_ToolCallStep__PrivateContentStep___FieldInfo_annotation_NoneType__required_True__discriminator__type____.
+type PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType struct {
+	// Data Items in the current page.
+	Data []PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item defines model for PaginatedResponse_Annotated_Union_ToolCallStep__PrivateContentStep___FieldInfo_annotation_NoneType__required_True__discriminator__type____.data.Item.
+type PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item struct {
+	union json.RawMessage
+}
+
 // PaginatedResponseDatabaseListItem defines model for PaginatedResponse_DatabaseListItem_.
 type PaginatedResponseDatabaseListItem struct {
 	// Data Items in the current page.
@@ -1458,6 +1541,23 @@ type PaginatedResponseDatabaseListItem struct {
 	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
+
+// PrivateContentStep defines model for PrivateContentStep.
+type PrivateContentStep struct {
+	CompletedAt   *time.Time `json:"completed_at"`
+	ContentStatus *string    `json:"content_status,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+
+	// DurationSeconds Seconds from creation to completion; null until completion.
+	DurationSeconds *float32               `json:"duration_seconds,omitempty"`
+	Id              openapi_types.UUID     `json:"id"`
+	Invocation      ResourceLink           `json:"invocation"`
+	Type            PrivateContentStepType `json:"type"`
+	UpdatedAt       time.Time              `json:"updated_at"`
+}
+
+// PrivateContentStepType defines model for PrivateContentStep.Type.
+type PrivateContentStepType string
 
 // Procedure defines model for Procedure.
 type Procedure struct {
@@ -1746,6 +1846,26 @@ type Tool struct {
 
 // ToolType Whether the tool is custom or built into Interloom.
 type ToolType string
+
+// ToolCallStep defines model for ToolCallStep.
+type ToolCallStep struct {
+	CompletedAt *time.Time `json:"completed_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+
+	// DurationSeconds Seconds from creation to completion; null until completion.
+	DurationSeconds *float32           `json:"duration_seconds,omitempty"`
+	Id              openapi_types.UUID `json:"id"`
+
+	// Input Raw recorded tool input, without redaction or truncation.
+	Input      map[string]interface{} `json:"input"`
+	Invocation ResourceLink           `json:"invocation"`
+
+	// Output Raw recorded tool output, without redaction or truncation. Null means no output was recorded; an empty string is a recorded empty output.
+	Output    *string   `json:"output"`
+	ToolName  string    `json:"tool_name"`
+	Type      string    `json:"type"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
 
 // ToolListItem defines model for ToolListItem.
 type ToolListItem struct {
@@ -2191,6 +2311,20 @@ type UpdateFileParams struct {
 // ListFileRelationshipsParams defines parameters for ListFileRelationships.
 type ListFileRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetInvocationParams defines parameters for GetInvocation.
+type GetInvocationParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListInvocationStepsParams defines parameters for ListInvocationSteps.
+type ListInvocationStepsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque next_cursor.
 	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
@@ -2752,6 +2886,93 @@ func (t *DatabaseRowValue) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsToolCallStep returns the union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item as a ToolCallStep
+func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) AsToolCallStep() (ToolCallStep, error) {
+	var body ToolCallStep
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromToolCallStep overwrites any union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item as the provided ToolCallStep
+func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) FromToolCallStep(v ToolCallStep) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeToolCallStep performs a merge with any union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item, using the provided ToolCallStep
+func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) MergeToolCallStep(v ToolCallStep) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPrivateContentStep returns the union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item as a PrivateContentStep
+func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) AsPrivateContentStep() (PrivateContentStep, error) {
+	var body PrivateContentStep
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPrivateContentStep overwrites any union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item as the provided PrivateContentStep
+func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) FromPrivateContentStep(v PrivateContentStep) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePrivateContentStep performs a merge with any union data inside the PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item, using the provided PrivateContentStep
+func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) MergePrivateContentStep(v PrivateContentStep) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reasoning":
+		return t.AsPrivateContentStep()
+	case "thinking":
+		return t.AsPrivateContentStep()
+	case "tool_call":
+		return t.AsToolCallStep()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsMessagePayload returns the union data inside the ThreadEvent_Payloads_Item as a MessagePayload
 func (t ThreadEvent_Payloads_Item) AsMessagePayload() (MessagePayload, error) {
 	var body MessagePayload
@@ -2808,6 +3029,34 @@ func (t *ThreadEvent_Payloads_Item) MergeFilePayload(v FilePayload) error {
 	return err
 }
 
+// AsAgentInvocationPayload returns the union data inside the ThreadEvent_Payloads_Item as a AgentInvocationPayload
+func (t ThreadEvent_Payloads_Item) AsAgentInvocationPayload() (AgentInvocationPayload, error) {
+	var body AgentInvocationPayload
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAgentInvocationPayload overwrites any union data inside the ThreadEvent_Payloads_Item as the provided AgentInvocationPayload
+func (t *ThreadEvent_Payloads_Item) FromAgentInvocationPayload(v AgentInvocationPayload) error {
+	v.PayloadType = "agent_invocation"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAgentInvocationPayload performs a merge with any union data inside the ThreadEvent_Payloads_Item, using the provided AgentInvocationPayload
+func (t *ThreadEvent_Payloads_Item) MergeAgentInvocationPayload(v AgentInvocationPayload) error {
+	v.PayloadType = "agent_invocation"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t ThreadEvent_Payloads_Item) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"payload_type"`
@@ -2822,6 +3071,8 @@ func (t ThreadEvent_Payloads_Item) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "agent_invocation":
+		return t.AsAgentInvocationPayload()
 	case "file":
 		return t.AsFilePayload()
 	case "message":
