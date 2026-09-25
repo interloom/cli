@@ -333,7 +333,38 @@ interloom invocations steps <id> --all
 Steps are ordered by creation time and ID. Tool-call steps include raw inputs
 and outputs, which may contain sensitive data. Thinking and reasoning-summary
 steps expose metadata only; their content is withheld. Final responses remain
-in thread messages. Per-step token usage and cost are not exposed.
+in thread messages. Invocations and steps include nullable `token_usage` counts.
+Metrics can arrive late. Cache-read and cache-write counts are included in input
+tokens, not additional tokens. Step counts are allocated shares of an LLM response;
+visible steps can exclude final or unsaved steps, so their sum can differ from the
+invocation total. Per-step costs are not exposed.
+
+## Usage
+
+```sh
+interloom cases usage <case-id>
+interloom spaces usage <space-id>
+interloom spaces usage breakdowns <space-id> --group-by case
+interloom spaces usage breakdowns <space-id> --group-by model --limit 20
+interloom spaces usage breakdowns <space-id> --group-by agent
+```
+
+Usage covers all time; date filters are not available. Case totals include
+descendants. Space totals and breakdowns require owner or manager access.
+Breakdowns require `--group-by case|model|agent`. Groups are ordered by group key,
+not usage. Omit `--limit` for all groups, or supply an integer of at least 1.
+There are no `--cursor` or `--all` flags for these commands.
+
+Metrics can arrive late. With no metrics, counts are zero and token totals and
+averages are null. The CLI preserves the API values without calculating totals.
+Cache reads are included in input tokens. Interactions count distinct LLM calls
+plus tool-call steps. Costs are customer costs in EUR; they can be incomplete or
+null when customer pricing is disabled or no priced usage exists.
+
+Case groups use the recorded root case and its space. Model and agent groups,
+like Space totals, use the invocation's recorded space. Thus, case breakdown
+totals can differ from Space totals. Deleted cases and agents can remain in groups.
+These usage commands are not exposed as MCP tools.
 
 ## MCP server
 

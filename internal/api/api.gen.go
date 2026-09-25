@@ -553,6 +553,27 @@ func (e ListNotesParamsDirection) Valid() bool {
 	}
 }
 
+// Defines values for ListSpaceUsageBreakdownsParamsGroupBy.
+const (
+	ListSpaceUsageBreakdownsParamsGroupByAgent ListSpaceUsageBreakdownsParamsGroupBy = "agent"
+	ListSpaceUsageBreakdownsParamsGroupByCase  ListSpaceUsageBreakdownsParamsGroupBy = "case"
+	ListSpaceUsageBreakdownsParamsGroupByModel ListSpaceUsageBreakdownsParamsGroupBy = "model"
+)
+
+// Valid indicates whether the value is a known member of the ListSpaceUsageBreakdownsParamsGroupBy enum.
+func (e ListSpaceUsageBreakdownsParamsGroupBy) Valid() bool {
+	switch e {
+	case ListSpaceUsageBreakdownsParamsGroupByAgent:
+		return true
+	case ListSpaceUsageBreakdownsParamsGroupByCase:
+		return true
+	case ListSpaceUsageBreakdownsParamsGroupByModel:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListThreadEventsParamsDirection.
 const (
 	Asc  ListThreadEventsParamsDirection = "asc"
@@ -649,6 +670,13 @@ type AgentToolLink struct {
 
 // AgentToolLinkType Whether the assigned tool is custom or built into Interloom.
 type AgentToolLinkType string
+
+// AgentUsageBreakdown defines model for AgentUsageBreakdown.
+type AgentUsageBreakdown struct {
+	Agent   ResourceLink      `json:"agent"`
+	GroupBy string            `json:"group_by"`
+	Totals  PublicUsageTotals `json:"totals"`
+}
 
 // AggregateDatabaseRequest defines model for AggregateDatabaseRequest.
 type AggregateDatabaseRequest struct {
@@ -834,6 +862,13 @@ type CaseListItem struct {
 
 // CaseStatus defines model for CaseStatus.
 type CaseStatus string
+
+// CaseUsageBreakdown defines model for CaseUsageBreakdown.
+type CaseUsageBreakdown struct {
+	Case    ResourceLink      `json:"case"`
+	GroupBy string            `json:"group_by"`
+	Totals  PublicUsageTotals `json:"totals"`
+}
 
 // CreateAgentRequest defines model for CreateAgentRequest.
 type CreateAgentRequest struct {
@@ -1230,8 +1265,17 @@ type Invocation struct {
 	Id              openapi_types.UUID     `json:"id"`
 	Outcome         AgentInvocationOutcome `json:"outcome"`
 	StepsUrl        *string                `json:"steps_url,omitempty"`
+	TokenUsage      InvocationTokenUsage   `json:"token_usage"`
 	Type            *string                `json:"type,omitempty"`
 	UpdatedAt       time.Time              `json:"updated_at"`
+}
+
+// InvocationTokenUsage defines model for InvocationTokenUsage.
+type InvocationTokenUsage struct {
+	CacheWriteInputTokens *int `json:"cache_write_input_tokens"`
+	CachedInputTokens     *int `json:"cached_input_tokens"`
+	InputTokens           *int `json:"input_tokens"`
+	OutputTokens          *int `json:"output_tokens"`
 }
 
 // ListAgentsResponse defines model for ListAgentsResponse.
@@ -1454,6 +1498,13 @@ type ModelReasoningCapability struct {
 	Supported *bool `json:"supported,omitempty"`
 }
 
+// ModelUsageBreakdown defines model for ModelUsageBreakdown.
+type ModelUsageBreakdown struct {
+	GroupBy string            `json:"group_by"`
+	Model   string            `json:"model"`
+	Totals  PublicUsageTotals `json:"totals"`
+}
+
 // Note defines model for Note.
 type Note struct {
 	// Body Optional note body.
@@ -1552,6 +1603,7 @@ type PrivateContentStep struct {
 	DurationSeconds *float32               `json:"duration_seconds,omitempty"`
 	Id              openapi_types.UUID     `json:"id"`
 	Invocation      ResourceLink           `json:"invocation"`
+	TokenUsage      InvocationTokenUsage   `json:"token_usage"`
 	Type            PrivateContentStepType `json:"type"`
 	UpdatedAt       time.Time              `json:"updated_at"`
 }
@@ -1633,6 +1685,43 @@ type ProcedureSummary struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// PublicUsageTotals defines model for PublicUsageTotals.
+type PublicUsageTotals struct {
+	// AverageCostAmount Average recorded customer cost in EUR across invocations with priced usage, or null when unavailable.
+	AverageCostAmount      *float32 `json:"average_cost_amount"`
+	AverageDurationSeconds *float32 `json:"average_duration_seconds,omitempty"`
+	AverageInteractions    *float32 `json:"average_interactions,omitempty"`
+	AverageTokens          *float32 `json:"average_tokens,omitempty"`
+
+	// InvocationCount Number of agent invocations represented.
+	InvocationCount int `json:"invocation_count"`
+
+	// TotalCachedInputCostAmount Customer cache-read and cache-write input price in EUR, or null when unavailable.
+	TotalCachedInputCostAmount *float32 `json:"total_cached_input_cost_amount"`
+
+	// TotalCachedInputTokens Input tokens served from cache; these are also included in total_input_tokens.
+	TotalCachedInputTokens *int `json:"total_cached_input_tokens"`
+
+	// TotalCostAmount Recorded customer cost in EUR from applicable Interloom price sheets. May be partial when some steps lack pricing; null when customer pricing is disabled or no priced usage exists.
+	TotalCostAmount *float32 `json:"total_cost_amount"`
+
+	// TotalInputCostAmount Customer input price in EUR, or null when unavailable.
+	TotalInputCostAmount *float32 `json:"total_input_cost_amount"`
+
+	// TotalInputTokens Input tokens, including cache reads, or null when missing.
+	TotalInputTokens *int `json:"total_input_tokens"`
+
+	// TotalInteractions Distinct LLM calls plus tool-call steps; not an LLM-call count alone.
+	TotalInteractions int `json:"total_interactions"`
+
+	// TotalOutputCostAmount Customer output price in EUR, or null when unavailable.
+	TotalOutputCostAmount *float32 `json:"total_output_cost_amount"`
+	TotalOutputTokens     *int     `json:"total_output_tokens,omitempty"`
+
+	// TotalTokens Total input and output tokens, or null when metrics are missing.
+	TotalTokens *int `json:"total_tokens"`
 }
 
 // QueryDatabaseRequest defines model for QueryDatabaseRequest.
@@ -1861,10 +1950,11 @@ type ToolCallStep struct {
 	Invocation ResourceLink           `json:"invocation"`
 
 	// Output Raw recorded tool output, without redaction or truncation. Null means no output was recorded; an empty string is a recorded empty output.
-	Output    *string   `json:"output"`
-	ToolName  string    `json:"tool_name"`
-	Type      string    `json:"type"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Output     *string              `json:"output"`
+	TokenUsage InvocationTokenUsage `json:"token_usage"`
+	ToolName   string               `json:"tool_name"`
+	Type       string               `json:"type"`
+	UpdatedAt  time.Time            `json:"updated_at"`
 }
 
 // ToolListItem defines model for ToolListItem.
@@ -2032,6 +2122,16 @@ type UpsertSpaceMemberRequest struct {
 
 // UpsertSpaceMemberRequestRole Role the user should have in the space. Defaults to member, including for an existing membership.
 type UpsertSpaceMemberRequestRole string
+
+// UsageBreakdownsResponse defines model for UsageBreakdownsResponse.
+type UsageBreakdownsResponse struct {
+	Data []UsageBreakdownsResponse_Data_Item `json:"data"`
+}
+
+// UsageBreakdownsResponse_Data_Item defines model for UsageBreakdownsResponse.data.Item.
+type UsageBreakdownsResponse_Data_Item struct {
+	union json.RawMessage
+}
 
 // User defines model for User.
 type User struct {
@@ -2214,6 +2314,11 @@ type UpdateCaseParams struct {
 type ListCaseRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetCaseUsageParams defines parameters for GetCaseUsage.
+type GetCaseUsageParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -2533,6 +2638,23 @@ type UpdateSpaceTriggerParams struct {
 type UpdateSpaceTrigger200JSONResponseBody struct {
 	union json.RawMessage
 }
+
+// GetSpaceUsageParams defines parameters for GetSpaceUsage.
+type GetSpaceUsageParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListSpaceUsageBreakdownsParams defines parameters for ListSpaceUsageBreakdowns.
+type ListSpaceUsageBreakdownsParams struct {
+	GroupBy ListSpaceUsageBreakdownsParamsGroupBy `form:"group_by" json:"group_by"`
+
+	// Limit Maximum groups to return. Omit for all groups.
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListSpaceUsageBreakdownsParamsGroupBy defines parameters for ListSpaceUsageBreakdowns.
+type ListSpaceUsageBreakdownsParamsGroupBy string
 
 // GetThreadParams defines parameters for GetThread.
 type GetThreadParams struct {
@@ -3176,6 +3298,125 @@ func (t UpsertDatabaseRowsRequest_Rows_AdditionalProperties) MarshalJSON() ([]by
 }
 
 func (t *UpsertDatabaseRowsRequest_Rows_AdditionalProperties) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCaseUsageBreakdown returns the union data inside the UsageBreakdownsResponse_Data_Item as a CaseUsageBreakdown
+func (t UsageBreakdownsResponse_Data_Item) AsCaseUsageBreakdown() (CaseUsageBreakdown, error) {
+	var body CaseUsageBreakdown
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCaseUsageBreakdown overwrites any union data inside the UsageBreakdownsResponse_Data_Item as the provided CaseUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) FromCaseUsageBreakdown(v CaseUsageBreakdown) error {
+	v.GroupBy = "case"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCaseUsageBreakdown performs a merge with any union data inside the UsageBreakdownsResponse_Data_Item, using the provided CaseUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) MergeCaseUsageBreakdown(v CaseUsageBreakdown) error {
+	v.GroupBy = "case"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAgentUsageBreakdown returns the union data inside the UsageBreakdownsResponse_Data_Item as a AgentUsageBreakdown
+func (t UsageBreakdownsResponse_Data_Item) AsAgentUsageBreakdown() (AgentUsageBreakdown, error) {
+	var body AgentUsageBreakdown
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAgentUsageBreakdown overwrites any union data inside the UsageBreakdownsResponse_Data_Item as the provided AgentUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) FromAgentUsageBreakdown(v AgentUsageBreakdown) error {
+	v.GroupBy = "agent"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAgentUsageBreakdown performs a merge with any union data inside the UsageBreakdownsResponse_Data_Item, using the provided AgentUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) MergeAgentUsageBreakdown(v AgentUsageBreakdown) error {
+	v.GroupBy = "agent"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsModelUsageBreakdown returns the union data inside the UsageBreakdownsResponse_Data_Item as a ModelUsageBreakdown
+func (t UsageBreakdownsResponse_Data_Item) AsModelUsageBreakdown() (ModelUsageBreakdown, error) {
+	var body ModelUsageBreakdown
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromModelUsageBreakdown overwrites any union data inside the UsageBreakdownsResponse_Data_Item as the provided ModelUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) FromModelUsageBreakdown(v ModelUsageBreakdown) error {
+	v.GroupBy = "model"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeModelUsageBreakdown performs a merge with any union data inside the UsageBreakdownsResponse_Data_Item, using the provided ModelUsageBreakdown
+func (t *UsageBreakdownsResponse_Data_Item) MergeModelUsageBreakdown(v ModelUsageBreakdown) error {
+	v.GroupBy = "model"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UsageBreakdownsResponse_Data_Item) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"group_by"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t UsageBreakdownsResponse_Data_Item) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "agent":
+		return t.AsAgentUsageBreakdown()
+	case "case":
+		return t.AsCaseUsageBreakdown()
+	case "model":
+		return t.AsModelUsageBreakdown()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t UsageBreakdownsResponse_Data_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UsageBreakdownsResponse_Data_Item) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

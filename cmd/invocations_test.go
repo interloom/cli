@@ -24,23 +24,23 @@ func TestInvocationsReadCommands(t *testing.T) {
 		{
 			name: "get", args: []string{commandNameGet, invocationID},
 			path: "/api/v1/public/invocations/run%2F7", queries: []string{""},
-			pages:    []string{`{"id":"run/7","outcome":"succeeded","duration_seconds":1.25}`},
-			expected: `{"id":"run/7","outcome":"succeeded","duration_seconds":1.25}`,
+			pages:    []string{`{"id":"run/7","outcome":"succeeded","duration_seconds":1.25,"token_usage":{"input_tokens":120,"output_tokens":31,"cached_input_tokens":40,"cache_write_input_tokens":null}}`},
+			expected: `{"id":"run/7","outcome":"succeeded","duration_seconds":1.25,"token_usage":{"input_tokens":120,"output_tokens":31,"cached_input_tokens":40,"cache_write_input_tokens":null}}`,
 		},
 		{
 			name: "page", args: []string{"steps", invocationID, "--" + argLimit, "3", "--" + keyCursor, "start"},
 			path: "/api/v1/public/invocations/run%2F7/steps", queries: []string{"cursor=start&limit=3"},
-			pages:    []string{`{"data":[{"id":"s2","type":"thinking","content_status":"withheld"}],"has_more":true,"next_cursor":"later"}`},
-			expected: `{"data":[{"id":"s2","type":"thinking","content_status":"withheld"}],"has_more":true,"next_cursor":"later"}`,
+			pages:    []string{`{"data":[{"id":"s2","type":"thinking","content_status":"withheld","token_usage":null}],"has_more":true,"next_cursor":"later"}`},
+			expected: `{"data":[{"id":"s2","type":"thinking","content_status":"withheld","token_usage":null}],"has_more":true,"next_cursor":"later"}`,
 		},
 		{
 			name: "all", args: []string{"steps", invocationID, "--" + argLimit, "3", "--all"},
 			path: "/api/v1/public/invocations/run%2F7/steps", queries: []string{"limit=3", "cursor=later&limit=3"},
 			pages: []string{
-				`{"data":[{"id":"s1","type":"tool_call","output":""}],"has_more":true,"next_cursor":"later"}`,
+				`{"data":[{"id":"s1","type":"tool_call","output":"","token_usage":{"input_tokens":17,"output_tokens":5,"cached_input_tokens":0,"cache_write_input_tokens":null}}],"has_more":true,"next_cursor":"later"}`,
 				`{"data":[{"id":"s2","type":"tool_call","output":null}],"has_more":false}`,
 			},
-			expected: `{"data":[{"id":"s1","type":"tool_call","output":""},{"id":"s2","type":"tool_call","output":null}]}`,
+			expected: `{"data":[{"id":"s1","type":"tool_call","output":"","token_usage":{"input_tokens":17,"output_tokens":5,"cached_input_tokens":0,"cache_write_input_tokens":null}},{"id":"s2","type":"tool_call","output":null}]}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

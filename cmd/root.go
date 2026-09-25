@@ -45,7 +45,7 @@ func newRootCmd() *cobra.Command {
 		newCaseIngestionsCmd(),
 		newDatabasesCmd(),
 		newSpacesCmd(),
-		newResourceCmd(apiResource(resourceCases)),
+		newCasesCmd(),
 		newResourceCmd(apiResource("notes")),
 		newResourceCmd(apiResource("procedures")),
 		newAgentsCmd(),

@@ -25,7 +25,9 @@ func newInvocationsStepsCmd() *cobra.Command {
 		Short: "List recorded steps for an invocation",
 		Long: "List recorded steps in creation-time and ID order. Raw tool inputs and\n" +
 			"outputs may contain sensitive data. Thinking and reasoning content is withheld.\n" +
-			"Final responses remain in thread messages; steps are not individual LLM turns.",
+			"Final responses remain in thread messages; steps are not individual LLM turns.\n" +
+			"Token counts can arrive late or be null. Cache counts are included in input tokens.\n" +
+			"Step counts are allocated shares and may not sum to invocation totals. Costs are not exposed.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
