@@ -1789,6 +1789,7 @@ type RelationshipType string
 
 // ReplaceAgentToolsRequest defines model for ReplaceAgentToolsRequest.
 type ReplaceAgentToolsRequest struct {
+	// ToolIds Tool IDs to assign. For assistants, only custom tool IDs are accepted; existing built-in tools remain assigned.
 	ToolIds []openapi_types.UUID `json:"tool_ids"`
 }
 

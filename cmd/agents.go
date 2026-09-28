@@ -50,7 +50,9 @@ func newAgentToolsReplaceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "replace <agent-id>",
 		Short: "Replace an Agent's assigned tools",
-		Args:  cobra.ExactArgs(1),
+		Long: "Replace an Agent's assigned tools. For assistants, supply only custom tool IDs.\n" +
+			"Existing built-in tools remain assigned, including when tool_ids is empty.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {

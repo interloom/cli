@@ -263,7 +263,9 @@ interloom users get <id>
 
 ## Agent tools
 
-List or replace the complete set of tools assigned to an Agent:
+List or replace the tools assigned to an Agent. For assistants, replacement
+accepts only custom tool IDs. Existing built-in tools remain assigned. An empty
+`tool_ids` list removes custom tools but keeps an assistant's built-in tools.
 
 ```sh
 interloom agents tools list <agent-id>
