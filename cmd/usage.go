@@ -11,6 +11,7 @@ import (
 func newCasesCmd() *cobra.Command {
 	cmd := newResourceCmd(apiResource(resourceCases))
 	cmd.AddCommand(newUsageCmd(resourceCases))
+	cmd.AddCommand(newCaseRecommendationsCmd("similar-cases", 30, 10), newCaseRecommendationsCmd("relevant-objects", 100, 20))
 	return cmd
 }
 

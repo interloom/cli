@@ -155,6 +155,26 @@ Each item contains the linked resource `id`, `type`, and `url`. When available,
 it also contains `relationship_type` and `relationship_direction` relative to
 the requested resource.
 
+### Case recommendations
+
+```sh
+interloom cases similar-cases <case-id> --limit 10
+interloom cases relevant-objects <case-id> --limit 20
+```
+
+These commands return ranked results without pagination (`--all` and `--cursor`
+are not supported). Similar cases accept limits from 1 to 30, with a server
+default of 10. Relevant objects accept limits from 1 to 100, with a server
+default of 20. Limits do not change scores. Scores are comparable only within
+one response and are not confidence estimates.
+
+Relevant objects require the server feature `task-b32f-memory-rank-case-matching`.
+When enabled, both commands use the containing root case. Otherwise, similar
+cases use the requested case. Responses include `anchor_case` and `data`;
+similar cases also include a nullable `score_source`. Relevant objects contain
+links and titles, not object contents. Their `source_cases` are stored links,
+not ranking contributions. These commands are not exposed as MCP tools.
+
 ### Space triggers
 
 Get or update the triage trigger applied to new cases in a Space. Updates use

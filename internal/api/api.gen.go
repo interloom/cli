@@ -361,6 +361,24 @@ func (e ResourceType) Valid() bool {
 	}
 }
 
+// Defines values for SimilarTaskScoreSource.
+const (
+	DatabaseCosineSimilarity SimilarTaskScoreSource = "database_cosine_similarity"
+	Reranker                 SimilarTaskScoreSource = "reranker"
+)
+
+// Valid indicates whether the value is a known member of the SimilarTaskScoreSource enum.
+func (e SimilarTaskScoreSource) Valid() bool {
+	switch e {
+	case DatabaseCosineSimilarity:
+		return true
+	case Reranker:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SpaceMembershipRole.
 const (
 	SpaceMembershipRoleManager SpaceMembershipRole = "manager"
@@ -825,6 +843,16 @@ type CaseIngestionFailedEntry struct {
 
 // CaseIngestionFailedEntryStatus Entry processing status.
 type CaseIngestionFailedEntryStatus string
+
+// CaseLink defines model for CaseLink.
+type CaseLink struct {
+	// Id Unique identifier for the linked object.
+	Id   openapi_types.UUID `json:"id"`
+	Type string             `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
+}
 
 // CaseListItem defines model for CaseListItem.
 type CaseListItem struct {
@@ -1787,6 +1815,31 @@ type RelationshipLink struct {
 // RelationshipType defines model for RelationshipType.
 type RelationshipType string
 
+// RelevantObjectLink defines model for RelevantObjectLink.
+type RelevantObjectLink struct {
+	// Id Unique identifier for the linked object.
+	Id openapi_types.UUID `json:"id"`
+
+	// Score Object relevance score, comparable only within this response.
+	Score float32 `json:"score"`
+
+	// SourceCases Permitted matched cases with stored outgoing relationships to this object. These links are not ranking contributions.
+	SourceCases []CaseLink `json:"source_cases"`
+
+	// Title Object title, name, or ID when neither is available.
+	Title string       `json:"title"`
+	Type  ResourceType `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
+}
+
+// RelevantObjectsResponse defines model for RelevantObjectsResponse.
+type RelevantObjectsResponse struct {
+	AnchorCase CaseLink             `json:"anchor_case"`
+	Data       []RelevantObjectLink `json:"data"`
+}
+
 // ReplaceAgentToolsRequest defines model for ReplaceAgentToolsRequest.
 type ReplaceAgentToolsRequest struct {
 	// ToolIds Tool IDs to assign. For assistants, only custom tool IDs are accepted; existing built-in tools remain assigned.
@@ -1817,6 +1870,51 @@ type Secret struct {
 	// Type Public resource type for the secret.
 	Type *string `json:"type,omitempty"`
 }
+
+// SimilarCase defines model for SimilarCase.
+type SimilarCase struct {
+	ExternalId *string `json:"external_id"`
+
+	// Id Unique identifier for the linked object.
+	Id openapi_types.UUID `json:"id"`
+
+	// Score Similarity score, comparable only within this response.
+	Score float32 `json:"score"`
+
+	// SemanticSearchContribution Weighted semantic contribution for unified matching; otherwise null.
+	SemanticSearchContribution *float32 `json:"semantic_search_contribution"`
+
+	// SharedObjectMatchContribution Weighted shared-object contribution for unified matching; otherwise null.
+	SharedObjectMatchContribution *float32   `json:"shared_object_match_contribution"`
+	Status                        CaseStatus `json:"status"`
+	Summary                       *string    `json:"summary"`
+	Tags                          []string   `json:"tags"`
+	Title                         string     `json:"title"`
+	Type                          string     `json:"type"`
+
+	// Url Canonical public REST URL for the linked resource.
+	Url *string `json:"url,omitempty"`
+}
+
+// SimilarCasesResponse defines model for SimilarCasesResponse.
+type SimilarCasesResponse struct {
+	AnchorCase CaseLink      `json:"anchor_case"`
+	Data       []SimilarCase `json:"data"`
+
+	// ScoreSource Score source shared by all candidates; null when no candidates match.
+	ScoreSource *SimilarCasesResponse_ScoreSource `json:"score_source"`
+}
+
+// SimilarCasesResponseScoreSource1 defines model for .
+type SimilarCasesResponseScoreSource1 = string
+
+// SimilarCasesResponse_ScoreSource Score source shared by all candidates; null when no candidates match.
+type SimilarCasesResponse_ScoreSource struct {
+	union json.RawMessage
+}
+
+// SimilarTaskScoreSource defines model for SimilarTaskScoreSource.
+type SimilarTaskScoreSource string
 
 // Space defines model for Space.
 type Space struct {
@@ -2315,6 +2413,20 @@ type UpdateCaseParams struct {
 type ListCaseRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetRelevantObjectsParams defines parameters for GetRelevantObjects.
+type GetRelevantObjectsParams struct {
+	// Limit Maximum number of ranked objects to return. Does not change scores.
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetSimilarCasesParams defines parameters for GetSimilarCases.
+type GetSimilarCasesParams struct {
+	// Limit Maximum number of ranked cases to return. Does not change scores.
+	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -3092,6 +3204,68 @@ func (t PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAn
 }
 
 func (t *PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType_Data_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSimilarTaskScoreSource returns the union data inside the SimilarCasesResponse_ScoreSource as a SimilarTaskScoreSource
+func (t SimilarCasesResponse_ScoreSource) AsSimilarTaskScoreSource() (SimilarTaskScoreSource, error) {
+	var body SimilarTaskScoreSource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSimilarTaskScoreSource overwrites any union data inside the SimilarCasesResponse_ScoreSource as the provided SimilarTaskScoreSource
+func (t *SimilarCasesResponse_ScoreSource) FromSimilarTaskScoreSource(v SimilarTaskScoreSource) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSimilarTaskScoreSource performs a merge with any union data inside the SimilarCasesResponse_ScoreSource, using the provided SimilarTaskScoreSource
+func (t *SimilarCasesResponse_ScoreSource) MergeSimilarTaskScoreSource(v SimilarTaskScoreSource) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSimilarCasesResponseScoreSource1 returns the union data inside the SimilarCasesResponse_ScoreSource as a SimilarCasesResponseScoreSource1
+func (t SimilarCasesResponse_ScoreSource) AsSimilarCasesResponseScoreSource1() (SimilarCasesResponseScoreSource1, error) {
+	var body SimilarCasesResponseScoreSource1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSimilarCasesResponseScoreSource1 overwrites any union data inside the SimilarCasesResponse_ScoreSource as the provided SimilarCasesResponseScoreSource1
+func (t *SimilarCasesResponse_ScoreSource) FromSimilarCasesResponseScoreSource1(v SimilarCasesResponseScoreSource1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSimilarCasesResponseScoreSource1 performs a merge with any union data inside the SimilarCasesResponse_ScoreSource, using the provided SimilarCasesResponseScoreSource1
+func (t *SimilarCasesResponse_ScoreSource) MergeSimilarCasesResponseScoreSource1(v SimilarCasesResponseScoreSource1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SimilarCasesResponse_ScoreSource) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SimilarCasesResponse_ScoreSource) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
