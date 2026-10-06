@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/interloom/cli/internal/api"
 	"github.com/interloom/cli/internal/client"
 	"github.com/interloom/cli/internal/config"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -36,6 +37,9 @@ const (
 	toolAgentToolsReplace     = "agents_tools_replace"
 	toolFilesDownload         = "files_download"
 	toolThreadsMessagesCreate = "threads_messages_create"
+	toolCasesUsage            = "cases_usage"
+	toolSpacesUsage           = "spaces_usage"
+	toolSpacesUsageBreakdowns = "spaces_usage_breakdowns"
 	schemaKeyType             = "type"
 	schemaKeyDesc             = "description"
 	schemaTypeObject          = "object"
@@ -217,6 +221,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerFileTools(server)
 	svc.registerCaseIngestionTools(server)
 	svc.registerDatabaseTools(server)
+	svc.registerUsageTools(server)
 	return server
 }
 
@@ -509,6 +514,86 @@ func (s *mcpService) registerDatabaseActionTool(
 		}
 		return toolJSONResult(raw), nil
 	})
+}
+
+func (s *mcpService) registerUsageTools(server *mcpsdk.Server) {
+	const usageNote = " Usage covers all time; metrics can arrive late, and EUR costs can be partial or null."
+	for _, tool := range []struct{ name, resourceName, description string }{
+		{toolCasesUsage, resourceCases, "Get a Case's all-time usage totals, including descendants."},
+		{toolSpacesUsage, resourceSpaces, "Get a Space's all-time usage totals. Requires owner or manager access."},
+	} {
+		resourceName := tool.resourceName
+		server.AddTool(&mcpsdk.Tool{
+			Name:        tool.name,
+			Description: tool.description + usageNote,
+			InputSchema: objectSchema(map[string]any{"id": stringSchema("resource ID")}, "id"),
+		}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+			args, err := parseToolArgs(req)
+			if err != nil {
+				return toolErrorResult(err), nil
+			}
+			id, err := args.requiredString("id")
+			if err != nil {
+				return toolErrorResult(err), nil
+			}
+			raw, err := getUsage(ctx, s.client, resourceName, id)
+			if err != nil {
+				return toolErrorResult(err), nil
+			}
+			return toolJSONResult(raw), nil
+		})
+	}
+
+	server.AddTool(&mcpsdk.Tool{
+		Name: toolSpacesUsageBreakdowns,
+		Description: "List a Space's all-time usage grouped by case, model, or agent. Requires owner or manager access." +
+			usageNote + " Pass sort to rank groups highest first, for example the most expensive cases.",
+		InputSchema: objectSchema(map[string]any{
+			"id":       stringSchema("Space ID"),
+			keyGroupBy: enumSchema("group usage by case, model, or agent", "case", "model", "agent"),
+			argLimit:   integerSchema("maximum groups to return (at least 1); applied after sort"),
+			keySort:    enumSchema("order groups by cost or tokens, highest first; omit for group-key order", usageSortCost, usageSortTokens),
+		}, "id", keyGroupBy),
+	}, s.usageBreakdownsHandler())
+}
+
+func (s *mcpService) usageBreakdownsHandler() mcpsdk.ToolHandler {
+	return func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+		args, err := parseToolArgs(req)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		id, err := args.requiredString("id")
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		group, err := args.requiredString(keyGroupBy)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		if !api.ListSpaceUsageBreakdownsParamsGroupBy(group).Valid() {
+			return toolErrorResult(fmt.Errorf("%s must be case, model, or agent", keyGroupBy)), nil
+		}
+		sortBy, _, err := args.string(keySort)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		if _, ok := usageSortFields[sortBy]; sortBy != "" && !ok {
+			return toolErrorResult(fmt.Errorf("%s must be cost or tokens", keySort)), nil
+		}
+		limit, hasLimit, err := args.int(argLimit)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		if hasLimit && limit < 1 {
+			return toolErrorResult(fmt.Errorf("%s must be at least 1", argLimit)), nil
+		}
+		raw, err := listUsageBreakdowns(ctx, s.client, id, group, sortBy, limit)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		return toolJSONResult(raw), nil
+	}
 }
 
 func (s *mcpService) listResourceHandler(r resource) mcpsdk.ToolHandler {
@@ -1283,6 +1368,12 @@ func stringSchema(description string) map[string]any {
 
 func integerSchema(description string) map[string]any {
 	return map[string]any{schemaKeyType: "integer", schemaKeyDesc: description}
+}
+
+func enumSchema(description string, values ...string) map[string]any {
+	schema := stringSchema(description)
+	schema["enum"] = values
+	return schema
 }
 
 func allSchema() map[string]any {
