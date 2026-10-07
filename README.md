@@ -92,6 +92,12 @@ interloom notes create --title "Note" --body "..." --space-id <id> --tags a,b
 interloom agents update <id> --model gpt-5 --reasoning-effort HIGH
 ```
 
+Spaces are private by default. Use `spaces create --name "Shared space"
+--is-public` to give everyone in the organization access and automatic
+membership. Use `--is-public=false` for an explicit private setting. Visibility
+cannot change after creation. The MCP `spaces_create` tool accepts the boolean
+`is_public` argument too.
+
 Raw JSON still works via `--data/-d` (inline), `--file/-f` (a path, or `-` for
 stdin), or piped stdin — use it for fields without a flag (e.g. a procedure's
 `stages`). Field flags and a raw body are mutually exclusive.

@@ -1032,6 +1032,15 @@ func bodyMapFromFieldArgs(args toolArgs, fields []field) (map[string]any, error)
 		if !args.has(f.name) {
 			continue
 		}
+		if f.boolean {
+			var v bool
+			raw, _ := args.raw(f.name)
+			if json.Unmarshal(raw, &v) != nil {
+				return nil, fmt.Errorf("%s must be a boolean", f.name)
+			}
+			out[f.name] = v
+			continue
+		}
 		if f.multi {
 			vals, _, err := args.stringSlice(f.name)
 			if err != nil {
@@ -1246,9 +1255,12 @@ func bodyInputSchema(r resource, create bool) map[string]any {
 		if create && f.required {
 			desc += " (required unless data is provided)"
 		}
-		if f.multi {
+		switch {
+		case f.multi:
 			props[f.name] = stringArraySchema(desc)
-		} else {
+		case f.boolean:
+			props[f.name] = map[string]any{schemaKeyType: "boolean", schemaKeyDesc: desc}
+		default:
 			props[f.name] = stringSchema(desc)
 		}
 	}

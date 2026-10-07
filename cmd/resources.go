@@ -7,6 +7,7 @@ func apiResources() []resource {
 		{name: resourceSpaces, singular: "space", hasRelationships: true, fields: []field{
 			{name: keyName, usage: "Space name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Space description", onCreate: true, onUpdate: true},
+			{name: "is_public", usage: "give everyone in the organization access and membership; cannot change after creation", boolean: true, onCreate: true},
 		}},
 		{name: resourceCases, singular: "case", hasRelationships: true, filters: []filter{
 			filterSpaceID,

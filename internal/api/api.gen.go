@@ -1000,7 +1000,10 @@ type CreateSecretRequest struct {
 // CreateSpaceRequest defines model for CreateSpaceRequest.
 type CreateSpaceRequest struct {
 	Description *string `json:"description,omitempty"`
-	Name        string  `json:"name"`
+
+	// IsPublic Whether everyone in the organization has access and is automatically a member. Defaults to private. Visibility cannot be changed after creation.
+	IsPublic *bool  `json:"is_public,omitempty"`
+	Name     string `json:"name"`
 }
 
 // CreateToolRequest defines model for CreateToolRequest.

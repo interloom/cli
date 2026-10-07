@@ -85,6 +85,7 @@ type field struct {
 	name     string
 	usage    string
 	multi    bool
+	boolean  bool
 	onCreate bool
 	onUpdate bool
 	required bool
@@ -360,9 +361,12 @@ func (r resource) addFieldFlags(cmd *cobra.Command, create bool) {
 		if create && f.required {
 			usage += " (required)"
 		}
-		if f.multi {
+		switch {
+		case f.multi:
 			cmd.Flags().StringSlice(f.flagName(), nil, usage)
-		} else {
+		case f.boolean:
+			cmd.Flags().Bool(f.flagName(), false, usage)
+		default:
 			cmd.Flags().String(f.flagName(), "", usage)
 		}
 	}
@@ -379,10 +383,14 @@ func (r resource) body(cmd *cobra.Command, create bool) ([]byte, error) {
 	for _, f := range fields {
 		flagName := f.flagName()
 		if cmd.Flags().Changed(flagName) {
-			if f.multi {
+			switch {
+			case f.multi:
 				vals, _ := cmd.Flags().GetStringSlice(flagName)
 				out[f.name] = vals
-			} else {
+			case f.boolean:
+				v, _ := cmd.Flags().GetBool(flagName)
+				out[f.name] = v
+			default:
 				v, _ := cmd.Flags().GetString(flagName)
 				out[f.name] = v
 			}
