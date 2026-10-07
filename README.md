@@ -369,13 +369,18 @@ interloom spaces usage <space-id>
 interloom spaces usage breakdowns <space-id> --group-by case
 interloom spaces usage breakdowns <space-id> --group-by model --limit 20
 interloom spaces usage breakdowns <space-id> --group-by agent
+interloom spaces usage breakdowns <space-id> --group-by case --sort cost --limit 10
 ```
 
 Usage covers all time; date filters are not available. Case totals include
 descendants. Space totals and breakdowns require owner or manager access.
-Breakdowns require `--group-by case|model|agent`. Groups are ordered by group key,
-not usage. Omit `--limit` for all groups, or supply an integer of at least 1.
-There are no `--cursor` or `--all` flags for these commands.
+Breakdowns require `--group-by case|model|agent`. Groups are ordered by group key
+unless `--sort cost|tokens` is passed, which orders them by `total_cost_amount` or
+`total_tokens`, highest first, with null values last. Omit `--limit` for all
+groups, or supply an integer of at least 1. With `--sort`, the CLI fetches every
+group and applies `--limit` after sorting, so `--sort cost --limit 10` returns the
+ten most expensive groups. There are no `--cursor` or `--all` flags for these
+commands.
 
 Metrics can arrive late. With no metrics, counts are zero and token totals and
 averages are null. The CLI preserves the API values without calculating totals.
@@ -386,7 +391,9 @@ null when customer pricing is disabled or no priced usage exists.
 Case groups use the recorded root case and its space. Model and agent groups,
 like Space totals, use the invocation's recorded space. Thus, case breakdown
 totals can differ from Space totals. Deleted cases and agents can remain in groups.
-These usage commands are not exposed as MCP tools.
+
+The MCP server exposes these commands as `cases_usage`, `spaces_usage`, and
+`spaces_usage_breakdowns` (`id`, `group_by`, optional `limit` and `sort`).
 
 ## MCP server
 

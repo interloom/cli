@@ -103,6 +103,7 @@ func TestMCPToolRegistration(t *testing.T) {
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
 		"spaces_relationships", "cases_relationships", "notes_relationships", "procedures_relationships",
 		"agents_relationships", "files_relationships", "users_relationships",
+		toolCasesUsage, toolSpacesUsage, toolSpacesUsageBreakdowns,
 	} {
 		if !names[name] {
 			t.Fatalf("tool %q not registered", name)
