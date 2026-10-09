@@ -100,6 +100,7 @@ func TestMCPToolRegistration(t *testing.T) {
 		toolCaseIngestionsCreate, toolCaseIngestionsGet, toolCaseIngestionsErrors,
 		toolDatabasesGet, toolDatabasesQuery, toolDatabasesAggregate,
 		"models_list",
+		"outbound-networks_list",
 		"users_list", "users_get", "users_me", "threads_get", "threads_events", toolThreadsMessagesCreate,
 		"spaces_relationships", "cases_relationships", "notes_relationships", "procedures_relationships",
 		"agents_relationships", "files_relationships", "users_relationships",

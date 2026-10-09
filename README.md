@@ -311,6 +311,22 @@ interloom tools update <tool-id> --description "Updated description"
 interloom tools update <tool-id> --secret-ids <secret-id-1>,<secret-id-2>
 ```
 
+Use `outbound-networks list` to find available sandbox network IDs. This list
+has no pagination. Set `--outbound-network <id>` on `tools create` or `tools
+update`. Creation defaults to `internet`; omitting the field on update keeps
+the current setting. The same field is available to MCP tools.
+
+```sh
+interloom outbound-networks list
+interloom tools update <tool-id> --outbound-network disabled
+```
+
+`internet` allows direct internet access. `disabled` blocks outbound traffic.
+An egress lane ID routes TCP traffic through its `public_ip_prefix` range.
+DNS and other UDP traffic do not use that range. If a lane is removed, tools
+that use it fail to run. Tool details include `outbound_network`; internal
+tools return null for this field.
+
 ## Secrets
 
 Create, list, or delete organization secrets. The API never returns stored

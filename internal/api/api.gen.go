@@ -226,6 +226,27 @@ func (e ModelDeploymentLocation) Valid() bool {
 	}
 }
 
+// Defines values for OutboundNetworkMode.
+const (
+	Disabled   OutboundNetworkMode = "disabled"
+	EgressLane OutboundNetworkMode = "egress_lane"
+	Internet   OutboundNetworkMode = "internet"
+)
+
+// Valid indicates whether the value is a known member of the OutboundNetworkMode enum.
+func (e OutboundNetworkMode) Valid() bool {
+	switch e {
+	case Disabled:
+		return true
+	case EgressLane:
+		return true
+	case Internet:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrivateContentStepType.
 const (
 	Reasoning PrivateContentStepType = "reasoning"
@@ -1017,6 +1038,9 @@ type CreateToolRequest struct {
 	// Name Unique name used to call the custom tool.
 	Name string `json:"name"`
 
+	// OutboundNetwork Outbound network id of the tool sandbox: "internet", "disabled", or an egress lane key. Use GET /outbound-networks to discover ids.
+	OutboundNetwork *string `json:"outbound_network,omitempty"`
+
 	// Script Python script executed by the custom tool.
 	Script string `json:"script"`
 
@@ -1375,6 +1399,12 @@ type ListNotesResponse struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// ListOutboundNetworksResponse defines model for ListOutboundNetworksResponse.
+type ListOutboundNetworksResponse struct {
+	// Data Outbound networks that custom tools can select, in display order.
+	Data []OutboundNetwork `json:"data"`
+}
+
 // ListProceduresResponse defines model for ListProceduresResponse.
 type ListProceduresResponse struct {
 	// Data Items in the current page.
@@ -1593,6 +1623,32 @@ type Organization struct {
 
 	// Slug URL-safe slug for the organization.
 	Slug string `json:"slug"`
+}
+
+// OutboundNetwork defines model for OutboundNetwork.
+type OutboundNetwork struct {
+	EgressLane OutboundNetworkEgressLane `json:"egress_lane"`
+
+	// Id Stable outbound network id sent back as a tool's outbound_network: "internet", "disabled", or an egress lane key.
+	Id string `json:"id"`
+
+	// Mode internet is direct internet access, disabled blocks all outbound traffic, and egress_lane sends TCP traffic through a static egress IP range. DNS and other UDP traffic do not use the static IP range.
+	Mode OutboundNetworkMode `json:"mode"`
+}
+
+// OutboundNetworkMode internet is direct internet access, disabled blocks all outbound traffic, and egress_lane sends TCP traffic through a static egress IP range. DNS and other UDP traffic do not use the static IP range.
+type OutboundNetworkMode string
+
+// OutboundNetworkEgressLane defines model for OutboundNetworkEgressLane.
+type OutboundNetworkEgressLane struct {
+	// Key Key of the sandbox egress lane.
+	Key string `json:"key"`
+
+	// Label Display label of the sandbox egress lane.
+	Label string `json:"label"`
+
+	// PublicIpPrefix Public IP range (CIDR) that outbound TCP traffic of the sandbox comes from. Allowlist this range in external systems.
+	PublicIpPrefix string `json:"public_ip_prefix"`
 }
 
 // PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType defines model for PaginatedResponse_Annotated_Union_ToolCallStep__PrivateContentStep___FieldInfo_annotation_NoneType__required_True__discriminator__type____.
@@ -2023,7 +2079,8 @@ type Tool struct {
 	Manager    *ResourceLink `json:"manager,omitempty"`
 
 	// Name Human-readable tool name.
-	Name string `json:"name"`
+	Name            string           `json:"name"`
+	OutboundNetwork *OutboundNetwork `json:"outbound_network,omitempty"`
 
 	// Script Python script for a custom tool managed by the authenticated user, or null otherwise.
 	Script *string `json:"script"`
@@ -2169,6 +2226,9 @@ type UpdateToolRequest struct {
 
 	// Name Updated unique tool name. Omit to leave unchanged.
 	Name *string `json:"name,omitempty"`
+
+	// OutboundNetwork Outbound network id of the tool sandbox: "internet", "disabled", or an egress lane key. Use GET /outbound-networks to discover ids. Omit to leave unchanged.
+	OutboundNetwork *string `json:"outbound_network,omitempty"`
 
 	// Script Updated Python script. Omit to leave unchanged.
 	Script *string `json:"script,omitempty"`
@@ -2610,6 +2670,11 @@ type UpdateNoteParams struct {
 type ListNoteRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ListOutboundNetworksParams defines parameters for ListOutboundNetworks.
+type ListOutboundNetworksParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 

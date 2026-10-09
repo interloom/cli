@@ -50,6 +50,7 @@ func newRootCmd() *cobra.Command {
 		newResourceCmd(apiResource("procedures")),
 		newAgentsCmd(),
 		newResourceCmd(apiResource(resourceModels)),
+		newResourceCmd(apiResource(resourceOutboundNetworks)),
 		newResourceCmd(apiResource(resourceTools)),
 		newResourceCmd(apiResource(resourceSecrets)),
 		newFilesCmd(),

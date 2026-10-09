@@ -1,5 +1,7 @@
 package cmd
 
+const resourceOutboundNetworks = "outbound-networks"
+
 // apiResources is the shared catalog for REST-backed resources. Keep resource
 // shape here so Cobra commands and MCP tools do not drift.
 func apiResources() []resource {
@@ -54,10 +56,12 @@ func apiResources() []resource {
 			{name: keyReasoningEffort, usage: "reasoning effort: LOW, MEDIUM, HIGH, or XHIGH", onCreate: true, onUpdate: true},
 		}},
 		{name: resourceModels, singular: "model", readOnly: true, noGet: true, noPaging: true},
+		{name: resourceOutboundNetworks, singular: "outbound network", readOnly: true, noGet: true, noPaging: true},
 		{name: resourceTools, singular: "tool", noDelete: true, fields: []field{
 			{name: keyName, usage: "Tool name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Tool description", onCreate: true, onUpdate: true, required: true},
 			{name: keyScript, usage: "Python tool script", onCreate: true, onUpdate: true, required: true},
+			{name: "outbound_network", usage: "sandbox network ID: internet, disabled, or an ID from outbound-networks list", onCreate: true, onUpdate: true},
 			{name: keySecretIDs, usage: "associated Secret IDs (repeatable)", multi: true, onCreate: true, onUpdate: true},
 			{name: "manager_id", usage: "new manager User ID", onUpdate: true},
 		}},

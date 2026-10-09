@@ -198,18 +198,20 @@ func TestCasesListDefaultsRespectExplicitDirection(t *testing.T) {
 }
 
 func TestModelsCommandIsListOnlyWithoutPaginationFlags(t *testing.T) {
-	models := newResourceCmd(apiResource(resourceModels))
-	list, _, err := models.Find([]string{commandUseList})
-	if err != nil || list == nil || list.Use != commandUseList {
-		t.Fatalf("models list command not registered: child=%v err=%v", list, err)
-	}
-	for _, flag := range []string{argLimit, keyCursor, argAll} {
-		if list.Flags().Lookup(flag) != nil {
-			t.Fatalf("models list should not expose --%s", flag)
+	for _, name := range []string{resourceModels, resourceOutboundNetworks} {
+		models := newResourceCmd(apiResource(name))
+		list, _, err := models.Find([]string{commandUseList})
+		if err != nil || list == nil || list.Use != commandUseList {
+			t.Fatalf("models list command not registered: child=%v err=%v", list, err)
 		}
-	}
-	if child, _, err := models.Find([]string{commandNameGet, "model-1"}); err == nil && child != nil && child.Use == commandUseGet {
-		t.Fatalf("models get command should not be registered")
+		for _, flag := range []string{argLimit, keyCursor, argAll} {
+			if list.Flags().Lookup(flag) != nil {
+				t.Fatalf("models list should not expose --%s", flag)
+			}
+		}
+		if child, _, err := models.Find([]string{commandNameGet, "model-1"}); err == nil && child != nil && child.Use == commandUseGet {
+			t.Fatalf("models get command should not be registered")
+		}
 	}
 }
 
@@ -253,20 +255,25 @@ func TestToolUpdateBodyFromFlags(t *testing.T) {
 	cmd := tools.updateCmd()
 	mustSet(t, cmd, keyDescription, testUpdatedToolDescription)
 	mustSet(t, cmd, field{name: keySecretIDs}.flagName(), "secret-1,"+testSecretID2)
+	mustSet(t, cmd, "outbound-network", "disabled")
 
 	body, err := tools.body(cmd, false)
 	if err != nil {
 		t.Fatalf("body: %v", err)
 	}
 	var got struct {
-		Description string   `json:"description"`
-		SecretIDs   []string `json:"secret_ids"`
+		Description     string   `json:"description"`
+		SecretIDs       []string `json:"secret_ids"`
+		OutboundNetwork string   `json:"outbound_network"`
 	}
 	if err := json.Unmarshal(body, &got); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if got.Description != testUpdatedToolDescription || len(got.SecretIDs) != 2 || got.SecretIDs[1] != testSecretID2 {
 		t.Fatalf("unexpected body: %s", body)
+	}
+	if got.OutboundNetwork != "disabled" {
+		t.Fatalf("unexpected network: %s", body)
 	}
 }
 
