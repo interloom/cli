@@ -12,8 +12,8 @@ func newCaseRecommendationsCmd(name string, maximum, defaultLimit int) *cobra.Co
 		Use:   name + " <case-id>",
 		Short: "Get ranked " + name + " for a case",
 		Long: "Get ranked results without pagination. Scores are comparable only within this response,\n" +
-			"not confidence estimates. Relevant objects require task-b32f-memory-rank-case-matching.\n" +
-			"With that feature enabled, retrieval uses the containing root case; otherwise similar cases use the requested case.",
+			"not confidence estimates. Both commands use the containing root case.\n" +
+			"Similar cases combine semantic and shared-object matches.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			q := url.Values{}
