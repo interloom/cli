@@ -343,6 +343,23 @@ interloom secrets delete <id>
 interloom models list
 ```
 
+## Assistant chats
+
+List or create the API key owner's personal Odin chats in the key's organization:
+
+```sh
+interloom assistant-chats list --limit 30
+interloom assistant-chats list --cursor <next_cursor>
+interloom assistant-chats list --all
+interloom assistant-chats create
+```
+
+Lists are newest first. Creation takes no body and returns an empty chat with
+a `thread` link. Use that thread ID with `threads messages create` to send a
+message and `threads events` to read replies. Sending returns the submitted
+event; assistant replies arrive asynchronously. The API has no chat get,
+update, or delete endpoint. These commands are not exposed as MCP tools.
+
 ## Threads
 
 Threads have no collection list. `get` fetches a single thread, `events` lists

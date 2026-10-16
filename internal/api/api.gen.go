@@ -751,6 +751,14 @@ type AssigneeSpaceTrigger struct {
 	TriggerType string             `json:"trigger_type"`
 }
 
+// AssistantChat defines model for AssistantChat.
+type AssistantChat struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Thread    ResourceLink       `json:"thread"`
+	UpdatedAt time.Time          `json:"updated_at"`
+}
+
 // Case defines model for Case.
 type Case struct {
 	Assignee *ResourceLink `json:"assignee,omitempty"`
@@ -1337,6 +1345,18 @@ type InvocationTokenUsage struct {
 type ListAgentsResponse struct {
 	// Data Items in the current page.
 	Data []AgentListItem `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListAssistantChatsResponse defines model for ListAssistantChatsResponse.
+type ListAssistantChatsResponse struct {
+	// Data Items in the current page.
+	Data []AssistantChat `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -2396,6 +2416,21 @@ type ReplaceAgentToolsParams struct {
 // ReplaceAgentTools422JSONResponseBody defines parameters for ReplaceAgentTools.
 type ReplaceAgentTools422JSONResponseBody struct {
 	union json.RawMessage
+}
+
+// ListAssistantChatsParams defines parameters for ListAssistantChats.
+type ListAssistantChatsParams struct {
+	// Limit Maximum number of assistant chats to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque cursor from next_cursor in a previous response.
+	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// CreateAssistantChatParams defines parameters for CreateAssistantChat.
+type CreateAssistantChatParams struct {
+	Authorization *string `json:"authorization,omitempty"`
 }
 
 // CreateCaseIngestionParams defines parameters for CreateCaseIngestion.
