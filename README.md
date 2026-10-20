@@ -214,7 +214,7 @@ Create a database with `databases create -f database.json`, using this body:
 {"space_id":"<space-id>","key":"example_records","title":"Example records","schema":{"columns":[{"name":"row_id","type":"string"},{"name":"status","type":"string","nullable":true}],"row_key_column":"row_id"}}
 ```
 
-The schema is immutable and accepts at most 100 columns. Its row-key column
+The initial schema accepts at most 100 columns. Its row-key column
 must be a non-nullable string. Creation with a compatible schema and the same
 space-local key returns the existing database without changing its title,
 rows, or revision. An incompatible schema returns `database_schema_conflict`.

@@ -29,7 +29,7 @@ func newDatabasesCmd() *cobra.Command {
 	create := r.createCmd()
 	create.Long = "Create a database or retrieve a compatible database with the same space-local key.\n" +
 		"Use --data, --file, or stdin to supply space_id, key, title, and the required\n" +
-		"nested schema (columns and row_key_column). The schema is immutable."
+		"nested initial schema (columns and row_key_column)."
 	deleteCmd := r.deleteCmd()
 	deleteCmd.Short = "Permanently delete a database and all its rows"
 	cmd.AddCommand(list, create, deleteCmd)

@@ -1209,7 +1209,7 @@ type DatabaseSchema struct {
 
 // DatabaseSchemaInput defines model for DatabaseSchemaInput.
 type DatabaseSchemaInput struct {
-	// Columns Ordered column definitions for the immutable database schema.
+	// Columns Ordered column definitions for the database's initial schema.
 	Columns []DatabaseColumnInput `json:"columns"`
 
 	// RowKeyColumn Name of the one non-nullable string column that uniquely identifies rows.
