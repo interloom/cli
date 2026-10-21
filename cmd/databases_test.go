@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -17,6 +18,36 @@ const (
 	testDatabaseID     = "database-1"
 	testDatabaseUpsert = "upsert"
 )
+
+func TestDatabasesAddColumns(t *testing.T) {
+	const body = `{"expected_revision":9007199254740993,"columns":[{"name":"reviewed","type":"boolean"}]}`
+	const response = `{"committed_revision":9007199254740994,"added_columns":["reviewed"],"idempotent_replay":false}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil || string(raw) != body {
+			t.Errorf("body = %s, error = %v", raw, err)
+		}
+		if r.Method != http.MethodPost || r.URL.EscapedPath() != "/api/v1/public/databases/a%2Fb/columns" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		}
+		_, _ = w.Write([]byte(response))
+	}))
+	defer server.Close()
+	setDatabaseTestEnv(t, server.URL)
+	out, err := os.CreateTemp(t.TempDir(), "stdout")
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := os.Stdout
+	os.Stdout = out
+	t.Cleanup(func() { os.Stdout = original; _ = out.Close() })
+	root := newRootCmd()
+	root.SetArgs([]string{resourceDatabases, "add-columns", "a/b", "--" + keyData, body})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	assertInvocationOutput(t, out, response)
+}
 
 func TestDatabasesCommandShape(t *testing.T) {
 	root := newRootCmd()

@@ -631,6 +631,24 @@ func (e ListThreadEventsParamsDirection) Valid() bool {
 	}
 }
 
+// AddDatabaseColumnsRequest defines model for AddDatabaseColumnsRequest.
+type AddDatabaseColumnsRequest struct {
+	// Columns Ordered new optional columns. Existing rows have null in these columns.
+	Columns []DatabaseColumnAdditionInput `json:"columns"`
+
+	// ExpectedRevision Observed database revision. Preserve it and the same columns for an exact retry.
+	ExpectedRevision int `json:"expected_revision"`
+}
+
+// AddDatabaseColumnsResponse defines model for AddDatabaseColumnsResponse.
+type AddDatabaseColumnsResponse struct {
+	AddedColumns      []string         `json:"added_columns"`
+	CommittedRevision int              `json:"committed_revision"`
+	Database          DatabaseIdentity `json:"database"`
+	IdempotentReplay  bool             `json:"idempotent_replay"`
+	ResultingRowCount int              `json:"resulting_row_count"`
+}
+
 // AdditionalMetadata defines model for AdditionalMetadata.
 type AdditionalMetadata map[string]interface{}
 
@@ -1100,6 +1118,16 @@ type DatabaseColumn struct {
 	Name        string             `json:"name"`
 	Nullable    *bool              `json:"nullable,omitempty"`
 	Type        DatabaseColumnType `json:"type"`
+}
+
+// DatabaseColumnAdditionInput defines model for DatabaseColumnAdditionInput.
+type DatabaseColumnAdditionInput struct {
+	// Description Optional concise description of the new column.
+	Description *string `json:"description,omitempty"`
+
+	// Name Lower-case name of the new column.
+	Name string             `json:"name"`
+	Type DatabaseColumnType `json:"type"`
 }
 
 // DatabaseColumnInput defines model for DatabaseColumnInput.
@@ -2566,6 +2594,11 @@ type AggregateDatabaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// AddDatabaseColumnsParams defines parameters for AddDatabaseColumns.
+type AddDatabaseColumnsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // QueryDatabaseParams defines parameters for QueryDatabase.
 type QueryDatabaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -2973,6 +3006,9 @@ type CreateDatabaseJSONRequestBody = CreateDatabaseRequest
 
 // AggregateDatabaseJSONRequestBody defines body for AggregateDatabase for application/json ContentType.
 type AggregateDatabaseJSONRequestBody = AggregateDatabaseRequest
+
+// AddDatabaseColumnsJSONRequestBody defines body for AddDatabaseColumns for application/json ContentType.
+type AddDatabaseColumnsJSONRequestBody = AddDatabaseColumnsRequest
 
 // QueryDatabaseJSONRequestBody defines body for QueryDatabase for application/json ContentType.
 type QueryDatabaseJSONRequestBody = QueryDatabaseRequest

@@ -222,6 +222,19 @@ The scalar fields have `--space-id`, `--key`, and `--title` flags, but the
 required nested `schema` needs a complete raw JSON body (`--data`, `--file`,
 or stdin). Raw JSON and field flags cannot be combined.
 
+Append optional columns with `databases add-columns <database-id> -f columns.json`:
+
+```json
+{"expected_revision":3,"columns":[{"name":"reviewed","type":"boolean","description":"Review completed"}]}
+```
+
+First use `databases get` to obtain the current revision and column names.
+Existing columns and the row key cannot change. Existing rows read as null in
+each new column. For an exact retry, keep the original revision and columns;
+the API returns the committed result with `idempotent_replay: true`. A stale
+or different request returns `write_conflict`. This command is not exposed
+as an MCP tool.
+
 Use `databases delete <database-id>` to permanently delete a database, its
 rows, and its write-idempotency records. There is no revision precondition.
 

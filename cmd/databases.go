@@ -34,6 +34,37 @@ func newDatabasesCmd() *cobra.Command {
 	deleteCmd.Short = "Permanently delete a database and all its rows"
 	cmd.AddCommand(list, create, deleteCmd)
 	cmd.AddCommand(newDatabasesGetCmd(), newDatabasesQueryCmd(), newDatabasesAggregateCmd(), newDatabasesUpsertCmd())
+	cmd.AddCommand(newDatabasesAddColumnsCmd())
+	return cmd
+}
+
+func newDatabasesAddColumnsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "add-columns <id>",
+		Short: "Append optional columns to a database",
+		Long: "Append optional columns using expected_revision and an ordered columns array\n" +
+			"of name, type, and optional description values. Existing rows read as null\n" +
+			"in new columns. Existing columns and the row key cannot change.\n" +
+			"For an exact retry, preserve the original revision and columns.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			body, err := readBody(cmd)
+			if err != nil {
+				return err
+			}
+			path := resourceDatabases + "/" + url.PathEscape(args[0]) + "/columns"
+			raw, err := c.Create(cmd.Context(), path, body)
+			if err != nil {
+				return err
+			}
+			return printResult(raw)
+		},
+	}
+	addBodyFlags(cmd)
 	return cmd
 }
 
