@@ -92,6 +92,13 @@ interloom notes create --title "Note" --body "..." --space-id <id> --tags a,b
 interloom agents update <id> --model gpt-5 --reasoning-effort HIGH
 ```
 
+Note creation accepts `--idempotency-key <key>` with field flags or a raw body.
+Choose a key of 1–255 characters. Retrying with the same key and body within
+7 days returns the original result instead of creating another note. A different
+body with the same key returns HTTP 409 `idempotency_key_reused`. The CLI does
+not generate keys or retry automatically. MCP `notes_create` accepts the
+separate `idempotency_key` argument; it is an HTTP header, not a body field.
+
 Spaces are private by default. Use `spaces create --name "Shared space"
 --is-public` to give everyone in the organization access and automatic
 membership. Use `--is-public=false` for an explicit private setting. Visibility

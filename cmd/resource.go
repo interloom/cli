@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -13,6 +14,10 @@ import (
 
 // snake_case JSON/query key names shared across resources.
 const (
+	keyIdempotency         = "idempotency_key"
+	flagIdempotency        = "idempotency-key"
+	headerIdempotency      = "Idempotency-Key"
+	idempotencyHelp        = "client key (1–255 characters); reuse with the same body for up to 7 days; different bodies return 409"
 	resourceCaseIngestions = "case-ingestions"
 	resourceCases          = "cases"
 	resourceModels         = "models"
@@ -115,6 +120,7 @@ type resource struct {
 	noDelete         bool     // no DELETE endpoint (e.g. agents)
 	noPaging         bool     // collection list is not cursor-paginated
 	hasRelationships bool     // item has a paginated relationships sub-resource
+	idempotentCreate bool     // create accepts an Idempotency-Key header
 	filters          []filter // list query filters
 	fields           []field  // create/update body fields
 }
@@ -283,7 +289,12 @@ func (r resource) createCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			raw, err := c.Create(cmd.Context(), r.name, body)
+			headers := http.Header{}
+			if r.idempotentCreate && cmd.Flags().Changed(flagIdempotency) {
+				key, _ := cmd.Flags().GetString(flagIdempotency)
+				headers.Set(headerIdempotency, key)
+			}
+			raw, err := c.Create(cmd.Context(), r.name, body, headers)
 			if err != nil {
 				return err
 			}
@@ -292,6 +303,9 @@ func (r resource) createCmd() *cobra.Command {
 	}
 	r.addFieldFlags(cmd, true)
 	addBodyFlags(cmd)
+	if r.idempotentCreate {
+		cmd.Flags().String(flagIdempotency, "", idempotencyHelp)
+	}
 	return cmd
 }
 

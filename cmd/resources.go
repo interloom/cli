@@ -30,7 +30,7 @@ func apiResources() []resource {
 			fieldTags,
 			{name: "attached_file_ids", usage: "attached File IDs (repeatable)", multi: true, onCreate: true},
 		}},
-		{name: "notes", singular: "note", hasRelationships: true, filters: []filter{
+		{name: "notes", singular: "note", hasRelationships: true, idempotentCreate: true, filters: []filter{
 			filterSpaceID,
 			filterCaseID,
 			{name: keyThreadID, usage: "filter by thread ID"},

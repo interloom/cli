@@ -2717,6 +2717,9 @@ type ListNotesParamsDirection string
 // CreateNoteParams defines parameters for CreateNote.
 type CreateNoteParams struct {
 	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // DeleteNoteParams defines parameters for DeleteNote.

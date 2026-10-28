@@ -53,7 +53,7 @@ func (e *APIError) Error() string {
 }
 
 // do performs a request and returns the raw body for 2xx, or an *APIError.
-func (c *Client) do(ctx context.Context, method, path string, query url.Values, body io.Reader, contentType string) (json.RawMessage, error) {
+func (c *Client) do(ctx context.Context, method, path string, query url.Values, body io.Reader, contentType string, headers ...http.Header) (json.RawMessage, error) {
 	u := c.baseURL + apiPrefix + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
@@ -66,6 +66,13 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	req.Header.Set("Accept", "application/json")
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
+	}
+	for _, header := range headers {
+		for name, values := range header {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
+		}
 	}
 
 	resp, err := c.http.Do(req)
@@ -143,8 +150,8 @@ func (c *Client) Get(ctx context.Context, resource, id string) (json.RawMessage,
 }
 
 // Create posts a JSON body to the resource collection.
-func (c *Client) Create(ctx context.Context, resource string, body []byte) (json.RawMessage, error) {
-	return c.do(ctx, http.MethodPost, "/"+resource, nil, bytes.NewReader(body), "application/json")
+func (c *Client) Create(ctx context.Context, resource string, body []byte, headers ...http.Header) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodPost, "/"+resource, nil, bytes.NewReader(body), "application/json", headers...)
 }
 
 // Update patches a single resource with a JSON body.

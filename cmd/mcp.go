@@ -601,7 +601,17 @@ func (s *mcpService) createResourceHandler(r resource) mcpsdk.ToolHandler {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		raw, err := s.client.Create(ctx, r.name, body)
+		headers := http.Header{}
+		if r.idempotentCreate {
+			key, present, keyErr := args.string(keyIdempotency)
+			if keyErr != nil {
+				return toolErrorResult(keyErr), nil
+			}
+			if present {
+				headers.Set(headerIdempotency, key)
+			}
+		}
+		raw, err := s.client.Create(ctx, r.name, body, headers)
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -1250,6 +1260,9 @@ func listInputSchema(r resource) map[string]any {
 
 func bodyInputSchema(r resource, create bool) map[string]any {
 	props := map[string]any{keyData: dataSchema("raw JSON request body; use this instead of typed field arguments")}
+	if create && r.idempotentCreate {
+		props[keyIdempotency] = stringSchema(idempotencyHelp)
+	}
 	for _, f := range r.fieldsFor(create) {
 		desc := f.usage
 		if create && f.required {
