@@ -1,15 +1,19 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/interloom/cli/internal/client"
 	"github.com/interloom/cli/internal/config"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 const (
@@ -69,8 +73,137 @@ func TestUsageCommands(t *testing.T) {
 	}
 }
 
+// usageCaseGroups are group_by=case breakdowns in the API's response shape.
+// They cover a null cost (pricing disabled), a cost tie, and a null token total.
+var usageCaseGroups = map[string]string{
+	"case-a": `{"group_by":"case","case":{"id":"case-a","type":"CASE","url":"/api/v1/public/cases/case-a"},"totals":{"invocation_count":2,"total_interactions":6,"total_tokens":900,"total_cost_amount":null}}`,
+	"case-b": `{"group_by":"case","case":{"id":"case-b","type":"CASE","url":"/api/v1/public/cases/case-b"},"totals":{"invocation_count":5,"total_interactions":14,"total_tokens":4000,"total_cost_amount":0.42}}`,
+	"case-c": `{"group_by":"case","case":{"id":"case-c","type":"CASE","url":"/api/v1/public/cases/case-c"},"totals":{"invocation_count":9,"total_interactions":40,"total_tokens":12000,"total_cost_amount":3.1}}`,
+	"case-d": `{"group_by":"case","case":{"id":"case-d","type":"CASE","url":"/api/v1/public/cases/case-d"},"totals":{"invocation_count":1,"total_interactions":3,"total_tokens":null,"total_cost_amount":0.42}}`,
+}
+
+// usageCaseResponse builds a breakdowns response with the groups in the given order.
+func usageCaseResponse(ids ...string) string {
+	groups := make([]string, len(ids))
+	for i, id := range ids {
+		groups[i] = usageCaseGroups[id]
+	}
+	return `{"data":[` + strings.Join(groups, ",") + `]}`
+}
+
+func TestUsageBreakdownsSort(t *testing.T) {
+	// The API returns groups in group-key order.
+	keyOrder := usageCaseResponse("case-a", "case-b", "case-c", "case-d")
+	for _, tc := range []struct {
+		name, want string
+		args       []string
+	}{
+		{"cost", usageCaseResponse("case-c", "case-b", "case-d", "case-a"), []string{"--" + keySort, usageSortCost}},
+		{"cost with limit", usageCaseResponse("case-c", "case-b"), []string{"--" + keySort, usageSortCost, "--" + argLimit, "2"}},
+		{"tokens", usageCaseResponse("case-c", "case-b", "case-a", "case-d"), []string{"--" + keySort, usageSortTokens}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				// A sorted request must fetch every group: the API applies limit in key order.
+				if r.URL.EscapedPath() != "/api/v1/public"+usageBreakdownsPath || r.URL.RawQuery != "group_by=case" {
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+				}
+				_, _ = w.Write([]byte(keyOrder))
+			}))
+			defer server.Close()
+			t.Setenv(config.EnvAPIKey, "test-key")
+			t.Setenv(config.EnvBaseURL, server.URL)
+			t.Setenv(config.EnvConfig, "")
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			out, err := os.CreateTemp(t.TempDir(), "stdout")
+			if err != nil {
+				t.Fatal(err)
+			}
+			original := os.Stdout
+			os.Stdout = out
+			t.Cleanup(func() { os.Stdout = original; _ = out.Close() })
+			root := newRootCmd()
+			root.SetArgs(append([]string{resourceSpaces, usageCommand, usageBreakdowns, usageTestID, usageGroupFlag, usageGroupCase}, tc.args...))
+			if err := root.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if calls != 1 {
+				t.Fatalf("requests = %d, want 1", calls)
+			}
+			assertInvocationOutput(t, out, tc.want)
+		})
+	}
+}
+
+func TestMCPUsageTools(t *testing.T) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() + "?" + r.URL.RawQuery {
+		case "/api/v1/public/cases/" + testCaseID + "/usage?":
+			_, _ = w.Write([]byte(`{"invocation_count":4,"total_cost_amount":1.5}`))
+		case "/api/v1/public/spaces/" + testSpaceID + "/usage/breakdowns?group_by=case":
+			_, _ = w.Write([]byte(usageCaseResponse("case-a", "case-b", "case-c", "case-d")))
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer apiServer.Close()
+	session := newTestMCPSession(t, client.New(apiServer.URL, "test-key"))
+
+	for _, tc := range []struct {
+		name, tool, want string
+		args             map[string]any
+	}{
+		{"case totals", toolCasesUsage, `{"invocation_count":4,"total_cost_amount":1.5}`, map[string]any{"id": testCaseID}},
+		{
+			"top cases by cost", toolSpacesUsageBreakdowns, usageCaseResponse("case-c", "case-b"),
+			map[string]any{"id": testSpaceID, keyGroupBy: usageGroupCase, keySort: usageSortCost, argLimit: 2},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{Name: tc.tool, Arguments: tc.args})
+			if err != nil {
+				t.Fatalf("CallTool: %v", err)
+			}
+			if result.IsError {
+				t.Fatalf("tool returned error: %s", toolResultText(t, result))
+			}
+			var got, want any
+			if err := json.Unmarshal([]byte(toolResultText(t, result)), &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tc.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("result = %v, want %v", got, want)
+			}
+		})
+	}
+
+	for _, args := range []map[string]any{
+		{"id": testSpaceID},
+		{"id": testSpaceID, keyGroupBy: "other"},
+		{"id": testSpaceID, keyGroupBy: usageGroupCase, keySort: "spend"},
+		{"id": testSpaceID, keyGroupBy: usageGroupCase, argLimit: 0},
+	} {
+		result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{Name: toolSpacesUsageBreakdowns, Arguments: args})
+		if err != nil {
+			t.Fatalf("CallTool(%v): %v", args, err)
+		}
+		if !result.IsError {
+			t.Fatalf("CallTool(%v) succeeded, want a tool error", args)
+		}
+	}
+}
+
 func TestUsageInvalidArguments(t *testing.T) {
-	const argumentError = "accepts 1 arg(s)"
+	const (
+		argumentError = "accepts 1 arg(s)"
+		unknownFlag   = "unknown flag"
+	)
 	for _, tc := range []struct {
 		args []string
 		want string
@@ -79,11 +212,13 @@ func TestUsageInvalidArguments(t *testing.T) {
 		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, "other"}, "--group-by must be"},
 		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, usageGroupCase, "--" + argLimit, "0"}, "--limit must be at least 1"},
 		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, usageGroupCase, "--" + argLimit, "-1"}, "--limit must be at least 1"},
+		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, usageGroupCase, "--" + keySort, "spend"}, "--sort must be cost or tokens"},
+		{[]string{resourceCases, usageCommand, "id", "--" + keySort, usageSortCost}, unknownFlag},
 		{[]string{resourceCases, usageCommand}, argumentError},
 		{[]string{resourceSpaces, usageCommand, "id", "extra"}, argumentError},
 		{[]string{resourceSpaces, usageCommand, usageBreakdowns, usageGroupFlag, usageGroupCase}, argumentError},
-		{[]string{resourceCases, usageCommand, "id", "--all"}, "unknown flag"},
-		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, usageGroupCase, "--" + keyCursor, "next"}, "unknown flag"},
+		{[]string{resourceCases, usageCommand, "id", "--all"}, unknownFlag},
+		{[]string{resourceSpaces, usageCommand, usageBreakdowns, "id", usageGroupFlag, usageGroupCase, "--" + keyCursor, "next"}, unknownFlag},
 	} {
 		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {
 			root := newRootCmd()
