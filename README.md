@@ -168,6 +168,27 @@ Each item contains the linked resource `id`, `type`, and `url`. When available,
 it also contains `relationship_type` and `relationship_direction` relative to
 the requested resource.
 
+### Expectations
+
+```sh
+interloom cases expectations <case-id>
+interloom procedures expectations <procedure-id>
+interloom stages expectations <stage-id>
+interloom procedure-stages expectations <procedure-stage-id>
+```
+
+These read-only commands return the directly attached root suite and checks in
+stored order. They do not run evaluation, modify reviews, or combine stage
+expectations. A missing or inaccessible suite returns HTTP 404
+`expectations_not_found`. Case-level evaluation is not implemented. Applying a
+procedure does not currently copy its procedure-level expectations to a case.
+There are no pagination flags or expectation write commands.
+
+MCP exposes `cases_expectations`, `procedures_expectations`,
+`stages_expectations`, and `procedure_stages_expectations`, each with a required
+`id` argument. The stage command groups expose only `expectations`; they do not
+add stage list, create, update, or delete endpoints.
+
 ### Case recommendations
 
 ```sh

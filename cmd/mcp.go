@@ -217,6 +217,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerFileTools(server)
 	svc.registerCaseIngestionTools(server)
 	svc.registerDatabaseTools(server)
+	svc.registerExpectationsTools(server)
 	return server
 }
 

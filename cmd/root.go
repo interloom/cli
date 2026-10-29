@@ -48,6 +48,8 @@ func newRootCmd() *cobra.Command {
 		newCasesCmd(),
 		newResourceCmd(apiResource("notes")),
 		newResourceCmd(apiResource("procedures")),
+		newStageExpectationsCmd(resourceStages, "stage"),
+		newStageExpectationsCmd(resourceProcedureStages, "procedure-stage"),
 		newAgentsCmd(),
 		newAssistantChatsCmd(),
 		newResourceCmd(apiResource(resourceModels)),

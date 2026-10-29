@@ -138,6 +138,9 @@ func newResourceCmd(r resource) *cobra.Command {
 	if r.hasRelationships {
 		cmd.AddCommand(newRelationshipsCmd(r))
 	}
+	if r.name == resourceCases || r.name == resourceProcedures {
+		cmd.AddCommand(newExpectationsCmd(r.name, r.singular))
+	}
 	if r.readOnly {
 		return cmd
 	}

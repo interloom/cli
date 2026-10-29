@@ -202,6 +202,78 @@ func (e DatabaseSortDirection) Valid() bool {
 	}
 }
 
+// Defines values for ExpectationsMode.
+const (
+	ExpectationsModeAll ExpectationsMode = "all"
+	ExpectationsModeAny ExpectationsMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the ExpectationsMode enum.
+func (e ExpectationsMode) Valid() bool {
+	switch e {
+	case ExpectationsModeAll:
+		return true
+	case ExpectationsModeAny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExpectationsTargetType.
+const (
+	ExpectationsTargetTypeCASE           ExpectationsTargetType = "CASE"
+	ExpectationsTargetTypePROCEDURE      ExpectationsTargetType = "PROCEDURE"
+	ExpectationsTargetTypePROCEDURESTAGE ExpectationsTargetType = "PROCEDURE_STAGE"
+	ExpectationsTargetTypeSTAGE          ExpectationsTargetType = "STAGE"
+)
+
+// Valid indicates whether the value is a known member of the ExpectationsTargetType enum.
+func (e ExpectationsTargetType) Valid() bool {
+	switch e {
+	case ExpectationsTargetTypeCASE:
+		return true
+	case ExpectationsTargetTypePROCEDURE:
+		return true
+	case ExpectationsTargetTypePROCEDURESTAGE:
+		return true
+	case ExpectationsTargetTypeSTAGE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FieldPredicateInputOp.
+const (
+	FieldPredicateInputOpEquals      FieldPredicateInputOp = "equals"
+	FieldPredicateInputOpGte         FieldPredicateInputOp = "gte"
+	FieldPredicateInputOpIn          FieldPredicateInputOp = "in"
+	FieldPredicateInputOpLte         FieldPredicateInputOp = "lte"
+	FieldPredicateInputOpNotEquals   FieldPredicateInputOp = "not_equals"
+	FieldPredicateInputOpStrContains FieldPredicateInputOp = "str_contains"
+)
+
+// Valid indicates whether the value is a known member of the FieldPredicateInputOp enum.
+func (e FieldPredicateInputOp) Valid() bool {
+	switch e {
+	case FieldPredicateInputOpEquals:
+		return true
+	case FieldPredicateInputOpGte:
+		return true
+	case FieldPredicateInputOpIn:
+		return true
+	case FieldPredicateInputOpLte:
+		return true
+	case FieldPredicateInputOpNotEquals:
+		return true
+	case FieldPredicateInputOpStrContains:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelDeploymentLocation.
 const (
 	EUROPE       ModelDeploymentLocation = "EUROPE"
@@ -241,6 +313,24 @@ func (e OutboundNetworkMode) Valid() bool {
 	case EgressLane:
 		return true
 	case Internet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutputAssertionDefinitionInputMode.
+const (
+	OutputAssertionDefinitionInputModeAll OutputAssertionDefinitionInputMode = "all"
+	OutputAssertionDefinitionInputModeAny OutputAssertionDefinitionInputMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the OutputAssertionDefinitionInputMode enum.
+func (e OutputAssertionDefinitionInputMode) Valid() bool {
+	switch e {
+	case OutputAssertionDefinitionInputModeAll:
+		return true
+	case OutputAssertionDefinitionInputModeAny:
 		return true
 	default:
 		return false
@@ -342,40 +432,40 @@ func (e RelationshipType) Valid() bool {
 
 // Defines values for ResourceType.
 const (
-	AGENT      ResourceType = "AGENT"
-	CASE       ResourceType = "CASE"
-	FILE       ResourceType = "FILE"
-	INVOCATION ResourceType = "INVOCATION"
-	NOTE       ResourceType = "NOTE"
-	PROCEDURE  ResourceType = "PROCEDURE"
-	SECRET     ResourceType = "SECRET"
-	SPACE      ResourceType = "SPACE"
-	THREAD     ResourceType = "THREAD"
-	USER       ResourceType = "USER"
+	ResourceTypeAGENT      ResourceType = "AGENT"
+	ResourceTypeCASE       ResourceType = "CASE"
+	ResourceTypeFILE       ResourceType = "FILE"
+	ResourceTypeINVOCATION ResourceType = "INVOCATION"
+	ResourceTypeNOTE       ResourceType = "NOTE"
+	ResourceTypePROCEDURE  ResourceType = "PROCEDURE"
+	ResourceTypeSECRET     ResourceType = "SECRET"
+	ResourceTypeSPACE      ResourceType = "SPACE"
+	ResourceTypeTHREAD     ResourceType = "THREAD"
+	ResourceTypeUSER       ResourceType = "USER"
 )
 
 // Valid indicates whether the value is a known member of the ResourceType enum.
 func (e ResourceType) Valid() bool {
 	switch e {
-	case AGENT:
+	case ResourceTypeAGENT:
 		return true
-	case CASE:
+	case ResourceTypeCASE:
 		return true
-	case FILE:
+	case ResourceTypeFILE:
 		return true
-	case INVOCATION:
+	case ResourceTypeINVOCATION:
 		return true
-	case NOTE:
+	case ResourceTypeNOTE:
 		return true
-	case PROCEDURE:
+	case ResourceTypePROCEDURE:
 		return true
-	case SECRET:
+	case ResourceTypeSECRET:
 		return true
-	case SPACE:
+	case ResourceTypeSPACE:
 		return true
-	case THREAD:
+	case ResourceTypeTHREAD:
 		return true
-	case USER:
+	case ResourceTypeUSER:
 		return true
 	default:
 		return false
@@ -424,6 +514,81 @@ func (e SpaceMembershipRole) Valid() bool {
 	}
 }
 
+// Defines values for StateAssertionDefinitionInputMode.
+const (
+	StateAssertionDefinitionInputModeAll StateAssertionDefinitionInputMode = "all"
+	StateAssertionDefinitionInputModeAny StateAssertionDefinitionInputMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the StateAssertionDefinitionInputMode enum.
+func (e StateAssertionDefinitionInputMode) Valid() bool {
+	switch e {
+	case StateAssertionDefinitionInputModeAll:
+		return true
+	case StateAssertionDefinitionInputModeAny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StateAssertionScopeInputObjectType.
+const (
+	AGENT          StateAssertionScopeInputObjectType = "AGENT"
+	FILE           StateAssertionScopeInputObjectType = "FILE"
+	NOTE           StateAssertionScopeInputObjectType = "NOTE"
+	PROCEDURE      StateAssertionScopeInputObjectType = "PROCEDURE"
+	PROCEDURESTAGE StateAssertionScopeInputObjectType = "PROCEDURE_STAGE"
+	SPACE          StateAssertionScopeInputObjectType = "SPACE"
+	TASK           StateAssertionScopeInputObjectType = "TASK"
+	USER           StateAssertionScopeInputObjectType = "USER"
+)
+
+// Valid indicates whether the value is a known member of the StateAssertionScopeInputObjectType enum.
+func (e StateAssertionScopeInputObjectType) Valid() bool {
+	switch e {
+	case AGENT:
+		return true
+	case FILE:
+		return true
+	case NOTE:
+		return true
+	case PROCEDURE:
+		return true
+	case PROCEDURESTAGE:
+		return true
+	case SPACE:
+		return true
+	case TASK:
+		return true
+	case USER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TextPredicateInputOp.
+const (
+	TextPredicateInputOpEquals      TextPredicateInputOp = "equals"
+	TextPredicateInputOpNotEquals   TextPredicateInputOp = "not_equals"
+	TextPredicateInputOpStrContains TextPredicateInputOp = "str_contains"
+)
+
+// Valid indicates whether the value is a known member of the TextPredicateInputOp enum.
+func (e TextPredicateInputOp) Valid() bool {
+	switch e {
+	case TextPredicateInputOpEquals:
+		return true
+	case TextPredicateInputOpNotEquals:
+		return true
+	case TextPredicateInputOpStrContains:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ToolType.
 const (
 	ToolTypeCustom   ToolType = "custom"
@@ -436,6 +601,24 @@ func (e ToolType) Valid() bool {
 	case ToolTypeCustom:
 		return true
 	case ToolTypeInternal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ToolCallsDefinitionInputMode.
+const (
+	ToolCallsDefinitionInputModeAll ToolCallsDefinitionInputMode = "all"
+	ToolCallsDefinitionInputModeAny ToolCallsDefinitionInputMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the ToolCallsDefinitionInputMode enum.
+func (e ToolCallsDefinitionInputMode) Valid() bool {
+	switch e {
+	case ToolCallsDefinitionInputModeAll:
+		return true
+	case ToolCallsDefinitionInputModeAny:
 		return true
 	default:
 		return false
@@ -1275,6 +1458,111 @@ type DisabledSpaceTrigger struct {
 	TriggerType string `json:"trigger_type"`
 }
 
+// ExpectationCheck defines model for ExpectationCheck.
+type ExpectationCheck struct {
+	Definition ExpectationCheck_Definition `json:"definition"`
+
+	// Id Check identifier; replacement may assign a new ID.
+	Id openapi_types.UUID `json:"id"`
+
+	// Title What must be true for this check to pass.
+	Title string `json:"title"`
+}
+
+// ExpectationCheck_Definition defines model for ExpectationCheck.Definition.
+type ExpectationCheck_Definition struct {
+	union json.RawMessage
+}
+
+// Expectations defines model for Expectations.
+type Expectations struct {
+	// Checks Checks in persisted order.
+	Checks []ExpectationCheck `json:"checks"`
+
+	// CreatedAt Timestamp when the suite was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the root expectation suite.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsGating Whether failed expectations gate agent completion.
+	IsGating bool `json:"is_gating"`
+
+	// Mode Whether all or any checks must pass.
+	Mode   ExpectationsMode   `json:"mode"`
+	Target ExpectationsTarget `json:"target"`
+
+	// UpdatedAt Timestamp when the suite was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ExpectationsMode Whether all or any checks must pass.
+type ExpectationsMode string
+
+// ExpectationsTarget defines model for ExpectationsTarget.
+type ExpectationsTarget struct {
+	// Id Identifier of the object that owns the suite.
+	Id openapi_types.UUID `json:"id"`
+
+	// Type Public type of the object that owns the suite.
+	Type ExpectationsTargetType `json:"type"`
+}
+
+// ExpectationsTargetType Public type of the object that owns the suite.
+type ExpectationsTargetType string
+
+// FieldPredicateInput defines model for FieldPredicateInput.
+type FieldPredicateInput struct {
+	// Field Dot-separated field path to inspect.
+	Field string `json:"field"`
+
+	// Op Comparison to apply to the field value.
+	Op FieldPredicateInputOp `json:"op"`
+
+	// Value Scalar comparison value, or a list when op is in. Lists must contain only strings, only booleans, or only numbers; list items cannot be null.
+	Value *FieldPredicateInput_Value `json:"value"`
+}
+
+// FieldPredicateInputOp Comparison to apply to the field value.
+type FieldPredicateInputOp string
+
+// FieldPredicateInputValue0 defines model for .
+type FieldPredicateInputValue0 = string
+
+// FieldPredicateInputValue1 defines model for .
+type FieldPredicateInputValue1 = int
+
+// FieldPredicateInputValue2 defines model for .
+type FieldPredicateInputValue2 = float32
+
+// FieldPredicateInputValue3 defines model for .
+type FieldPredicateInputValue3 = bool
+
+// FieldPredicateInputValue4 defines model for .
+type FieldPredicateInputValue4 = []string
+
+// FieldPredicateInputValue5 defines model for .
+type FieldPredicateInputValue5 = []bool
+
+// FieldPredicateInputValue6 defines model for .
+type FieldPredicateInputValue6 = []FieldPredicateInput_Value_6_Item
+
+// FieldPredicateInputValue60 defines model for .
+type FieldPredicateInputValue60 = int
+
+// FieldPredicateInputValue61 defines model for .
+type FieldPredicateInputValue61 = float32
+
+// FieldPredicateInput_Value_6_Item defines model for FieldPredicateInput.Value.6.Item.
+type FieldPredicateInput_Value_6_Item struct {
+	union json.RawMessage
+}
+
+// FieldPredicateInput_Value Scalar comparison value, or a list when op is in. Lists must contain only strings, only booleans, or only numbers; list items cannot be null.
+type FieldPredicateInput_Value struct {
+	union json.RawMessage
+}
+
 // File defines model for File.
 type File struct {
 	AdditionalMetadata *AdditionalMetadata `json:"additional_metadata,omitempty"`
@@ -1326,6 +1614,12 @@ type GameObject struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// HumanReviewDefinitionInput defines model for HumanReviewDefinitionInput.
+type HumanReviewDefinitionInput struct {
+	// Type Requests a person to assess this check's title.
+	Type string `json:"type"`
 }
 
 // InvalidToolIdsError defines model for InvalidToolIdsError.
@@ -1698,6 +1992,21 @@ type OutboundNetworkEgressLane struct {
 	// PublicIpPrefix Public IP range (CIDR) that outbound TCP traffic of the sandbox comes from. Allowlist this range in external systems.
 	PublicIpPrefix string `json:"public_ip_prefix"`
 }
+
+// OutputAssertionDefinitionInput defines model for OutputAssertionDefinitionInput.
+type OutputAssertionDefinitionInput struct {
+	// Mode Whether all or any predicates must match.
+	Mode *OutputAssertionDefinitionInputMode `json:"mode,omitempty"`
+
+	// Predicates Non-empty predicates evaluated against the agent's final output text.
+	Predicates []TextPredicateInput `json:"predicates"`
+
+	// Type Checks the agent's final response text.
+	Type string `json:"type"`
+}
+
+// OutputAssertionDefinitionInputMode Whether all or any predicates must match.
+type OutputAssertionDefinitionInputMode string
 
 // PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType defines model for PaginatedResponse_Annotated_Union_ToolCallStep__PrivateContentStep___FieldInfo_annotation_NoneType__required_True__discriminator__type____.
 type PaginatedResponseAnnotatedUnionToolCallStepPrivateContentStepFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorType struct {
@@ -2087,6 +2396,43 @@ type SpaceMember struct {
 // SpaceMembershipRole defines model for SpaceMembershipRole.
 type SpaceMembershipRole string
 
+// StateAssertionDefinitionInput defines model for StateAssertionDefinitionInput.
+type StateAssertionDefinitionInput struct {
+	// Mode Whether all or any predicates must match.
+	Mode *StateAssertionDefinitionInputMode `json:"mode,omitempty"`
+
+	// Predicates Non-empty predicates evaluated against id, type, or supported properties fields.
+	Predicates []FieldPredicateInput    `json:"predicates"`
+	Scope      StateAssertionScopeInput `json:"scope"`
+
+	// Type Checks persisted game-object state.
+	Type string `json:"type"`
+}
+
+// StateAssertionDefinitionInputMode Whether all or any predicates must match.
+type StateAssertionDefinitionInputMode string
+
+// StateAssertionScopeInput defines model for StateAssertionScopeInput.
+type StateAssertionScopeInput struct {
+	// ObjectType Game-object type whose current state should be inspected.
+	ObjectType StateAssertionScopeInputObjectType `json:"object_type"`
+}
+
+// StateAssertionScopeInputObjectType Game-object type whose current state should be inspected.
+type StateAssertionScopeInputObjectType string
+
+// TextPredicateInput defines model for TextPredicateInput.
+type TextPredicateInput struct {
+	// Op Comparison to apply to the text.
+	Op TextPredicateInputOp `json:"op"`
+
+	// Value Text value to compare against.
+	Value string `json:"value"`
+}
+
+// TextPredicateInputOp Comparison to apply to the text.
+type TextPredicateInputOp string
+
 // Thread defines model for Thread.
 type Thread struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -2163,6 +2509,37 @@ type ToolCallStep struct {
 	Type       string               `json:"type"`
 	UpdatedAt  time.Time            `json:"updated_at"`
 }
+
+// ToolCallWhereInput defines model for ToolCallWhereInput.
+type ToolCallWhereInput struct {
+	// Input Optional predicates evaluated against fields in the tool input object.
+	Input *[]FieldPredicateInput `json:"input,omitempty"`
+
+	// OutputText Optional predicates evaluated against the tool's raw output text.
+	OutputText *[]TextPredicateInput `json:"output_text,omitempty"`
+}
+
+// ToolCallsDefinitionInput defines model for ToolCallsDefinitionInput.
+type ToolCallsDefinitionInput struct {
+	// MaxCalls Optional maximum number of qualifying calls. Must be at least min_calls.
+	MaxCalls *int `json:"max_calls,omitempty"`
+
+	// MinCalls Minimum number of qualifying calls. Must be zero or greater.
+	MinCalls *int `json:"min_calls,omitempty"`
+
+	// Mode Whether all or any where predicates must match a tool call.
+	Mode *ToolCallsDefinitionInputMode `json:"mode,omitempty"`
+
+	// Tool Exact tool name.
+	Tool string `json:"tool"`
+
+	// Type Checks observed tool calls.
+	Type  string              `json:"type"`
+	Where *ToolCallWhereInput `json:"where,omitempty"`
+}
+
+// ToolCallsDefinitionInputMode Whether all or any where predicates must match a tool call.
+type ToolCallsDefinitionInputMode string
 
 // ToolListItem defines model for ToolListItem.
 type ToolListItem struct {
@@ -2535,6 +2912,11 @@ type UpdateCaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// GetCaseExpectationsParams defines parameters for GetCaseExpectations.
+type GetCaseExpectationsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListCaseRelationshipsParams defines parameters for ListCaseRelationships.
 type ListCaseRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
@@ -2749,6 +3131,11 @@ type ListOutboundNetworksParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// GetProcedureStageExpectationsParams defines parameters for GetProcedureStageExpectations.
+type GetProcedureStageExpectationsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListProceduresParams defines parameters for ListProcedures.
 type ListProceduresParams struct {
 	// SpaceId Return procedures owned by this Space.
@@ -2779,6 +3166,11 @@ type GetProcedureParams struct {
 
 // UpdateProcedureParams defines parameters for UpdateProcedure.
 type UpdateProcedureParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetProcedureExpectationsParams defines parameters for GetProcedureExpectations.
+type GetProcedureExpectationsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
@@ -2907,6 +3299,11 @@ type ListSpaceUsageBreakdownsParams struct {
 
 // ListSpaceUsageBreakdownsParamsGroupBy defines parameters for ListSpaceUsageBreakdowns.
 type ListSpaceUsageBreakdownsParamsGroupBy string
+
+// GetStageExpectationsParams defines parameters for GetStageExpectations.
+type GetStageExpectationsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
 
 // GetThreadParams defines parameters for GetThread.
 type GetThreadParams struct {
@@ -3259,6 +3656,409 @@ func (t DatabaseRowValue) MarshalJSON() ([]byte, error) {
 }
 
 func (t *DatabaseRowValue) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsOutputAssertionDefinitionInput returns the union data inside the ExpectationCheck_Definition as a OutputAssertionDefinitionInput
+func (t ExpectationCheck_Definition) AsOutputAssertionDefinitionInput() (OutputAssertionDefinitionInput, error) {
+	var body OutputAssertionDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromOutputAssertionDefinitionInput overwrites any union data inside the ExpectationCheck_Definition as the provided OutputAssertionDefinitionInput
+func (t *ExpectationCheck_Definition) FromOutputAssertionDefinitionInput(v OutputAssertionDefinitionInput) error {
+	v.Type = "output_assertion"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeOutputAssertionDefinitionInput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided OutputAssertionDefinitionInput
+func (t *ExpectationCheck_Definition) MergeOutputAssertionDefinitionInput(v OutputAssertionDefinitionInput) error {
+	v.Type = "output_assertion"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsToolCallsDefinitionInput returns the union data inside the ExpectationCheck_Definition as a ToolCallsDefinitionInput
+func (t ExpectationCheck_Definition) AsToolCallsDefinitionInput() (ToolCallsDefinitionInput, error) {
+	var body ToolCallsDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromToolCallsDefinitionInput overwrites any union data inside the ExpectationCheck_Definition as the provided ToolCallsDefinitionInput
+func (t *ExpectationCheck_Definition) FromToolCallsDefinitionInput(v ToolCallsDefinitionInput) error {
+	v.Type = "tool_calls"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeToolCallsDefinitionInput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided ToolCallsDefinitionInput
+func (t *ExpectationCheck_Definition) MergeToolCallsDefinitionInput(v ToolCallsDefinitionInput) error {
+	v.Type = "tool_calls"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsStateAssertionDefinitionInput returns the union data inside the ExpectationCheck_Definition as a StateAssertionDefinitionInput
+func (t ExpectationCheck_Definition) AsStateAssertionDefinitionInput() (StateAssertionDefinitionInput, error) {
+	var body StateAssertionDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromStateAssertionDefinitionInput overwrites any union data inside the ExpectationCheck_Definition as the provided StateAssertionDefinitionInput
+func (t *ExpectationCheck_Definition) FromStateAssertionDefinitionInput(v StateAssertionDefinitionInput) error {
+	v.Type = "state_assertion"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeStateAssertionDefinitionInput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided StateAssertionDefinitionInput
+func (t *ExpectationCheck_Definition) MergeStateAssertionDefinitionInput(v StateAssertionDefinitionInput) error {
+	v.Type = "state_assertion"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsHumanReviewDefinitionInput returns the union data inside the ExpectationCheck_Definition as a HumanReviewDefinitionInput
+func (t ExpectationCheck_Definition) AsHumanReviewDefinitionInput() (HumanReviewDefinitionInput, error) {
+	var body HumanReviewDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromHumanReviewDefinitionInput overwrites any union data inside the ExpectationCheck_Definition as the provided HumanReviewDefinitionInput
+func (t *ExpectationCheck_Definition) FromHumanReviewDefinitionInput(v HumanReviewDefinitionInput) error {
+	v.Type = "human_review"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeHumanReviewDefinitionInput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided HumanReviewDefinitionInput
+func (t *ExpectationCheck_Definition) MergeHumanReviewDefinitionInput(v HumanReviewDefinitionInput) error {
+	v.Type = "human_review"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ExpectationCheck_Definition) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ExpectationCheck_Definition) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "human_review":
+		return t.AsHumanReviewDefinitionInput()
+	case "output_assertion":
+		return t.AsOutputAssertionDefinitionInput()
+	case "state_assertion":
+		return t.AsStateAssertionDefinitionInput()
+	case "tool_calls":
+		return t.AsToolCallsDefinitionInput()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ExpectationCheck_Definition) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ExpectationCheck_Definition) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsFieldPredicateInputValue60 returns the union data inside the FieldPredicateInput_Value_6_Item as a FieldPredicateInputValue60
+func (t FieldPredicateInput_Value_6_Item) AsFieldPredicateInputValue60() (FieldPredicateInputValue60, error) {
+	var body FieldPredicateInputValue60
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue60 overwrites any union data inside the FieldPredicateInput_Value_6_Item as the provided FieldPredicateInputValue60
+func (t *FieldPredicateInput_Value_6_Item) FromFieldPredicateInputValue60(v FieldPredicateInputValue60) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue60 performs a merge with any union data inside the FieldPredicateInput_Value_6_Item, using the provided FieldPredicateInputValue60
+func (t *FieldPredicateInput_Value_6_Item) MergeFieldPredicateInputValue60(v FieldPredicateInputValue60) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue61 returns the union data inside the FieldPredicateInput_Value_6_Item as a FieldPredicateInputValue61
+func (t FieldPredicateInput_Value_6_Item) AsFieldPredicateInputValue61() (FieldPredicateInputValue61, error) {
+	var body FieldPredicateInputValue61
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue61 overwrites any union data inside the FieldPredicateInput_Value_6_Item as the provided FieldPredicateInputValue61
+func (t *FieldPredicateInput_Value_6_Item) FromFieldPredicateInputValue61(v FieldPredicateInputValue61) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue61 performs a merge with any union data inside the FieldPredicateInput_Value_6_Item, using the provided FieldPredicateInputValue61
+func (t *FieldPredicateInput_Value_6_Item) MergeFieldPredicateInputValue61(v FieldPredicateInputValue61) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t FieldPredicateInput_Value_6_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *FieldPredicateInput_Value_6_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsFieldPredicateInputValue0 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue0
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue0() (FieldPredicateInputValue0, error) {
+	var body FieldPredicateInputValue0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue0 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue0
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue0(v FieldPredicateInputValue0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue0 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue0
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue0(v FieldPredicateInputValue0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue1 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue1
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue1() (FieldPredicateInputValue1, error) {
+	var body FieldPredicateInputValue1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue1 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue1
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue1(v FieldPredicateInputValue1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue1 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue1
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue1(v FieldPredicateInputValue1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue2 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue2
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue2() (FieldPredicateInputValue2, error) {
+	var body FieldPredicateInputValue2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue2 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue2
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue2(v FieldPredicateInputValue2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue2 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue2
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue2(v FieldPredicateInputValue2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue3 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue3
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue3() (FieldPredicateInputValue3, error) {
+	var body FieldPredicateInputValue3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue3 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue3
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue3(v FieldPredicateInputValue3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue3 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue3
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue3(v FieldPredicateInputValue3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue4 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue4
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue4() (FieldPredicateInputValue4, error) {
+	var body FieldPredicateInputValue4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue4 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue4
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue4(v FieldPredicateInputValue4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue4 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue4
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue4(v FieldPredicateInputValue4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue5 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue5
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue5() (FieldPredicateInputValue5, error) {
+	var body FieldPredicateInputValue5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue5 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue5
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue5(v FieldPredicateInputValue5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue5 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue5
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue5(v FieldPredicateInputValue5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFieldPredicateInputValue6 returns the union data inside the FieldPredicateInput_Value as a FieldPredicateInputValue6
+func (t FieldPredicateInput_Value) AsFieldPredicateInputValue6() (FieldPredicateInputValue6, error) {
+	var body FieldPredicateInputValue6
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFieldPredicateInputValue6 overwrites any union data inside the FieldPredicateInput_Value as the provided FieldPredicateInputValue6
+func (t *FieldPredicateInput_Value) FromFieldPredicateInputValue6(v FieldPredicateInputValue6) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFieldPredicateInputValue6 performs a merge with any union data inside the FieldPredicateInput_Value, using the provided FieldPredicateInputValue6
+func (t *FieldPredicateInput_Value) MergeFieldPredicateInputValue6(v FieldPredicateInputValue6) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t FieldPredicateInput_Value) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *FieldPredicateInput_Value) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
