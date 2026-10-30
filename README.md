@@ -182,7 +182,22 @@ stored order. They do not run evaluation, modify reviews, or combine stage
 expectations. A missing or inaccessible suite returns HTTP 404
 `expectations_not_found`. Case-level evaluation is not implemented. Applying a
 procedure does not currently copy its procedure-level expectations to a case.
-There are no pagination flags or expectation write commands.
+There are no pagination flags.
+
+Set a complete definition for a stage or procedure stage with a raw JSON body
+(`--data`, `--file`, or stdin):
+
+```sh
+interloom expectations set --data '{"target":{"type":"STAGE","id":"<stage-id>"},"checks":[{"title":"Review the result","definition":{"type":"human_review"}}]}'
+```
+
+Targets must be `STAGE` or `PROCEDURE_STAGE`, and you must have edit permission.
+Supply at least one check. This creates or replaces the complete definition;
+it does not append checks. Omitted `mode` and `is_gating` reset to `all` and
+`false`. Identical submissions leave the suite unchanged. Changed check lists
+receive new IDs; unchanged lists retain their IDs. Do not send check IDs.
+Existing suite titles and descriptions are preserved. MCP `expectations_set`
+accepts the same request body in its required `data` argument.
 
 MCP exposes `cases_expectations`, `procedures_expectations`,
 `stages_expectations`, and `procedure_stages_expectations`, each with a required

@@ -472,6 +472,42 @@ func (e ResourceType) Valid() bool {
 	}
 }
 
+// Defines values for SetExpectationsRequestMode.
+const (
+	SetExpectationsRequestModeAll SetExpectationsRequestMode = "all"
+	SetExpectationsRequestModeAny SetExpectationsRequestMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the SetExpectationsRequestMode enum.
+func (e SetExpectationsRequestMode) Valid() bool {
+	switch e {
+	case SetExpectationsRequestModeAll:
+		return true
+	case SetExpectationsRequestModeAny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetExpectationsTargetType.
+const (
+	SetExpectationsTargetTypePROCEDURESTAGE SetExpectationsTargetType = "PROCEDURE_STAGE"
+	SetExpectationsTargetTypeSTAGE          SetExpectationsTargetType = "STAGE"
+)
+
+// Valid indicates whether the value is a known member of the SetExpectationsTargetType enum.
+func (e SetExpectationsTargetType) Valid() bool {
+	switch e {
+	case SetExpectationsTargetTypePROCEDURESTAGE:
+		return true
+	case SetExpectationsTargetTypeSTAGE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SimilarTaskScoreSource.
 const (
 	DatabaseCosineSimilarity SimilarTaskScoreSource = "database_cosine_similarity"
@@ -534,34 +570,34 @@ func (e StateAssertionDefinitionInputMode) Valid() bool {
 
 // Defines values for StateAssertionScopeInputObjectType.
 const (
-	AGENT          StateAssertionScopeInputObjectType = "AGENT"
-	FILE           StateAssertionScopeInputObjectType = "FILE"
-	NOTE           StateAssertionScopeInputObjectType = "NOTE"
-	PROCEDURE      StateAssertionScopeInputObjectType = "PROCEDURE"
-	PROCEDURESTAGE StateAssertionScopeInputObjectType = "PROCEDURE_STAGE"
-	SPACE          StateAssertionScopeInputObjectType = "SPACE"
-	TASK           StateAssertionScopeInputObjectType = "TASK"
-	USER           StateAssertionScopeInputObjectType = "USER"
+	StateAssertionScopeInputObjectTypeAGENT          StateAssertionScopeInputObjectType = "AGENT"
+	StateAssertionScopeInputObjectTypeFILE           StateAssertionScopeInputObjectType = "FILE"
+	StateAssertionScopeInputObjectTypeNOTE           StateAssertionScopeInputObjectType = "NOTE"
+	StateAssertionScopeInputObjectTypePROCEDURE      StateAssertionScopeInputObjectType = "PROCEDURE"
+	StateAssertionScopeInputObjectTypePROCEDURESTAGE StateAssertionScopeInputObjectType = "PROCEDURE_STAGE"
+	StateAssertionScopeInputObjectTypeSPACE          StateAssertionScopeInputObjectType = "SPACE"
+	StateAssertionScopeInputObjectTypeTASK           StateAssertionScopeInputObjectType = "TASK"
+	StateAssertionScopeInputObjectTypeUSER           StateAssertionScopeInputObjectType = "USER"
 )
 
 // Valid indicates whether the value is a known member of the StateAssertionScopeInputObjectType enum.
 func (e StateAssertionScopeInputObjectType) Valid() bool {
 	switch e {
-	case AGENT:
+	case StateAssertionScopeInputObjectTypeAGENT:
 		return true
-	case FILE:
+	case StateAssertionScopeInputObjectTypeFILE:
 		return true
-	case NOTE:
+	case StateAssertionScopeInputObjectTypeNOTE:
 		return true
-	case PROCEDURE:
+	case StateAssertionScopeInputObjectTypePROCEDURE:
 		return true
-	case PROCEDURESTAGE:
+	case StateAssertionScopeInputObjectTypePROCEDURESTAGE:
 		return true
-	case SPACE:
+	case StateAssertionScopeInputObjectTypeSPACE:
 		return true
-	case TASK:
+	case StateAssertionScopeInputObjectTypeTASK:
 		return true
-	case USER:
+	case StateAssertionScopeInputObjectTypeUSER:
 		return true
 	default:
 		return false
@@ -607,18 +643,36 @@ func (e ToolType) Valid() bool {
 	}
 }
 
-// Defines values for ToolCallsDefinitionInputMode.
+// Defines values for ToolCallsDefinitionInputInputMode.
 const (
-	ToolCallsDefinitionInputModeAll ToolCallsDefinitionInputMode = "all"
-	ToolCallsDefinitionInputModeAny ToolCallsDefinitionInputMode = "any"
+	ToolCallsDefinitionInputInputModeAll ToolCallsDefinitionInputInputMode = "all"
+	ToolCallsDefinitionInputInputModeAny ToolCallsDefinitionInputInputMode = "any"
 )
 
-// Valid indicates whether the value is a known member of the ToolCallsDefinitionInputMode enum.
-func (e ToolCallsDefinitionInputMode) Valid() bool {
+// Valid indicates whether the value is a known member of the ToolCallsDefinitionInputInputMode enum.
+func (e ToolCallsDefinitionInputInputMode) Valid() bool {
 	switch e {
-	case ToolCallsDefinitionInputModeAll:
+	case ToolCallsDefinitionInputInputModeAll:
 		return true
-	case ToolCallsDefinitionInputModeAny:
+	case ToolCallsDefinitionInputInputModeAny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ToolCallsDefinitionInputOutputMode.
+const (
+	ToolCallsDefinitionInputOutputModeAll ToolCallsDefinitionInputOutputMode = "all"
+	ToolCallsDefinitionInputOutputModeAny ToolCallsDefinitionInputOutputMode = "any"
+)
+
+// Valid indicates whether the value is a known member of the ToolCallsDefinitionInputOutputMode enum.
+func (e ToolCallsDefinitionInputOutputMode) Valid() bool {
+	switch e {
+	case ToolCallsDefinitionInputOutputModeAll:
+		return true
+	case ToolCallsDefinitionInputOutputModeAny:
 		return true
 	default:
 		return false
@@ -1474,6 +1528,20 @@ type ExpectationCheck_Definition struct {
 	union json.RawMessage
 }
 
+// ExpectationCheckAuthoringInput defines model for ExpectationCheckAuthoringInput.
+type ExpectationCheckAuthoringInput struct {
+	// Definition Exactly one rule definition.
+	Definition ExpectationCheckAuthoringInput_Definition `json:"definition"`
+
+	// Title What must be true for this check to pass.
+	Title string `json:"title"`
+}
+
+// ExpectationCheckAuthoringInput_Definition Exactly one rule definition.
+type ExpectationCheckAuthoringInput_Definition struct {
+	union json.RawMessage
+}
+
 // Expectations defines model for Expectations.
 type Expectations struct {
 	// Checks Checks in persisted order.
@@ -2287,6 +2355,27 @@ type Secret struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// SetExpectationsRequest defines model for SetExpectationsRequest.
+type SetExpectationsRequest struct {
+	// Checks Complete ordered list of checks. Replaces the existing list; check IDs are not accepted.
+	Checks   []ExpectationCheckAuthoringInput `json:"checks"`
+	IsGating *bool                            `json:"is_gating,omitempty"`
+	Mode     *SetExpectationsRequestMode      `json:"mode,omitempty"`
+	Target   SetExpectationsTarget            `json:"target"`
+}
+
+// SetExpectationsRequestMode defines model for SetExpectationsRequest.Mode.
+type SetExpectationsRequestMode string
+
+// SetExpectationsTarget defines model for SetExpectationsTarget.
+type SetExpectationsTarget struct {
+	Id   openapi_types.UUID        `json:"id"`
+	Type SetExpectationsTargetType `json:"type"`
+}
+
+// SetExpectationsTargetType defines model for SetExpectationsTarget.Type.
+type SetExpectationsTargetType string
+
 // SimilarCase defines model for SimilarCase.
 type SimilarCase struct {
 	ExternalId *string `json:"external_id"`
@@ -2519,8 +2608,8 @@ type ToolCallWhereInput struct {
 	OutputText *[]TextPredicateInput `json:"output_text,omitempty"`
 }
 
-// ToolCallsDefinitionInput defines model for ToolCallsDefinitionInput.
-type ToolCallsDefinitionInput struct {
+// ToolCallsDefinitionInputInput defines model for ToolCallsDefinitionInput-Input.
+type ToolCallsDefinitionInputInput struct {
 	// MaxCalls Optional maximum number of qualifying calls. Must be at least min_calls.
 	MaxCalls *int `json:"max_calls,omitempty"`
 
@@ -2528,7 +2617,7 @@ type ToolCallsDefinitionInput struct {
 	MinCalls *int `json:"min_calls,omitempty"`
 
 	// Mode Whether all or any where predicates must match a tool call.
-	Mode *ToolCallsDefinitionInputMode `json:"mode,omitempty"`
+	Mode *ToolCallsDefinitionInputInputMode `json:"mode,omitempty"`
 
 	// Tool Exact tool name.
 	Tool string `json:"tool"`
@@ -2538,8 +2627,30 @@ type ToolCallsDefinitionInput struct {
 	Where *ToolCallWhereInput `json:"where,omitempty"`
 }
 
-// ToolCallsDefinitionInputMode Whether all or any where predicates must match a tool call.
-type ToolCallsDefinitionInputMode string
+// ToolCallsDefinitionInputInputMode Whether all or any where predicates must match a tool call.
+type ToolCallsDefinitionInputInputMode string
+
+// ToolCallsDefinitionInputOutput defines model for ToolCallsDefinitionInput-Output.
+type ToolCallsDefinitionInputOutput struct {
+	// MaxCalls Optional maximum number of qualifying calls. Must be at least min_calls.
+	MaxCalls *int `json:"max_calls,omitempty"`
+
+	// MinCalls Minimum number of qualifying calls. Must be zero or greater.
+	MinCalls *int `json:"min_calls,omitempty"`
+
+	// Mode Whether all or any where predicates must match a tool call.
+	Mode *ToolCallsDefinitionInputOutputMode `json:"mode,omitempty"`
+
+	// Tool Exact tool name.
+	Tool string `json:"tool"`
+
+	// Type Checks observed tool calls.
+	Type  string              `json:"type"`
+	Where *ToolCallWhereInput `json:"where,omitempty"`
+}
+
+// ToolCallsDefinitionInputOutputMode Whether all or any where predicates must match a tool call.
+type ToolCallsDefinitionInputOutputMode string
 
 // ToolListItem defines model for ToolListItem.
 type ToolListItem struct {
@@ -2991,6 +3102,11 @@ type UpsertDatabaseRowsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// SetExpectationsParams defines parameters for SetExpectations.
+type SetExpectationsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
 	// Limit Maximum number of files to return.
@@ -3416,6 +3532,9 @@ type QueryDatabaseJSONRequestBody = QueryDatabaseRequest
 // UpsertDatabaseRowsJSONRequestBody defines body for UpsertDatabaseRows for application/json ContentType.
 type UpsertDatabaseRowsJSONRequestBody = UpsertDatabaseRowsRequest
 
+// SetExpectationsJSONRequestBody defines body for SetExpectations for application/json ContentType.
+type SetExpectationsJSONRequestBody = SetExpectationsRequest
+
 // CreateFileMultipartRequestBody defines body for CreateFile for multipart/form-data ContentType.
 type CreateFileMultipartRequestBody = CreateFileRequest
 
@@ -3688,23 +3807,23 @@ func (t *ExpectationCheck_Definition) MergeOutputAssertionDefinitionInput(v Outp
 	return err
 }
 
-// AsToolCallsDefinitionInput returns the union data inside the ExpectationCheck_Definition as a ToolCallsDefinitionInput
-func (t ExpectationCheck_Definition) AsToolCallsDefinitionInput() (ToolCallsDefinitionInput, error) {
-	var body ToolCallsDefinitionInput
+// AsToolCallsDefinitionInputOutput returns the union data inside the ExpectationCheck_Definition as a ToolCallsDefinitionInputOutput
+func (t ExpectationCheck_Definition) AsToolCallsDefinitionInputOutput() (ToolCallsDefinitionInputOutput, error) {
+	var body ToolCallsDefinitionInputOutput
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromToolCallsDefinitionInput overwrites any union data inside the ExpectationCheck_Definition as the provided ToolCallsDefinitionInput
-func (t *ExpectationCheck_Definition) FromToolCallsDefinitionInput(v ToolCallsDefinitionInput) error {
+// FromToolCallsDefinitionInputOutput overwrites any union data inside the ExpectationCheck_Definition as the provided ToolCallsDefinitionInputOutput
+func (t *ExpectationCheck_Definition) FromToolCallsDefinitionInputOutput(v ToolCallsDefinitionInputOutput) error {
 	v.Type = "tool_calls"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeToolCallsDefinitionInput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided ToolCallsDefinitionInput
-func (t *ExpectationCheck_Definition) MergeToolCallsDefinitionInput(v ToolCallsDefinitionInput) error {
+// MergeToolCallsDefinitionInputOutput performs a merge with any union data inside the ExpectationCheck_Definition, using the provided ToolCallsDefinitionInputOutput
+func (t *ExpectationCheck_Definition) MergeToolCallsDefinitionInputOutput(v ToolCallsDefinitionInputOutput) error {
 	v.Type = "tool_calls"
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -3793,7 +3912,7 @@ func (t ExpectationCheck_Definition) ValueByDiscriminator() (interface{}, error)
 	case "state_assertion":
 		return t.AsStateAssertionDefinitionInput()
 	case "tool_calls":
-		return t.AsToolCallsDefinitionInput()
+		return t.AsToolCallsDefinitionInputOutput()
 	default:
 		return nil, errors.New("unknown discriminator value: " + discriminator)
 	}
@@ -3805,6 +3924,120 @@ func (t ExpectationCheck_Definition) MarshalJSON() ([]byte, error) {
 }
 
 func (t *ExpectationCheck_Definition) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsOutputAssertionDefinitionInput returns the union data inside the ExpectationCheckAuthoringInput_Definition as a OutputAssertionDefinitionInput
+func (t ExpectationCheckAuthoringInput_Definition) AsOutputAssertionDefinitionInput() (OutputAssertionDefinitionInput, error) {
+	var body OutputAssertionDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromOutputAssertionDefinitionInput overwrites any union data inside the ExpectationCheckAuthoringInput_Definition as the provided OutputAssertionDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) FromOutputAssertionDefinitionInput(v OutputAssertionDefinitionInput) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeOutputAssertionDefinitionInput performs a merge with any union data inside the ExpectationCheckAuthoringInput_Definition, using the provided OutputAssertionDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) MergeOutputAssertionDefinitionInput(v OutputAssertionDefinitionInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsToolCallsDefinitionInputInput returns the union data inside the ExpectationCheckAuthoringInput_Definition as a ToolCallsDefinitionInputInput
+func (t ExpectationCheckAuthoringInput_Definition) AsToolCallsDefinitionInputInput() (ToolCallsDefinitionInputInput, error) {
+	var body ToolCallsDefinitionInputInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromToolCallsDefinitionInputInput overwrites any union data inside the ExpectationCheckAuthoringInput_Definition as the provided ToolCallsDefinitionInputInput
+func (t *ExpectationCheckAuthoringInput_Definition) FromToolCallsDefinitionInputInput(v ToolCallsDefinitionInputInput) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeToolCallsDefinitionInputInput performs a merge with any union data inside the ExpectationCheckAuthoringInput_Definition, using the provided ToolCallsDefinitionInputInput
+func (t *ExpectationCheckAuthoringInput_Definition) MergeToolCallsDefinitionInputInput(v ToolCallsDefinitionInputInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsStateAssertionDefinitionInput returns the union data inside the ExpectationCheckAuthoringInput_Definition as a StateAssertionDefinitionInput
+func (t ExpectationCheckAuthoringInput_Definition) AsStateAssertionDefinitionInput() (StateAssertionDefinitionInput, error) {
+	var body StateAssertionDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromStateAssertionDefinitionInput overwrites any union data inside the ExpectationCheckAuthoringInput_Definition as the provided StateAssertionDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) FromStateAssertionDefinitionInput(v StateAssertionDefinitionInput) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeStateAssertionDefinitionInput performs a merge with any union data inside the ExpectationCheckAuthoringInput_Definition, using the provided StateAssertionDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) MergeStateAssertionDefinitionInput(v StateAssertionDefinitionInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsHumanReviewDefinitionInput returns the union data inside the ExpectationCheckAuthoringInput_Definition as a HumanReviewDefinitionInput
+func (t ExpectationCheckAuthoringInput_Definition) AsHumanReviewDefinitionInput() (HumanReviewDefinitionInput, error) {
+	var body HumanReviewDefinitionInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromHumanReviewDefinitionInput overwrites any union data inside the ExpectationCheckAuthoringInput_Definition as the provided HumanReviewDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) FromHumanReviewDefinitionInput(v HumanReviewDefinitionInput) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeHumanReviewDefinitionInput performs a merge with any union data inside the ExpectationCheckAuthoringInput_Definition, using the provided HumanReviewDefinitionInput
+func (t *ExpectationCheckAuthoringInput_Definition) MergeHumanReviewDefinitionInput(v HumanReviewDefinitionInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ExpectationCheckAuthoringInput_Definition) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ExpectationCheckAuthoringInput_Definition) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
