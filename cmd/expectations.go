@@ -16,17 +16,21 @@ const (
 	resourceProcedures      = "procedures"
 	expectationsHelp        = "Read the directly attached root suite and ordered checks; does not evaluate or combine stage expectations. Returns 404 when no accessible suite exists."
 	setExpectationsHelp     = "Create or replace the complete definition for a STAGE or PROCEDURE_STAGE target. Requires edit permission. Omitted mode and is_gating reset to all and false. Identical submissions leave the suite unchanged; changed check lists receive new IDs. Existing suite titles and descriptions are preserved."
+	deleteExpectationsHelp  = "Delete a stage or procedure-stage root suite and its owned checks by suite ID, not target ID. Requires target edit permission. Missing or inaccessible suites, unsupported owner types, and repeated deletion return 404. Does not evaluate expectations or release workflows."
 )
 
 func newExpectationsWriteCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: commandExpectations, Short: "Set stage expectations"}
+	cmd := &cobra.Command{Use: commandExpectations, Short: "Manage stage expectations"}
 	addConfigNameFlag(cmd)
 	r := resource{name: commandExpectations, singular: "expectation suite"}
 	set := r.createCmd()
 	set.Use = "set"
 	set.Short = "Create or replace a stage's complete expectation definition"
 	set.Long = setExpectationsHelp
-	cmd.AddCommand(set)
+	remove := r.deleteCmd()
+	remove.Use = "delete <suite-id>"
+	remove.Long = deleteExpectationsHelp
+	cmd.AddCommand(set, remove)
 	return cmd
 }
 
@@ -63,6 +67,11 @@ func (s *mcpService) registerExpectationsTools(server *mcpsdk.Server) {
 		Description: setExpectationsHelp,
 		InputSchema: objectSchema(map[string]any{keyData: dataSchema("complete definition: target, checks, optional mode and is_gating")}, keyData),
 	}, s.createResourceHandler(resource{name: commandExpectations}))
+	server.AddTool(&mcpsdk.Tool{
+		Name:        "expectations_delete",
+		Description: deleteExpectationsHelp,
+		InputSchema: objectSchema(map[string]any{"id": stringSchema("root suite ID, not the target ID")}, "id"),
+	}, s.deleteResourceHandler(resource{name: commandExpectations}))
 	for _, name := range []string{resourceCases, resourceProcedures, resourceStages, resourceProcedureStages} {
 		server.AddTool(&mcpsdk.Tool{
 			Name:        strings.ReplaceAll(name, "-", "_") + "_expectations",

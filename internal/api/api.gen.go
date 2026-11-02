@@ -3107,6 +3107,11 @@ type SetExpectationsParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// DeleteExpectationsParams defines parameters for DeleteExpectations.
+type DeleteExpectationsParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
 	// Limit Maximum number of files to return.

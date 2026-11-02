@@ -199,6 +199,14 @@ receive new IDs; unchanged lists retain their IDs. Do not send check IDs.
 Existing suite titles and descriptions are preserved. MCP `expectations_set`
 accepts the same request body in its required `data` argument.
 
+Delete a stage or procedure-stage suite with `interloom expectations delete
+<suite-id>`, or MCP `expectations_delete` with the suite ID in `id`. Use the
+root suite's `id` from a read or set response, not `target.id`. This deletes the
+suite and its owned checks and requires target edit permission. A successful
+deletion returns `{"id":"<suite-id>","deleted":true}`. Missing or inaccessible
+suites, unsupported owner types, and repeated deletion return HTTP 404
+`expectations_not_found`. Deletion does not evaluate checks or release workflows.
+
 MCP exposes `cases_expectations`, `procedures_expectations`,
 `stages_expectations`, and `procedure_stages_expectations`, each with a required
 `id` argument. The stage command groups expose only `expectations`; they do not
