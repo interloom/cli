@@ -434,6 +434,7 @@ func (e RelationshipType) Valid() bool {
 const (
 	ResourceTypeAGENT      ResourceType = "AGENT"
 	ResourceTypeCASE       ResourceType = "CASE"
+	ResourceTypeDATABASE   ResourceType = "DATABASE"
 	ResourceTypeFILE       ResourceType = "FILE"
 	ResourceTypeINVOCATION ResourceType = "INVOCATION"
 	ResourceTypeNOTE       ResourceType = "NOTE"
@@ -450,6 +451,8 @@ func (e ResourceType) Valid() bool {
 	case ResourceTypeAGENT:
 		return true
 	case ResourceTypeCASE:
+		return true
+	case ResourceTypeDATABASE:
 		return true
 	case ResourceTypeFILE:
 		return true

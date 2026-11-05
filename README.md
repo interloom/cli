@@ -166,7 +166,7 @@ interloom cases relationships <case-id> --all
 
 Each item contains the linked resource `id`, `type`, and `url`. When available,
 it also contains `relationship_type` and `relationship_direction` relative to
-the requested resource.
+the requested resource. Database links use the resource type `DATABASE`.
 
 ### Expectations
 
