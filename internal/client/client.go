@@ -155,18 +155,18 @@ func (c *Client) Create(ctx context.Context, resource string, body []byte, heade
 }
 
 // Update patches a single resource with a JSON body.
-func (c *Client) Update(ctx context.Context, resource, id string, body []byte) (json.RawMessage, error) {
-	return c.do(ctx, http.MethodPatch, "/"+resource+"/"+url.PathEscape(id), nil, bytes.NewReader(body), "application/json")
+func (c *Client) Update(ctx context.Context, resource, id string, body []byte, headers ...http.Header) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodPatch, "/"+resource+"/"+url.PathEscape(id), nil, bytes.NewReader(body), "application/json", headers...)
 }
 
 // Replace puts a JSON body to a resource or composed sub-resource path.
-func (c *Client) Replace(ctx context.Context, resource string, body []byte) (json.RawMessage, error) {
-	return c.do(ctx, http.MethodPut, "/"+resource, nil, bytes.NewReader(body), "application/json")
+func (c *Client) Replace(ctx context.Context, resource string, body []byte, headers ...http.Header) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodPut, "/"+resource, nil, bytes.NewReader(body), "application/json", headers...)
 }
 
 // Delete removes a single resource. A 204 yields an empty body.
-func (c *Client) Delete(ctx context.Context, resource, id string) (json.RawMessage, error) {
-	return c.do(ctx, http.MethodDelete, "/"+resource+"/"+url.PathEscape(id), nil, nil, "")
+func (c *Client) Delete(ctx context.Context, resource, id string, headers ...http.Header) (json.RawMessage, error) {
+	return c.do(ctx, http.MethodDelete, "/"+resource+"/"+url.PathEscape(id), nil, nil, "", headers...)
 }
 
 // Upload posts a multipart/form-data request with the file under the "file"

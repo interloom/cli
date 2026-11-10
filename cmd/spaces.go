@@ -19,7 +19,7 @@ const (
 // resource commands.
 func newSpacesCmd() *cobra.Command {
 	cmd := newResourceCmd(apiResource(resourceSpaces))
-	cmd.AddCommand(newSpacesMembersCmd(), newSpacesTriggerCmd(), newUsageCmd(resourceSpaces))
+	cmd.AddCommand(newSpacesMembersCmd(), newSpacesTriggerCmd(), newUsageCmd(resourceSpaces), newSpaceEmailCmd())
 	return cmd
 }
 

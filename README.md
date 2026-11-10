@@ -114,7 +114,7 @@ interloom cases create -d '{"title":"New case"}'
 interloom cases update <id> -f patch.json
 ```
 
-`agents` and `tools` have no `delete`. `users` is read-only (`list`, `get`) and
+`agents`, `tools`, and `skills` have no `delete`. `users` is read-only (`list`, `get`) and
 adds `me`. `models` is list-only for discovering model IDs accepted by agent
 commands.
 `secrets` supports `list`, `create`, and `delete`; secret values are never
@@ -151,7 +151,42 @@ Available list filters per resource:
 | `models`     | —                                                             |
 | `tools`      | —                                                             |
 | `secrets`    | —                                                             |
+| `skills`     | `scope`, `search`, `agent-id`                                  |
 | `files`      | `space-id`, `case-id`, `sort`, `direction`                    |
+
+### Skills
+
+```sh
+interloom skills list --scope managed --search example
+interloom skills list --scope equipped --agent-id <agent-id> --all
+interloom skills get <skill-id>
+interloom skills create --name Example --description "Example skill" --instructions "Follow the review checklist."
+interloom skills update <skill-id> --instructions ""
+interloom agents skills equip <agent-id> <skill-id>
+interloom agents skills remove <agent-id> <skill-id>
+```
+
+List scopes are `discovery` (default), `managed`, `eligible`, and `equipped`.
+Lists return metadata and permission fields, never instructions. Get returns
+instructions only when the caller manages the skill or has access through an
+equipped agent. Creating a skill does not equip it. Updates change only supplied
+fields; an empty string clears instructions and null is rejected. Skills have
+no delete endpoint.
+
+Equip requires skill management and agent configuration permission. Remove
+requires agent configuration permission, not skill management. Removing an
+absent assignment, including an unknown skill ID, succeeds without changing
+anything. It does not delete the skill. Assignment commands return `agent_id`,
+`skill_id`, and `equipped` (true after equip, false after remove).
+
+Create, update, equip, and remove accept `--idempotency-key`. Reuse a key with
+the same request for up to seven days; a different body returns HTTP 409.
+The CLI does not generate keys or retry automatically.
+
+MCP exposes `skills_list`, `skills_get`, `skills_create`, `skills_update`,
+`agents_skills_equip`, and `agents_skills_remove`. Assignment tools require
+`agent_id` and `skill_id`. Writes accept the separate `idempotency_key` argument,
+which is sent as a header, not in the request body.
 
 ### Relationships
 
@@ -230,6 +265,27 @@ and shared-object matches. Responses include `anchor_case` and `data`;
 similar cases also include a nullable `score_source`. Relevant objects contain
 links and titles, not object contents. Their `source_cases` are stored links,
 not ranking contributions. These commands are not exposed as MCP tools.
+
+### Space email addresses
+
+```sh
+interloom spaces email-addresses get <space-id>
+interloom spaces email-addresses configure <space-id> -d '{"local_part":"example","previous_alias_inbound":"retain"}'
+interloom spaces email-addresses configure <space-id> -d '{"local_part":null,"previous_alias_inbound":"disable"}'
+interloom spaces email-addresses disable <space-id> <local-part>
+```
+
+Configure selects the outbound alias on the instance domain. Both JSON fields
+are required: `local_part` selects an alias, or null clears the selection;
+`previous_alias_inbound` explicitly retains or disables the previous alias's
+inbound routing. Disabled names remain reserved. Responses contain `domain`
+and `addresses`, with `local_part`, `inbound_enabled`, and `is_outbound` per alias.
+Configure and disable accept `--idempotency-key` for safe retries.
+
+MCP exposes `spaces_email_addresses_get`, `spaces_email_addresses_configure`,
+and `spaces_email_addresses_disable`. All require `space_id`; configure also
+requires a `data` object, and disable requires `local_part`. Writes accept
+`idempotency_key` separately from the body.
 
 ### Space triggers
 

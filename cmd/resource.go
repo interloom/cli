@@ -121,6 +121,7 @@ type resource struct {
 	noPaging         bool     // collection list is not cursor-paginated
 	hasRelationships bool     // item has a paginated relationships sub-resource
 	idempotentCreate bool     // create accepts an Idempotency-Key header
+	idempotentUpdate bool     // update accepts an Idempotency-Key header
 	filters          []filter // list query filters
 	fields           []field  // create/update body fields
 }
@@ -326,7 +327,12 @@ func (r resource) updateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			raw, err := c.Update(cmd.Context(), r.name, args[0], body)
+			headers := http.Header{}
+			if r.idempotentUpdate && cmd.Flags().Changed(flagIdempotency) {
+				key, _ := cmd.Flags().GetString(flagIdempotency)
+				headers.Set(headerIdempotency, key)
+			}
+			raw, err := c.Update(cmd.Context(), r.name, args[0], body, headers)
 			if err != nil {
 				return err
 			}
@@ -335,6 +341,9 @@ func (r resource) updateCmd() *cobra.Command {
 	}
 	r.addFieldFlags(cmd, false)
 	addBodyFlags(cmd)
+	if r.idempotentUpdate {
+		cmd.Flags().String(flagIdempotency, "", idempotencyHelp)
+	}
 	return cmd
 }
 

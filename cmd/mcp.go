@@ -218,6 +218,8 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerCaseIngestionTools(server)
 	svc.registerDatabaseTools(server)
 	svc.registerExpectationsTools(server)
+	svc.registerAgentSkillTools(server)
+	svc.registerSpaceEmailTools(server)
 	return server
 }
 
@@ -634,7 +636,17 @@ func (s *mcpService) updateResourceHandler(r resource) mcpsdk.ToolHandler {
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
-		raw, err := s.client.Update(ctx, r.name, id, body)
+		headers := http.Header{}
+		if r.idempotentUpdate {
+			key, present, keyErr := args.string(keyIdempotency)
+			if keyErr != nil {
+				return toolErrorResult(keyErr), nil
+			}
+			if present {
+				headers.Set(headerIdempotency, key)
+			}
+		}
+		raw, err := s.client.Update(ctx, r.name, id, body, headers)
 		if err != nil {
 			return toolErrorResult(err), nil
 		}
@@ -1261,7 +1273,7 @@ func listInputSchema(r resource) map[string]any {
 
 func bodyInputSchema(r resource, create bool) map[string]any {
 	props := map[string]any{keyData: dataSchema("raw JSON request body; use this instead of typed field arguments")}
-	if create && r.idempotentCreate {
+	if (create && r.idempotentCreate) || (!create && r.idempotentUpdate) {
 		props[keyIdempotency] = stringSchema(idempotencyHelp)
 	}
 	for _, f := range r.fieldsFor(create) {

@@ -127,6 +127,24 @@ func (e CaseStatus) Valid() bool {
 	}
 }
 
+// Defines values for ConfigureSpaceEmailAddressRequestPreviousAliasInbound.
+const (
+	Disable ConfigureSpaceEmailAddressRequestPreviousAliasInbound = "disable"
+	Retain  ConfigureSpaceEmailAddressRequestPreviousAliasInbound = "retain"
+)
+
+// Valid indicates whether the value is a known member of the ConfigureSpaceEmailAddressRequestPreviousAliasInbound enum.
+func (e ConfigureSpaceEmailAddressRequestPreviousAliasInbound) Valid() bool {
+	switch e {
+	case Disable:
+		return true
+	case Retain:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DatabaseAggregateExpressionFunction.
 const (
 	Avg   DatabaseAggregateExpressionFunction = "avg"
@@ -832,6 +850,30 @@ func (e ListNotesParamsDirection) Valid() bool {
 	}
 }
 
+// Defines values for ListSkillsParamsScope.
+const (
+	Discovery ListSkillsParamsScope = "discovery"
+	Eligible  ListSkillsParamsScope = "eligible"
+	Equipped  ListSkillsParamsScope = "equipped"
+	Managed   ListSkillsParamsScope = "managed"
+)
+
+// Valid indicates whether the value is a known member of the ListSkillsParamsScope enum.
+func (e ListSkillsParamsScope) Valid() bool {
+	switch e {
+	case Discovery:
+		return true
+	case Eligible:
+		return true
+	case Equipped:
+		return true
+	case Managed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSpaceUsageBreakdownsParamsGroupBy.
 const (
 	ListSpaceUsageBreakdownsParamsGroupByAgent ListSpaceUsageBreakdownsParamsGroupBy = "agent"
@@ -1185,6 +1227,18 @@ type CaseUsageBreakdown struct {
 	Totals  PublicUsageTotals `json:"totals"`
 }
 
+// ConfigureSpaceEmailAddressRequest defines model for ConfigureSpaceEmailAddressRequest.
+type ConfigureSpaceEmailAddressRequest struct {
+	// LocalPart Alias on the instance domain to select for outbound mail; null clears the selection.
+	LocalPart *string `json:"local_part"`
+
+	// PreviousAliasInbound Explicitly retain or disable inbound routing for the previous selection. Its name remains reserved.
+	PreviousAliasInbound ConfigureSpaceEmailAddressRequestPreviousAliasInbound `json:"previous_alias_inbound"`
+}
+
+// ConfigureSpaceEmailAddressRequestPreviousAliasInbound Explicitly retain or disable inbound routing for the previous selection. Its name remains reserved.
+type ConfigureSpaceEmailAddressRequestPreviousAliasInbound string
+
 // CreateAgentRequest defines model for CreateAgentRequest.
 type CreateAgentRequest struct {
 	JobDescription *string `json:"job_description,omitempty"`
@@ -1282,6 +1336,13 @@ type CreateSecretRequest struct {
 
 	// Value Sensitive value to encrypt and store.
 	Value string `json:"value"`
+}
+
+// CreateSkillRequest defines model for CreateSkillRequest.
+type CreateSkillRequest struct {
+	Description  string `json:"description"`
+	Instructions string `json:"instructions"`
+	Name         string `json:"name"`
 }
 
 // CreateSpaceRequest defines model for CreateSpaceRequest.
@@ -1846,6 +1907,18 @@ type ListRelationshipsResponse struct {
 type ListSecretsResponse struct {
 	// Data Items in the current page.
 	Data []Secret `json:"data"`
+
+	// HasMore Whether more items are available after this page.
+	HasMore bool `json:"has_more"`
+
+	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListSkillsResponse defines model for ListSkillsResponse.
+type ListSkillsResponse struct {
+	// Data Items in the current page.
+	Data []SkillSummary `json:"data"`
 
 	// HasMore Whether more items are available after this page.
 	HasMore bool `json:"has_more"`
@@ -2424,6 +2497,33 @@ type SimilarCasesResponse_ScoreSource struct {
 // SimilarTaskScoreSource defines model for SimilarTaskScoreSource.
 type SimilarTaskScoreSource string
 
+// Skill defines model for Skill.
+type Skill struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Description string             `json:"description"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// Instructions Current instructions, visible to the manager or through an accessible equipped agent.
+	Instructions string             `json:"instructions"`
+	ManagerId    openapi_types.UUID `json:"manager_id"`
+	Name         string             `json:"name"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+}
+
+// SkillSummary defines model for SkillSummary.
+type SkillSummary struct {
+	CanEdit             bool               `json:"can_edit"`
+	CanEquip            *bool              `json:"can_equip"`
+	CanLoad             *bool              `json:"can_load"`
+	CanReadInstructions bool               `json:"can_read_instructions"`
+	CanRemove           *bool              `json:"can_remove"`
+	Description         string             `json:"description"`
+	Id                  openapi_types.UUID `json:"id"`
+	ManagerId           openapi_types.UUID `json:"manager_id"`
+	Name                string             `json:"name"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+}
+
 // Space defines model for Space.
 type Space struct {
 	// CreatedAt Timestamp when the object was created.
@@ -2450,6 +2550,19 @@ type Space struct {
 
 	// UpdatedAt Timestamp when the object was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SpaceEmailAddress defines model for SpaceEmailAddress.
+type SpaceEmailAddress struct {
+	InboundEnabled bool   `json:"inbound_enabled"`
+	IsOutbound     bool   `json:"is_outbound"`
+	LocalPart      string `json:"local_part"`
+}
+
+// SpaceEmailAddresses defines model for SpaceEmailAddresses.
+type SpaceEmailAddresses struct {
+	Addresses []SpaceEmailAddress `json:"addresses"`
+	Domain    string              `json:"domain"`
 }
 
 // SpaceListItem defines model for SpaceListItem.
@@ -2746,6 +2859,18 @@ type UpdateProcedureRequest struct {
 	Title *string `json:"title,omitempty"`
 }
 
+// UpdateSkillRequest defines model for UpdateSkillRequest.
+type UpdateSkillRequest struct {
+	// Description Omit to leave unchanged. Null is rejected.
+	Description *string `json:"description,omitempty"`
+
+	// Instructions Omit to leave unchanged. An empty string clears instructions; null is rejected.
+	Instructions *string `json:"instructions,omitempty"`
+
+	// Name Omit to leave unchanged. Null is rejected.
+	Name *string `json:"name,omitempty"`
+}
+
 // UpdateSpaceRequest defines model for UpdateSpaceRequest.
 type UpdateSpaceRequest struct {
 	Description *string `json:"description,omitempty"`
@@ -2920,6 +3045,22 @@ type ListAgentRelationshipsParams struct {
 	Limit         *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor        *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Authorization *string `json:"authorization,omitempty"`
+}
+
+// RemoveAgentSkillParams defines parameters for RemoveAgentSkill.
+type RemoveAgentSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
+// EquipAgentSkillParams defines parameters for EquipAgentSkill.
+type EquipAgentSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // ListAgentToolsParams defines parameters for ListAgentTools.
@@ -3325,6 +3466,40 @@ type DeleteSecretParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListSkillsParams defines parameters for ListSkills.
+type ListSkillsParams struct {
+	Scope         *ListSkillsParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+	Search        *string                `form:"search,omitempty" json:"search,omitempty"`
+	AgentId       *openapi_types.UUID    `form:"agent_id,omitempty" json:"agent_id,omitempty"`
+	Limit         *int                   `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string                `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Authorization *string                `json:"authorization,omitempty"`
+}
+
+// ListSkillsParamsScope defines parameters for ListSkills.
+type ListSkillsParamsScope string
+
+// CreateSkillParams defines parameters for CreateSkill.
+type CreateSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
+// GetSkillParams defines parameters for GetSkill.
+type GetSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// UpdateSkillParams defines parameters for UpdateSkill.
+type UpdateSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
 // ListSpacesParams defines parameters for ListSpaces.
 type ListSpacesParams struct {
 	// Limit Maximum number of spaces to return.
@@ -3353,6 +3528,25 @@ type GetSpaceParams struct {
 // UpdateSpaceParams defines parameters for UpdateSpace.
 type UpdateSpaceParams struct {
 	Authorization *string `json:"authorization,omitempty"`
+}
+
+// GetSpaceEmailAddressesParams defines parameters for GetSpaceEmailAddresses.
+type GetSpaceEmailAddressesParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// ConfigureSpaceEmailAddressParams defines parameters for ConfigureSpaceEmailAddress.
+type ConfigureSpaceEmailAddressParams struct {
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+	Authorization  *string `json:"authorization,omitempty"`
+}
+
+// DisableSpaceEmailAddressParams defines parameters for DisableSpaceEmailAddress.
+type DisableSpaceEmailAddressParams struct {
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+	Authorization  *string `json:"authorization,omitempty"`
 }
 
 // ListSpaceMembersParams defines parameters for ListSpaceMembers.
@@ -3564,11 +3758,20 @@ type UpdateProcedureJSONRequestBody = UpdateProcedureRequest
 // CreateSecretJSONRequestBody defines body for CreateSecret for application/json ContentType.
 type CreateSecretJSONRequestBody = CreateSecretRequest
 
+// CreateSkillJSONRequestBody defines body for CreateSkill for application/json ContentType.
+type CreateSkillJSONRequestBody = CreateSkillRequest
+
+// UpdateSkillJSONRequestBody defines body for UpdateSkill for application/json ContentType.
+type UpdateSkillJSONRequestBody = UpdateSkillRequest
+
 // CreateSpaceJSONRequestBody defines body for CreateSpace for application/json ContentType.
 type CreateSpaceJSONRequestBody = CreateSpaceRequest
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = UpdateSpaceRequest
+
+// ConfigureSpaceEmailAddressJSONRequestBody defines body for ConfigureSpaceEmailAddress for application/json ContentType.
+type ConfigureSpaceEmailAddressJSONRequestBody = ConfigureSpaceEmailAddressRequest
 
 // UpsertSpaceMemberJSONRequestBody defines body for UpsertSpaceMember for application/json ContentType.
 type UpsertSpaceMemberJSONRequestBody = UpsertSpaceMemberRequest

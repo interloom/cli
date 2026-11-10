@@ -13,7 +13,7 @@ const agentToolIDsFlag = "tool-ids"
 // newAgentsCmd adds the tools sub-resource to the standard Agent commands.
 func newAgentsCmd() *cobra.Command {
 	cmd := newResourceCmd(apiResource("agents"))
-	cmd.AddCommand(newAgentToolsCmd())
+	cmd.AddCommand(newAgentToolsCmd(), newAgentSkillsCmd())
 	return cmd
 }
 
