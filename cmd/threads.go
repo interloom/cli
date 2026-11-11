@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/spf13/cobra"
@@ -110,7 +111,12 @@ func newThreadsMessagesCreateCmd() *cobra.Command {
 				return err
 			}
 			resource := "threads/" + url.PathEscape(args[0]) + "/messages"
-			raw, err := c.Create(cmd.Context(), resource, body)
+			headers := http.Header{}
+			if cmd.Flags().Changed(flagIdempotency) {
+				key, _ := cmd.Flags().GetString(flagIdempotency)
+				headers.Set(headerIdempotency, key)
+			}
+			raw, err := c.Create(cmd.Context(), resource, body, headers)
 			if err != nil {
 				return err
 			}
@@ -119,6 +125,7 @@ func newThreadsMessagesCreateCmd() *cobra.Command {
 	}
 	cmd.Flags().String("text", "", "message text (equivalent to --data '{\"text\":...}')")
 	cmd.Flags().StringSlice(threadMessageFileIDsFlag, nil, "File IDs to attach to the created thread event (repeatable)")
+	cmd.Flags().String(flagIdempotency, "", idempotencyHelp)
 	addBodyFlags(cmd)
 	return cmd
 }

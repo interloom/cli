@@ -33,6 +33,10 @@ func TestSkillsRequests(t *testing.T) {
 		args                                           map[string]any
 	}{
 		{
+			name: "agents_create", method: http.MethodPost, path: "/agents", body: `{"name":"Equipped agent","skill_ids":["first","second"]}`, response: `{"id":"new-agent"}`,
+			cli: []string{agents, commandUseCreate, "--" + keyName, "Equipped agent", "--skill-ids", "first,second"}, args: map[string]any{keyName: "Equipped agent", "skill_ids": []string{"first", "second"}},
+		},
+		{
 			name: "skills_list", method: http.MethodGet, path: "/skills", query: "agent_id=agent-7&scope=equipped&search=review", response: `{"data":[],"has_more":false}`,
 			cli: []string{resourceSkills, commandUseList, "--agent-id", "agent-7", "--scope", equipped, "--search", "review"}, args: map[string]any{keyAgentID: "agent-7", "scope": equipped, "search": "review"},
 		},

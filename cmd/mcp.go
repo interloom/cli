@@ -220,6 +220,7 @@ func newInterloomMCPServer(c *client.Client) *mcpsdk.Server {
 	svc.registerExpectationsTools(server)
 	svc.registerAgentSkillTools(server)
 	svc.registerSpaceEmailTools(server)
+	svc.registerCaseStageTools(server)
 	return server
 }
 
@@ -389,10 +390,11 @@ func (s *mcpService) registerThreadTools(server *mcpsdk.Server) {
 		Name:        toolThreadsMessagesCreate,
 		Description: "Create a message in a thread",
 		InputSchema: objectSchema(map[string]any{
-			keyThreadID: stringSchema("thread ID"),
-			"text":      stringSchema("message text"),
-			keyFileIDs:  stringArraySchema("File IDs to attach to the created thread event"),
-			keyData:     dataSchema("raw JSON request body"),
+			keyThreadID:    stringSchema("thread ID"),
+			"text":         stringSchema("message text"),
+			keyFileIDs:     stringArraySchema("File IDs to attach to the created thread event"),
+			keyData:        dataSchema("raw JSON request body"),
+			keyIdempotency: stringSchema(idempotencyHelp),
 		}, keyThreadID),
 	}, s.threadMessageCreateHandler())
 }
@@ -722,7 +724,15 @@ func (s *mcpService) threadMessageCreateHandler() mcpsdk.ToolHandler {
 			return toolErrorResult(err), nil
 		}
 		resource := "threads/" + url.PathEscape(threadID) + "/messages"
-		raw, err := s.client.Create(ctx, resource, body)
+		key, present, err := args.string(keyIdempotency)
+		if err != nil {
+			return toolErrorResult(err), nil
+		}
+		headers := http.Header{}
+		if present {
+			headers.Set(headerIdempotency, key)
+		}
+		raw, err := s.client.Create(ctx, resource, body, headers)
 		if err != nil {
 			return toolErrorResult(err), nil
 		}

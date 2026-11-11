@@ -92,6 +92,10 @@ interloom notes create --title "Note" --body "..." --space-id <id> --tags a,b
 interloom agents update <id> --model gpt-5 --reasoning-effort HIGH
 ```
 
+Agent creation accepts `--skill-ids <id-1>,<id-2>` to equip up to 100 skills on
+the new agent. MCP `agents_create` accepts the same `skill_ids` array. This is
+create-only; use `agents skills equip/remove` to change an existing agent.
+
 Note creation accepts `--idempotency-key <key>` with field flags or a raw body.
 Choose a key of 1–255 characters. Retrying with the same key and body within
 7 days returns the original result instead of creating another note. A different
@@ -266,6 +270,15 @@ similar cases also include a nullable `score_source`. Relevant objects contain
 links and titles, not object contents. Their `source_cases` are stored links,
 not ranking contributions. These commands are not exposed as MCP tools.
 
+### Case stages
+
+`interloom cases stages <case-id>` returns all stages in order as a `data`
+array, without pagination. MCP exposes `cases_stages` with required `case_id`.
+Stage positions increase but are not consecutive. Status is `pending`,
+`in_progress`, `waiting`, `completed`, `blocked`, or `skipped`; `in_progress`,
+`waiting`, and `blocked` identify the current stage. Assignee, title, start
+time, and completion time can be null.
+
 ### Space email addresses
 
 ```sh
@@ -374,10 +387,14 @@ strings, with a timezone for timestamps. Aim for 100–250 rows per batch. The
 limits are 1,000 rows per request, 64 KiB per row, and 5 MiB per batch (compact,
 normalized UTF-8 JSON). A database can hold up to 100,000 rows.
 
-Each new batch, including an empty batch, advances the revision once. Use the
-returned `committed_revision` for the next batch. If a response is lost, retry
-the same rows with the original `expected_revision` to get the original result.
-On `write_conflict`, read the latest data and revise the batch before retrying.
+Use the revision returned with the rows you read as `expected_revision`.
+Each new batch, including an empty batch, advances the revision once. Later
+writes to other row keys do not prevent the batch from being applied. A later
+insert, replacement, or deletion of a batch row key, or a revision more than
+1,000 revisions old, returns `write_conflict` without writing. If a response
+is lost, retry the same rows with the original `expected_revision` to get the
+original result. On `write_conflict`, read the affected rows again and revise
+the batch before retrying.
 
 ## Files
 
@@ -494,6 +511,12 @@ interloom threads messages create <id> --text "Hello from the CLI"
 interloom threads messages create <id> --text "See attached" --file-ids <file-id>
 interloom threads messages create <id> -d '{"text":"Hello from JSON"}'
 ```
+
+Message creation accepts `--idempotency-key` with typed flags or a raw body.
+MCP `threads_messages_create` accepts `idempotency_key` separately from the
+body. Reuse a key with the same body within seven days to receive the original
+result without a duplicate message. A different body with the same key returns
+HTTP 409. The CLI does not generate keys or retry automatically.
 
 Thread event payloads can also contain `agent_invocation` links. Use the
 linked invocation ID to inspect an agent execution.

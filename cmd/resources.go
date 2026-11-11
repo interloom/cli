@@ -61,6 +61,7 @@ func apiResources() []resource {
 		{name: "agents", singular: "agent", noDelete: true, hasRelationships: true, fields: []field{
 			{name: keyName, usage: "Agent name", onCreate: true, onUpdate: true, required: true},
 			{name: "job_description", usage: "Agent job description", onCreate: true, onUpdate: true},
+			{name: "skill_ids", usage: "Skill IDs to equip on the new agent (maximum 100)", multi: true, onCreate: true},
 			{name: "model", usage: "model the agent uses", onCreate: true, onUpdate: true},
 			{name: keyReasoningEffort, usage: "reasoning effort: LOW, MEDIUM, HIGH, or XHIGH", onCreate: true, onUpdate: true},
 		}},

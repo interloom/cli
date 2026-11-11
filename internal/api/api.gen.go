@@ -81,19 +81,49 @@ func (e CaseIngestionStatus) Valid() bool {
 
 // Defines values for CaseIngestionFailedEntryStatus.
 const (
-	Failed  CaseIngestionFailedEntryStatus = "failed"
-	Skipped CaseIngestionFailedEntryStatus = "skipped"
-	Success CaseIngestionFailedEntryStatus = "success"
+	CaseIngestionFailedEntryStatusFailed  CaseIngestionFailedEntryStatus = "failed"
+	CaseIngestionFailedEntryStatusSkipped CaseIngestionFailedEntryStatus = "skipped"
+	CaseIngestionFailedEntryStatusSuccess CaseIngestionFailedEntryStatus = "success"
 )
 
 // Valid indicates whether the value is a known member of the CaseIngestionFailedEntryStatus enum.
 func (e CaseIngestionFailedEntryStatus) Valid() bool {
 	switch e {
-	case Failed:
+	case CaseIngestionFailedEntryStatusFailed:
 		return true
-	case Skipped:
+	case CaseIngestionFailedEntryStatusSkipped:
 		return true
-	case Success:
+	case CaseIngestionFailedEntryStatusSuccess:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaseStageStatus.
+const (
+	CaseStageStatusBlocked    CaseStageStatus = "blocked"
+	CaseStageStatusCompleted  CaseStageStatus = "completed"
+	CaseStageStatusInProgress CaseStageStatus = "in_progress"
+	CaseStageStatusPending    CaseStageStatus = "pending"
+	CaseStageStatusSkipped    CaseStageStatus = "skipped"
+	CaseStageStatusWaiting    CaseStageStatus = "waiting"
+)
+
+// Valid indicates whether the value is a known member of the CaseStageStatus enum.
+func (e CaseStageStatus) Valid() bool {
+	switch e {
+	case CaseStageStatusBlocked:
+		return true
+	case CaseStageStatusCompleted:
+		return true
+	case CaseStageStatusInProgress:
+		return true
+	case CaseStageStatusPending:
+		return true
+	case CaseStageStatusSkipped:
+		return true
+	case CaseStageStatusWaiting:
 		return true
 	default:
 		return false
@@ -1217,6 +1247,36 @@ type CaseListItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// CaseStage defines model for CaseStage.
+type CaseStage struct {
+	Assignee ResourceLink `json:"assignee"`
+
+	// CompletedAt Timestamp when the stage was completed, or null when it is not completed.
+	CompletedAt *time.Time `json:"completed_at"`
+
+	// CreatedAt Timestamp when the stage was created.
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id Unique identifier for the stage.
+	Id openapi_types.UUID `json:"id"`
+
+	// Position Sort key of the stage within the case. Values increase in stage order but are not consecutive.
+	Position int `json:"position"`
+
+	// StartedAt Timestamp when the stage first started, or null when it has not started.
+	StartedAt *time.Time      `json:"started_at"`
+	Status    CaseStageStatus `json:"status"`
+
+	// Title Human-readable stage title, if any.
+	Title *string `json:"title"`
+
+	// UpdatedAt Timestamp when the stage was last updated.
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// CaseStageStatus defines model for CaseStageStatus.
+type CaseStageStatus string
+
 // CaseStatus defines model for CaseStatus.
 type CaseStatus string
 
@@ -1247,6 +1307,9 @@ type CreateAgentRequest struct {
 	Model           *string          `json:"model,omitempty"`
 	Name            string           `json:"name"`
 	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
+
+	// SkillIds IDs of skills to equip on the new agent.
+	SkillIds *[]openapi_types.UUID `json:"skill_ids,omitempty"`
 }
 
 // CreateCaseIngestionRequest defines model for CreateCaseIngestionRequest.
@@ -1829,6 +1892,12 @@ type ListCaseIngestionErrorsResponse struct {
 
 	// NextCursor Opaque cursor for the next page. Pass this value as cursor on the next request with the same filters and sort options.
 	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// ListCaseStagesResponse defines model for ListCaseStagesResponse.
+type ListCaseStagesResponse struct {
+	// Data All stages of the case, in order.
+	Data []CaseStage `json:"data"`
 }
 
 // ListCasesResponse defines model for ListCasesResponse.
@@ -3193,6 +3262,11 @@ type GetSimilarCasesParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListCaseStagesParams defines parameters for ListCaseStages.
+type ListCaseStagesParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // GetCaseUsageParams defines parameters for GetCaseUsage.
 type GetCaseUsageParams struct {
 	Authorization *string `json:"authorization,omitempty"`
@@ -3647,6 +3721,9 @@ type ListThreadEventsParamsDirection string
 // CreateThreadMessageParams defines parameters for CreateThreadMessage.
 type CreateThreadMessageParams struct {
 	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // ListToolsParams defines parameters for ListTools.

@@ -1,8 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/interloom/cli/internal/client"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 const (
@@ -96,5 +103,41 @@ func TestThreadMessageBodyRequiresTextWithFileIDs(t *testing.T) {
 	}
 	if _, err := threadMessageBody(cmd); err == nil {
 		t.Fatalf("expected missing text error")
+	}
+}
+
+func TestThreadMessageIdempotency(t *testing.T) {
+	const key = "message-retry"
+	const textKey = "text"
+	const bodyJSON = `{"text":"hello"}`
+	const messages = "messages"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.EscapedPath() != "/api/v1/public/threads/a%2Fb/messages" || r.Header.Get(headerIdempotency) != key {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+		}
+		assertSkillJSON(t, string(body), bodyJSON)
+		_, _ = w.Write([]byte(`{"id":"message-1"}`))
+	}))
+	defer server.Close()
+	setDatabaseTestEnv(t, server.URL)
+	for _, flags := range [][]string{{"--text", testMessageText}, {"--" + keyData, bodyJSON}} {
+		root := newRootCmd()
+		root.SetArgs(append([]string{"threads", messages, commandUseCreate, usageTestID, "--" + flagIdempotency, key}, flags...))
+		if err := root.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	session := newTestMCPSession(t, client.New(server.URL, "test-key"))
+	for _, bodyArgs := range []map[string]any{{textKey: testMessageText}, {keyData: map[string]any{textKey: testMessageText}}} {
+		bodyArgs[keyThreadID], bodyArgs[keyIdempotency] = usageTestID, key
+		result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{Name: toolThreadsMessagesCreate, Arguments: bodyArgs})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertSkillJSON(t, toolResultText(t, result), `{"id":"message-1"}`)
 	}
 }
