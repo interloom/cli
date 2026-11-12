@@ -166,6 +166,7 @@ interloom skills list --scope equipped --agent-id <agent-id> --all
 interloom skills get <skill-id>
 interloom skills create --name Example --description "Example skill" --instructions "Follow the review checklist."
 interloom skills update <skill-id> --instructions ""
+interloom skills update <skill-id> --manager-id <human-user-id>
 interloom agents skills equip <agent-id> <skill-id>
 interloom agents skills remove <agent-id> <skill-id>
 ```
@@ -183,7 +184,12 @@ absent assignment, including an unknown skill ID, succeeds without changing
 anything. It does not delete the skill. Assignment commands return `agent_id`,
 `skill_id`, and `equipped` (true after equip, false after remove).
 
-Create, update, equip, and remove accept `--idempotency-key`. Reuse a key with
+Only the current manager can transfer a skill to an active human member of
+the same organization. Send `manager_id` alone, through `--manager-id` or MCP
+`skills_update`; do not combine it with content fields or an idempotency key.
+Null is rejected. A transfer leaves content and agent assignments unchanged.
+
+Create, content update, equip, and remove accept `--idempotency-key`. Reuse a key with
 the same request for up to seven days; a different body returns HTTP 409.
 The CLI does not generate keys or retry automatically.
 
@@ -284,6 +290,7 @@ time, and completion time can be null.
 ```sh
 interloom spaces email-addresses get <space-id>
 interloom spaces email-addresses configure <space-id> -d '{"local_part":"example","previous_alias_inbound":"retain"}'
+interloom spaces email-addresses configure <space-id> -d '{"local_part":"inbound","previous_alias_inbound":"retain","set_as_sender":false}'
 interloom spaces email-addresses configure <space-id> -d '{"local_part":null,"previous_alias_inbound":"disable"}'
 interloom spaces email-addresses disable <space-id> <local-part>
 ```
@@ -294,6 +301,11 @@ are required: `local_part` selects an alias, or null clears the selection;
 inbound routing. Disabled names remain reserved. Responses contain `domain`
 and `addresses`, with `local_part`, `inbound_enabled`, and `is_outbound` per alias.
 Configure and disable accept `--idempotency-key` for safe retries.
+
+The optional `set_as_sender` field defaults to true. Set it to false to enable
+incoming mail for an alias without changing the outbound sender. This requires
+a non-null `local_part` and `previous_alias_inbound: "retain"`. CLI JSON bodies
+and MCP `data` objects both support this field.
 
 MCP exposes `spaces_email_addresses_get`, `spaces_email_addresses_configure`,
 and `spaces_email_addresses_disable`. All require `space_id`; configure also

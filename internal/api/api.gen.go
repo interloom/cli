@@ -1294,6 +1294,9 @@ type ConfigureSpaceEmailAddressRequest struct {
 
 	// PreviousAliasInbound Explicitly retain or disable inbound routing for the previous selection. Its name remains reserved.
 	PreviousAliasInbound ConfigureSpaceEmailAddressRequestPreviousAliasInbound `json:"previous_alias_inbound"`
+
+	// SetAsSender False enables incoming mail without changing the sender; requires a non-null alias and retain.
+	SetAsSender *bool `json:"set_as_sender,omitempty"`
 }
 
 // ConfigureSpaceEmailAddressRequestPreviousAliasInbound Explicitly retain or disable inbound routing for the previous selection. Its name remains reserved.
@@ -2935,6 +2938,9 @@ type UpdateSkillRequest struct {
 
 	// Instructions Omit to leave unchanged. An empty string clears instructions; null is rejected.
 	Instructions *string `json:"instructions,omitempty"`
+
+	// ManagerId Transfer management to an active human member of the skill's organization. Only the current manager may transfer. Omit to leave unchanged; null is rejected. Cannot be combined with content updates or Idempotency-Key. Content and agent assignments remain unchanged.
+	ManagerId *openapi_types.UUID `json:"manager_id,omitempty"`
 
 	// Name Omit to leave unchanged. Null is rejected.
 	Name *string `json:"name,omitempty"`

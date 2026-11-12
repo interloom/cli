@@ -26,6 +26,7 @@ func TestSkillsRequests(t *testing.T) {
 		updateKey    = "update-key"
 		equipKey     = "equip-key"
 		skillID      = "c/d"
+		managerKey   = "manager_id"
 	)
 	for _, tc := range []struct {
 		name, method, path, query, body, key, response string
@@ -51,6 +52,10 @@ func TestSkillsRequests(t *testing.T) {
 		{
 			name: "skills_update", method: http.MethodPatch, path: "/skills/a%2Fb", body: `{"instructions":""}`, key: updateKey, response: `{"id":"a/b","instructions":""}`,
 			cli: []string{resourceSkills, commandNameUpdate, usageTestID, "--instructions", "", "--" + flagIdempotency, updateKey}, args: map[string]any{"id": usageTestID, instructions: "", keyIdempotency: updateKey},
+		},
+		{
+			name: "skills_update", method: http.MethodPatch, path: "/skills/transfer-id", body: `{"manager_id":"human-2"}`, response: `{"id":"transfer-id","manager_id":"human-2"}`,
+			cli: []string{resourceSkills, commandNameUpdate, "transfer-id", "--manager-id", "human-2"}, args: map[string]any{"id": "transfer-id", managerKey: "human-2"},
 		},
 		{
 			name: "agents_skills_equip", method: http.MethodPut, path: "/agents/a%2Fb/skills/c%2Fd", key: equipKey, response: `{"agent_id":"a/b","skill_id":"c/d","equipped":true}`,

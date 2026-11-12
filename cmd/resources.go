@@ -14,6 +14,7 @@ func apiResources() []resource {
 			{name: keyName, usage: "Skill name", onCreate: true, onUpdate: true, required: true},
 			{name: keyDescription, usage: "Skill description", onCreate: true, onUpdate: true, required: true},
 			{name: "instructions", usage: "Skill instructions; empty string clears them on update, null is rejected", onCreate: true, onUpdate: true, required: true},
+			{name: "manager_id", usage: "transfer to an active human member; current manager only; cannot combine with content or idempotency key", onUpdate: true},
 		}},
 		{name: resourceSpaces, singular: "space", hasRelationships: true, fields: []field{
 			{name: keyName, usage: "Space name", onCreate: true, onUpdate: true, required: true},

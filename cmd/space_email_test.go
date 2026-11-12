@@ -16,6 +16,8 @@ import (
 func TestSpaceEmailRequests(t *testing.T) {
 	const response = `{"domain":"example.test","addresses":[{"local_part":"old","inbound_enabled":false,"is_outbound":false}]}`
 	const retryKey = "email-retry"
+	const inboundBody = `{"local_part":"inbound","previous_alias_inbound":"retain","set_as_sender":false}`
+	const previousAliasKey = "previous_alias_inbound"
 	for _, tc := range []struct {
 		action, method, suffix, body, key string
 		flags                             []string
@@ -25,12 +27,17 @@ func TestSpaceEmailRequests(t *testing.T) {
 		{
 			commandConfigure, http.MethodPut, "", `{"local_part":"new","previous_alias_inbound":"retain"}`, retryKey,
 			[]string{"--" + keyData, `{"local_part":"new","previous_alias_inbound":"retain"}`, "--" + flagIdempotency, retryKey},
-			map[string]any{keyData: map[string]any{keyLocalPart: "new", "previous_alias_inbound": "retain"}, keyIdempotency: retryKey},
+			map[string]any{keyData: map[string]any{keyLocalPart: "new", previousAliasKey: "retain"}, keyIdempotency: retryKey},
 		},
 		{
 			commandConfigure, http.MethodPut, "", `{"local_part":null,"previous_alias_inbound":"disable"}`, retryKey,
 			[]string{"--" + keyData, `{"local_part":null,"previous_alias_inbound":"disable"}`, "--" + flagIdempotency, retryKey},
-			map[string]any{keyData: map[string]any{keyLocalPart: nil, "previous_alias_inbound": commandDisable}, keyIdempotency: retryKey},
+			map[string]any{keyData: map[string]any{keyLocalPart: nil, previousAliasKey: commandDisable}, keyIdempotency: retryKey},
+		},
+		{
+			commandConfigure, http.MethodPut, "", inboundBody, retryKey,
+			[]string{"--" + keyData, inboundBody, "--" + flagIdempotency, retryKey},
+			map[string]any{keyData: map[string]any{keyLocalPart: "inbound", previousAliasKey: "retain", "set_as_sender": false}, keyIdempotency: retryKey},
 		},
 		{
 			commandDisable, http.MethodDelete, "/a%2Fb", "", retryKey,
