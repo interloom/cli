@@ -15,7 +15,7 @@ const (
 	resourceProcedureStages = "procedure-stages"
 	resourceProcedures      = "procedures"
 	expectationsHelp        = "Read the directly attached root suite and ordered checks; does not evaluate or combine stage expectations. Returns 404 when no accessible suite exists."
-	setExpectationsHelp     = "Create or replace the complete definition for a STAGE or PROCEDURE_STAGE target. Requires edit permission. Omitted mode and is_gating reset to all and false. Identical submissions leave the suite unchanged; changed check lists receive new IDs. Existing suite titles and descriptions are preserved."
+	setExpectationsHelp     = "Create or replace the complete definition for a STAGE or PROCEDURE_STAGE target. Requires edit permission. Omitted mode and is_gating reset to all and false. Identical submissions leave the suite unchanged; changed check lists receive new IDs."
 	deleteExpectationsHelp  = "Delete a stage or procedure-stage root suite and its owned checks by suite ID, not target ID. Requires target edit permission. Missing or inaccessible suites, unsupported owner types, and repeated deletion return 404. Does not evaluate expectations or release workflows."
 )
 

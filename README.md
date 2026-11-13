@@ -109,6 +109,11 @@ membership. Use `--is-public=false` for an explicit private setting. Visibility
 cannot change after creation. The MCP `spaces_create` tool accepts the boolean
 `is_public` argument too.
 
+Organizations can restrict Space and Agent creation to managers and owners.
+When that restriction applies, the API returns HTTP 403 with
+`space_creation_not_allowed` or `agent_creation_not_allowed`. The CLI reports
+the API error; it does not change organization permissions.
+
 Raw JSON still works via `--data/-d` (inline), `--file/-f` (a path, or `-` for
 stdin), or piped stdin — use it for fields without a flag (e.g. a procedure's
 `stages`). Field flags and a raw body are mutually exclusive.
@@ -241,8 +246,8 @@ Supply at least one check. This creates or replaces the complete definition;
 it does not append checks. Omitted `mode` and `is_gating` reset to `all` and
 `false`. Identical submissions leave the suite unchanged. Changed check lists
 receive new IDs; unchanged lists retain their IDs. Do not send check IDs.
-Existing suite titles and descriptions are preserved. MCP `expectations_set`
-accepts the same request body in its required `data` argument.
+MCP `expectations_set` accepts the same request body in its required `data`
+argument.
 
 Delete a stage or procedure-stage suite with `interloom expectations delete
 <suite-id>`, or MCP `expectations_delete` with the suite ID in `id`. Use the
