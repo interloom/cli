@@ -27,6 +27,7 @@ func TestSkillsRequests(t *testing.T) {
 		equipKey     = "equip-key"
 		skillID      = "c/d"
 		managerKey   = "manager_id"
+		deleteID     = "delete/id"
 	)
 	for _, tc := range []struct {
 		name, method, path, query, body, key, response string
@@ -44,6 +45,10 @@ func TestSkillsRequests(t *testing.T) {
 		{
 			name: "skills_get", method: http.MethodGet, path: "/skills/a%2Fb", response: `{"id":"a/b","instructions":"Review"}`,
 			cli: []string{resourceSkills, commandNameGet, usageTestID}, args: map[string]any{"id": usageTestID},
+		},
+		{
+			name: "skills_delete", method: http.MethodDelete, path: "/skills/delete%2Fid", response: `{"id":"delete/id","deleted":true}`,
+			cli: []string{resourceSkills, commandNameDelete, deleteID}, args: map[string]any{"id": deleteID},
 		},
 		{
 			name: "skills_create", method: http.MethodPost, path: "/skills", body: `{"name":"Review","description":"Test","instructions":"Check"}`, key: createKey, response: `{"id":"skill-1"}`,

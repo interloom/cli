@@ -6,7 +6,7 @@ const resourceOutboundNetworks = "outbound-networks"
 // shape here so Cobra commands and MCP tools do not drift.
 func apiResources() []resource {
 	return []resource{
-		{name: resourceSkills, singular: "skill", noDelete: true, idempotentCreate: true, idempotentUpdate: true, filters: []filter{
+		{name: resourceSkills, singular: "skill", idempotentCreate: true, idempotentUpdate: true, filters: []filter{
 			{name: "scope", usage: "discovery (default), managed, eligible, or equipped"},
 			{name: "search", usage: "search skill metadata"},
 			{name: keyAgentID, usage: "agent context for skill permissions and assignments"},

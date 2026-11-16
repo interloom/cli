@@ -123,7 +123,7 @@ interloom cases create -d '{"title":"New case"}'
 interloom cases update <id> -f patch.json
 ```
 
-`agents`, `tools`, and `skills` have no `delete`. `users` is read-only (`list`, `get`) and
+`agents` and `tools` have no `delete`. `users` is read-only (`list`, `get`) and
 adds `me`. `models` is list-only for discovering model IDs accepted by agent
 commands.
 `secrets` supports `list`, `create`, and `delete`; secret values are never
@@ -172,6 +172,7 @@ interloom skills get <skill-id>
 interloom skills create --name Example --description "Example skill" --instructions "Follow the review checklist."
 interloom skills update <skill-id> --instructions ""
 interloom skills update <skill-id> --manager-id <human-user-id>
+interloom skills delete <skill-id>
 interloom agents skills equip <agent-id> <skill-id>
 interloom agents skills remove <agent-id> <skill-id>
 ```
@@ -180,8 +181,10 @@ List scopes are `discovery` (default), `managed`, `eligible`, and `equipped`.
 Lists return metadata and permission fields, never instructions. Get returns
 instructions only when the caller manages the skill or has access through an
 equipped agent. Creating a skill does not equip it. Updates change only supplied
-fields; an empty string clears instructions and null is rejected. Skills have
-no delete endpoint.
+fields; an empty string clears instructions and null is rejected. Deleting a
+skill also removes it from all equipped agents. A successful delete returns
+`{"id":"<skill-id>","deleted":true}`. Delete does not accept an idempotency key;
+a missing skill returns HTTP 404 `skill_not_found`.
 
 Equip requires skill management and agent configuration permission. Remove
 requires agent configuration permission, not skill management. Removing an
@@ -198,10 +201,11 @@ Create, content update, equip, and remove accept `--idempotency-key`. Reuse a ke
 the same request for up to seven days; a different body returns HTTP 409.
 The CLI does not generate keys or retry automatically.
 
-MCP exposes `skills_list`, `skills_get`, `skills_create`, `skills_update`,
+MCP exposes `skills_list`, `skills_get`, `skills_create`, `skills_update`, `skills_delete`,
 `agents_skills_equip`, and `agents_skills_remove`. Assignment tools require
-`agent_id` and `skill_id`. Writes accept the separate `idempotency_key` argument,
-which is sent as a header, not in the request body.
+`agent_id` and `skill_id`. Delete requires `id`. Create, content update, equip,
+and remove accept the separate `idempotency_key` argument, which is sent as a
+header, not in the request body.
 
 ### Relationships
 

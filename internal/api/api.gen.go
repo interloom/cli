@@ -3567,6 +3567,11 @@ type CreateSkillParams struct {
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
+// DeleteSkillParams defines parameters for DeleteSkill.
+type DeleteSkillParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // GetSkillParams defines parameters for GetSkill.
 type GetSkillParams struct {
 	Authorization *string `json:"authorization,omitempty"`
