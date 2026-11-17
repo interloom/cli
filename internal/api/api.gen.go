@@ -622,12 +622,12 @@ func (e StateAssertionDefinitionInputMode) Valid() bool {
 // Defines values for StateAssertionScopeInputObjectType.
 const (
 	StateAssertionScopeInputObjectTypeAGENT          StateAssertionScopeInputObjectType = "AGENT"
+	StateAssertionScopeInputObjectTypeCASE           StateAssertionScopeInputObjectType = "CASE"
 	StateAssertionScopeInputObjectTypeFILE           StateAssertionScopeInputObjectType = "FILE"
 	StateAssertionScopeInputObjectTypeNOTE           StateAssertionScopeInputObjectType = "NOTE"
 	StateAssertionScopeInputObjectTypePROCEDURE      StateAssertionScopeInputObjectType = "PROCEDURE"
 	StateAssertionScopeInputObjectTypePROCEDURESTAGE StateAssertionScopeInputObjectType = "PROCEDURE_STAGE"
 	StateAssertionScopeInputObjectTypeSPACE          StateAssertionScopeInputObjectType = "SPACE"
-	StateAssertionScopeInputObjectTypeTASK           StateAssertionScopeInputObjectType = "TASK"
 	StateAssertionScopeInputObjectTypeUSER           StateAssertionScopeInputObjectType = "USER"
 )
 
@@ -635,6 +635,8 @@ const (
 func (e StateAssertionScopeInputObjectType) Valid() bool {
 	switch e {
 	case StateAssertionScopeInputObjectTypeAGENT:
+		return true
+	case StateAssertionScopeInputObjectTypeCASE:
 		return true
 	case StateAssertionScopeInputObjectTypeFILE:
 		return true
@@ -645,8 +647,6 @@ func (e StateAssertionScopeInputObjectType) Valid() bool {
 	case StateAssertionScopeInputObjectTypePROCEDURESTAGE:
 		return true
 	case StateAssertionScopeInputObjectTypeSPACE:
-		return true
-	case StateAssertionScopeInputObjectTypeTASK:
 		return true
 	case StateAssertionScopeInputObjectTypeUSER:
 		return true
@@ -3225,6 +3225,9 @@ type ListCasesParamsDirection string
 // CreateCaseParams defines parameters for CreateCase.
 type CreateCaseParams struct {
 	Authorization *string `json:"authorization,omitempty"`
+
+	// IdempotencyKey Optional client-chosen key of 1 to 255 characters. Retrying a request with the same key and body for 7 days returns the original result instead of repeating the write. Reusing the key with a different body returns 409 idempotency_key_reused.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // DeleteCaseParams defines parameters for DeleteCase.

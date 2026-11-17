@@ -96,11 +96,11 @@ Agent creation accepts `--skill-ids <id-1>,<id-2>` to equip up to 100 skills on
 the new agent. MCP `agents_create` accepts the same `skill_ids` array. This is
 create-only; use `agents skills equip/remove` to change an existing agent.
 
-Note creation accepts `--idempotency-key <key>` with field flags or a raw body.
+Note and Case creation accept `--idempotency-key <key>` with field flags or a raw body.
 Choose a key of 1–255 characters. Retrying with the same key and body within
-7 days returns the original result instead of creating another note. A different
+7 days returns the original result instead of creating another object. A different
 body with the same key returns HTTP 409 `idempotency_key_reused`. The CLI does
-not generate keys or retry automatically. MCP `notes_create` accepts the
+not generate keys or retry automatically. MCP `notes_create` and `cases_create` accept the
 separate `idempotency_key` argument; it is an HTTP header, not a body field.
 
 Spaces are private by default. Use `spaces create --name "Shared space"
@@ -252,6 +252,10 @@ it does not append checks. Omitted `mode` and `is_gating` reset to `all` and
 receive new IDs; unchanged lists retain their IDs. Do not send check IDs.
 MCP `expectations_set` accepts the same request body in its required `data`
 argument.
+
+For state-assertion scopes, use `object_type: "CASE"` for cases. The schema no
+longer accepts `"TASK"`. Raw expectation bodies pass through unchanged; update
+existing caller payloads to use `"CASE"`.
 
 Delete a stage or procedure-stage suite with `interloom expectations delete
 <suite-id>`, or MCP `expectations_delete` with the suite ID in `id`. Use the
